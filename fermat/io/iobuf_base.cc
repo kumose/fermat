@@ -16,12 +16,31 @@
 #include <fermat/io/iobuf_base.h>
 
 namespace fermat {
-
     Allocator<IOBufBase::Block> IOBufBase::alloc;
-    IOBufBase::Block * IOBufBase::create_block(size_t nblock) {
+
+    void IOBufBase::do_release() {
+        /// 1. Iterate through all views and release their corresponding blocks.
+        /// Each call to block->release() handles the ref_count and memory deallocation.
+        for (auto &v: _views) {
+            if (v.block) {
+                release_block(v.block);
+                v.block = nullptr;
+            }
+        }
+
+        /// 2. Clear the vector to prevent dangling pointers.
+        _views.clear();
+
+        /// 3. Reset logical metadata to initial state.
+        _total_size = 0;
+        _index = 0;
+        _view_start = 0;
+    }
+
+    IOBufBase::Block *IOBufBase::create_block(size_t nblock) {
         auto *b = alloc.allocate(1);
         auto n = nblock * _block_size;
-        auto ptr = static_cast<char*>(mi_aligned_alloc(_alignment, n));
+        auto ptr = static_cast<char *>(mi_aligned_alloc(_alignment, n));
         Allocator<Block>::construct(b, ptr, n);
         return b;
     }
@@ -38,4 +57,673 @@ namespace fermat {
             alloc.deallocate(block, 1);
         }
     }
-}  // namespace fermat
+
+    void IOBufBase::alloc_block(size_t n, bool combine) {
+        if (combine) {
+            auto b = create_block(n);
+            b->share();
+            BlockView view;
+            view.block = b;
+            _views.push_back(view);
+            return;
+        }
+
+        for (size_t i = 0; i < n; i++) {
+            auto b = create_block(1);
+            b->share();
+            BlockView view;
+            view.block = b;
+            _views.push_back(view);
+        }
+    }
+
+    turbo::Result<size_t> IOBufBase::write_able_size() const {
+        if (_index == _views.size()) {
+            return 0;
+        }
+        if (_borrowing) {
+            return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
+        }
+        size_t total_size{0};
+
+        for (size_t i = _index; i < _views.size(); i++) {
+            total_size += _views[i].block->capacity - _views[i].length - _views[i].offset;
+        }
+        return total_size;
+    }
+
+    turbo::Result<turbo::span<char> > IOBufBase::borrow() {
+        TURBO_MOVE_OR_RAISE(auto wra, write_able_size());
+        if (wra == 0) {
+            alloc_block(1, false);
+        }
+        KCHECK(_views[_index].status == BlockStatus::Writeable) << " " << static_cast<int>(_views[_index].status);
+        _views[_index].status = BlockStatus::Borrowing;
+        _borrowing = true;
+        return _views[_index].write_able();
+    }
+
+    turbo::Result<std::vector<turbo::span<char> > > IOBufBase::borrow(
+        size_t byte_size, std::optional<int> combine) {
+        /// *combine > BlockSize go to big block mode
+        if (combine.has_value() && *combine > _block_size) {
+            return get_combine_write_able(byte_size, *combine);
+        }
+
+        TURBO_MOVE_OR_RAISE(auto wra, write_able_size());
+        while (wra < byte_size) {
+            alloc_block(1, false);
+            wra += _block_size;
+        }
+        wra = 0;
+        std::vector<turbo::span<char> > vec;
+        for (size_t i = _index; wra < byte_size && i < _views.size(); i++) {
+            KCHECK(_views[i].status == BlockStatus::Writeable);
+            _views[i].status = BlockStatus::Borrowing;
+            auto s = _views[i].write_able();
+            wra += s.size();
+            vec.push_back(s);
+        }
+        _borrowing = true;
+        return vec;
+    }
+
+
+    turbo::Result<std::vector<turbo::span<char> > > IOBufBase::get_combine_write_able(
+        size_t byte_size, int combine) {
+        if (_borrowing) {
+            return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
+        }
+        size_t n = (combine + _block_size - 1) / _block_size;
+
+        /// no holds
+        do_shrink_immutable();
+        size_t wra{0};
+        while (wra < byte_size) {
+            alloc_block(n, true);
+            wra += _block_size * n;
+        }
+        wra = 0;
+        std::vector<turbo::span<char> > vec;
+        for (size_t i = _index; wra < byte_size && i < _views.size(); i++) {
+            KCHECK(_views[i].status == BlockStatus::Writeable);
+            _views[i].status = BlockStatus::Borrowing;
+            auto s = _views[i].write_able();
+            wra += s.size();
+            vec.push_back(s);
+        }
+        _borrowing = true;
+        return vec;
+    }
+
+    size_t IOBufBase::do_shrink_immutable() {
+        if (_views.empty()) {
+            return 0;
+        }
+
+        size_t ret = 0;
+        bool done = false;
+        while (!done && !_views.empty()) {
+            auto &v = _views.back();
+            switch (v.status) {
+                case BlockStatus::Writeable: {
+                    if (v.length == 0) {
+                        ret += v.block->capacity;
+                        release_block(v.block);
+                        _views.pop_back();
+                        break;
+                    }
+                    v.status = BlockStatus::Immutable;
+                    done = true;
+                    break;
+                }
+                case BlockStatus::Immutable:
+                case BlockStatus::Reference: {
+                    done = true;
+                    break;
+                }
+                case BlockStatus::Borrowing:
+                case BlockStatus::Umount:
+                default:
+                    TURBO_UNREACHABLE();
+            }
+        }
+        _index = _views.size();
+        return ret;
+    }
+
+
+    size_t IOBufBase::do_shrink() {
+        if (_views.empty()) {
+            return 0;
+        }
+
+        size_t ret = 0;
+        bool done = false;
+        while (!done && !_views.empty()) {
+            auto &v = _views.back();
+            switch (v.status) {
+                case BlockStatus::Writeable: {
+                    if (v.length == 0) {
+                        ret += v.block->capacity;
+                        release_block(v.block);
+                        _views.pop_back();
+                        break;
+                    }
+                    done = true;
+                    break;
+                }
+                case BlockStatus::Immutable:
+                case BlockStatus::Reference: {
+                    done = true;
+                    break;
+                }
+                case BlockStatus::Borrowing:
+                case BlockStatus::Umount:
+                default:
+                    TURBO_UNREACHABLE();
+            }
+        }
+        if (!_views.empty() && _views.back().status == BlockStatus::Writeable) {
+            _index = _views.size() - 1;
+        } else {
+            _index = _views.size();
+        }
+        return ret;
+    }
+
+    void IOBufBase::commit(size_t n) {
+        if (!_borrowing || _index == _views.size()) {
+            return;
+        }
+        /// Starting point must be a writable owner block.
+        /// If append() happened before commit(), it's a caller's logical error.
+        if (n > 0) {
+            while (n > 0) {
+                DKCHECK(_index < _views.size()) << "Commit exceeds buffer boundaries";
+                auto &v = _views[_index];
+
+                /// Invariant: Current index for committing MUST be an owner.
+                /// We don't skip; we error out because the sequence is broken.
+                DKCHECK(
+                    v.status == BlockStatus::
+                    Borrowing) << "Logic error: Attempting to commit into a read-only (shared) view";
+
+                uint32_t remaining = v.block->capacity - v.length - v.offset;
+
+                uint32_t consume = static_cast<uint32_t>(std::min((size_t) remaining, n));
+
+                v.length += consume;
+                _total_size += consume;
+                n -= consume;
+
+                if (v.length + v.offset == v.block->capacity) {
+                    v.status = BlockStatus::Immutable;
+                    _index++;
+                } else {
+                    /// not full
+                    v.status = BlockStatus::Writeable;
+                }
+            }
+        }
+
+        _borrowing = false;
+        for (auto bindex = _index; bindex < _views.size(); bindex++) {
+            auto &v = _views[bindex];
+            switch (v.status) {
+                case BlockStatus::Borrowing: {
+                    v.status = BlockStatus::Writeable;
+                    break;
+                }
+                case BlockStatus::Writeable: {
+                    return;
+                }
+                default:
+                    TURBO_UNREACHABLE();
+            }
+        }
+    }
+
+    /// @brief Append data from string_view.
+    turbo::Status IOBufBase::append(std::string_view data) {
+        return append(const_cast<char *>(data.data()), data.size());
+    }
+
+    /// @brief Raw append: copy data into IOBuf.
+    turbo::Status IOBufBase::append(void *data, size_t size) {
+        if (size == 0 || data == nullptr) return turbo::OkStatus();
+
+        /// INVARIANT: No append allowed during an active borrowing session.
+        DKCHECK(!_borrowing) << "logic error: appending during borrowing";
+
+        size_t left = size;
+        char *src = static_cast<char *>(data);
+
+        while (left > 0) {
+            /// 1. "Borrow" space from the current write index.
+            /// If current block is full/Immutable/Reference, borrow() will handle allocation.
+            TURBO_MOVE_OR_RAISE(auto span, borrow());
+
+            size_t to_copy = std::min(span.size(), left);
+
+            /// 2. Physical Copy.
+            std::memcpy(span.data(), src, to_copy);
+
+            /// 3. "Commit" the debt.
+            commit(to_copy);
+
+            src += to_copy;
+            left -= to_copy;
+        }
+        return turbo::OkStatus();
+    }
+
+    turbo::Status IOBufBase::prepend_to(IOBufBase &lhs) {
+        if (share_able_to(lhs)) {
+            return prepend_share_to(lhs);
+        } else {
+            return prepend_copy_to(lhs);
+        }
+    }
+
+    /// @brief Share current assets to the front of lhs and seal local write access.
+    turbo::Status IOBufBase::prepend_share_to(IOBufBase &lhs) {
+        /// 1. Transaction & Identity Check.
+        if (_borrowing) {
+            return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
+        }
+        if (lhs._borrowing) {
+            return turbo::unavailable_error("target locked: block is currently under borrowing transaction");
+        }
+
+        if (this == &lhs || _total_size == 0) return turbo::OkStatus();
+
+
+        /// 3. Close local gaps to ensure contiguous logical flow.
+        this->do_shrink_immutable();
+
+        /// 4. Prepare new view vector for lhs.
+
+
+        auto n = _views.size() - _view_start;
+        auto ln = lhs._views.size() - lhs._view_start;
+        auto li = lhs._index - lhs._view_start;
+        std::vector<BlockView> new_views;
+
+        turbo::span<BlockView> views;
+        turbo::span<BlockView> lhs_views;
+        if (n < lhs._view_start) {
+            views = turbo::span<BlockView>(lhs._views.data() + lhs._view_start - n, n);
+        } else {
+            new_views.resize(n + ln);
+            views = turbo::span<BlockView>(new_views.data(), n);
+            lhs_views = turbo::span<BlockView>(new_views.data() + n, ln);
+        }
+
+        for (size_t i = _view_start; i < _views.size(); i++) {
+            auto &v = _views[i];
+            v.block->share();
+
+            /// 5. Setup View for Receiver (lhs): Mark as Reference.
+            BlockView sv = v;
+            sv.status = BlockStatus::Reference;
+            views[i - _view_start] = sv;
+        }
+
+        /// 7. Combine with lhs's original views.
+        for (size_t i = 0; i < lhs_views.size(); i++) {
+            auto &v = lhs._views[i + lhs._view_start];
+            lhs_views[i] = v;
+        }
+
+        if (n < lhs._view_start) {
+            lhs._view_start = lhs._view_start - n;
+            /// no need to move lhs _inde
+        } else {
+            lhs._views.swap(new_views);
+            lhs._view_start = 0;
+            lhs._index = n + li;
+        }
+        lhs._total_size += _total_size;
+        return turbo::OkStatus();
+    }
+
+
+    turbo::Status IOBufBase::prepend_copy_to(IOBufBase &lhs) {
+        // 1. Transaction checks
+        if (_borrowing) {
+            return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
+        }
+        if (lhs._borrowing) {
+            return turbo::unavailable_error("target locked: block is currently under borrowing transaction");
+        }
+        if (this == &lhs || _total_size == 0) {
+            return turbo::OkStatus();
+        }
+
+        // 2. Determine how many standard blocks we need to copy the data
+        size_t data_size = _total_size;
+        size_t block_sz = lhs._block_size;
+        size_t num_blocks = (data_size + block_sz - 1) / block_sz;
+
+        // 3. Build a temporary vector of new BlockView objects (each referring to a newly allocated block)
+        std::vector<BlockView> new_blocks;
+        new_blocks.reserve(num_blocks);
+
+        char *src_start = nullptr; // we will iterate source fragments
+        // Helper to iterate source IOBuf data without flattening
+        size_t remaining = data_size;
+        size_t src_idx = _view_start;
+        size_t src_offset = 0; // offset inside current source block
+
+        while (remaining > 0) {
+            // Allocate a new block from lhs (size = block_sz)
+            Block *new_block = lhs.create_block(1);
+            new_block->share();
+            char *dest = new_block->data;
+            size_t copy_size = std::min(remaining, block_sz);
+            size_t copied = 0;
+            while (copied < copy_size) {
+                const auto &v = _views[src_idx];
+                size_t avail = v.length - src_offset;
+                size_t to_copy = std::min(copy_size - copied, avail);
+                std::memcpy(dest + copied, v.block->data + v.offset + src_offset, to_copy);
+                copied += to_copy;
+                src_offset += to_copy;
+                if (src_offset >= v.length) {
+                    ++src_idx;
+                    src_offset = 0;
+                }
+            }
+            // Create BlockView for this new block
+            BlockView view;
+            view.block = new_block;
+            view.offset = 0;
+            view.length = static_cast<uint32_t>(copy_size);
+            view.status = BlockStatus::Immutable; // copied data is read-only
+            new_blocks.push_back(view);
+            remaining -= copy_size;
+        }
+
+        // 4. Prepend these new blocks to lhs (similar logic as prepend_share_to, but with n = new_blocks.size())
+        size_t n = new_blocks.size();
+        size_t ln = lhs._views.size() - lhs._view_start;
+        size_t li = lhs._index - lhs._view_start;
+        std::vector<BlockView> final_views;
+
+        if (n <= lhs._view_start) {
+            // Reuse head Umount slots: overwrite them directly
+            for (size_t i = 0; i < n; ++i) {
+                lhs._views[lhs._view_start - n + i] = new_blocks[i];
+            }
+            lhs._view_start -= n;
+            // lhs._index remains unchanged (absolute index still valid)
+        } else {
+            // Need to construct new view vector
+            final_views.reserve(n + ln);
+            // Insert new blocks
+            final_views.insert(final_views.end(), new_blocks.begin(), new_blocks.end());
+            // Append existing effective views from lhs
+            for (size_t i = lhs._view_start; i < lhs._views.size(); ++i) {
+                final_views.push_back(lhs._views[i]);
+            }
+            lhs._views.swap(final_views);
+            lhs._view_start = 0;
+            lhs._index = n + li;
+        }
+
+        lhs._total_size += data_size;
+
+        // 5. Current object unchanged
+        return turbo::OkStatus();
+    }
+
+    /// --- Preappend (Move) ---
+    turbo::Status IOBufBase::prepend(IOBufBase &&lhs) {
+        /// 1. Transaction & Identity Check.
+        if (_borrowing) {
+            return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
+        }
+        if (lhs._borrowing) {
+            return turbo::unavailable_error("target locked: block is currently under borrowing transaction");
+        }
+        if (!lhs.share_able_to(*this)) {
+            return turbo::invalid_argument_error("alignment size mismatch, cannot share blocks[this:", _alignment,
+                                                 " vs lhs:", lhs._alignment, "]");
+        }
+
+        if (this == &lhs || _total_size == 0) return turbo::OkStatus();
+
+        /// 1. Settle lhs to reclaim empty trailing blocks.
+        lhs.do_shrink_immutable();
+        size_t lhs_view_count = lhs._views.size() - lhs._view_start;
+        auto li = _index - _view_start;
+
+        turbo::span<BlockView> views;
+        turbo::span<BlockView> local_views;
+        std::vector<BlockView> new_views;
+
+        if (lhs_view_count < _view_start) {
+            views = turbo::span<BlockView>(_views.data() + _view_start - lhs_view_count, lhs_view_count);
+        } else {
+            new_views.resize(lhs_view_count + _views.size() - _view_start);
+            views = turbo::span<BlockView>(new_views.data(), lhs_view_count);
+            local_views = turbo::span<BlockView>(new_views.data() + lhs_view_count, _views.size() - _view_start);
+        }
+
+        for (size_t i = 0; i < views.size(); i++) {
+            auto &v = lhs._views[i + lhs._view_start];
+            views[i] = v;
+        }
+
+        for (size_t i = 0; i < local_views.size(); i++) {
+            auto &v = _views[i + _view_start];
+            local_views[i] = v;
+        }
+
+        if (local_views.empty()) {
+            _view_start = _view_start - lhs_view_count;
+        } else {
+            _views.swap(new_views);
+            _view_start = 0;
+            _index = li + lhs_view_count;
+        }
+        _total_size += lhs._total_size;
+
+        /// 5. Reset lhs carcass.
+        lhs._views.clear();
+        lhs._total_size = 0;
+        lhs._index = 0;
+        lhs._view_start = 0;
+        return turbo::OkStatus();
+    }
+
+
+    /// @brief Steal committed assets from lhs (Move semantics).
+    turbo::Status IOBufBase::append(IOBufBase &&lhs) {
+        /// 1. Transaction & Identity Check.
+        if (_borrowing) {
+            return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
+        }
+        if (lhs._borrowing) {
+            return turbo::unavailable_error("target locked: block is currently under borrowing transaction");
+        }
+
+        if (!lhs.share_able_to(*this)) {
+            return turbo::invalid_argument_error("alignment size mismatch, cannot share blocks[this:", _alignment,
+                                                 " vs lhs:", lhs._alignment, "]");
+        }
+        if (this == &lhs || _total_size == 0) return turbo::OkStatus();
+
+        /// 2. Pre-process: Close local gaps to ensure contiguous logical flow.
+        this->do_shrink_immutable();
+        lhs.do_shrink();
+
+        /// 3. Asset Seizure Loop.
+        for (auto &v: lhs._views) {
+            /// Move ownership: No share(), no release().
+            /// We keep the original status (Writeable/Immutable) as we are the new master.
+            if (v.status == BlockStatus::Umount) {
+                continue;
+            }
+            _views.push_back(v);
+
+            /// IMPORTANT: Nullify the source pointer so lhs won't release it.
+            v.block = nullptr;
+        }
+
+        _total_size += lhs._total_size;
+
+        /// 4. Reset write index.
+        /// Since we just appended data, we reset _index to force a fresh look
+        /// or a new allocation on the next write attempt.
+        _index = _views.size();
+        if (_index > 0) {
+            auto &v = _views.back();
+            if ((v.status == BlockStatus::Immutable || v.status == BlockStatus::Writeable) && v.length + v.offset < v.
+                block->capacity) {
+                v.status = BlockStatus::Writeable;
+                _index = _views.size() - 1;
+            }
+        }
+
+        /// 5. Clean up the carcass of lhs.
+        /// do_release will now only free the empty/uncommitted blocks we left behind.
+        lhs.do_release();
+        return turbo::OkStatus();
+    }
+
+
+    turbo::Status IOBufBase::append_to(IOBufBase &rhs) {
+        if (share_able_to(rhs)) {
+            return append_share_to(rhs);
+        } else {
+            return append_copy_to(rhs);
+        }
+    }
+
+    /// --- Append (Const Ref) ---
+    /// @brief Share current committed assets to rhs and seal local write access.
+    turbo::Status IOBufBase::append_share_to(IOBufBase &rhs) {
+        if (_borrowing) {
+            return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
+        }
+        if (rhs._borrowing) {
+            return turbo::unavailable_error("target locked: block is currently under borrowing transaction");
+        }
+        /// 1. Safety Check: Transaction isolation.
+        if (this == &rhs || _total_size == 0) return turbo::OkStatus();
+
+
+        /// 2. Housekeeping: Reclaim local and remote trailing gaps.
+        this->do_shrink_immutable();
+        rhs.do_shrink_immutable();
+
+        /// 3. Asset Transfer Loop.
+        /// v.status == BlockStatus::Umount or v.status == BlockStatus::Immutable or BlockStatus::Reference
+        for (size_t idx = _view_start; idx < _views.size(); idx++) {
+            auto &v = _views[idx];
+            if (v.status == BlockStatus::Umount) {
+                continue;
+            }
+
+            /// Increase physical ref_count for the block.
+            v.block->share();
+
+            /// 4. Setup Receiver View: Mark as Reference (Read-only snapshot).
+            BlockView shared_view = v;
+            shared_view.status = BlockStatus::Reference;
+            rhs._views.push_back(shared_view);
+        }
+
+        /// 6. Meta Synchronization.
+        rhs._total_size += _total_size;
+
+        /// 7. Index Alignment.
+        /// Since all shared blocks are now Immutable, local _index must move to the end.
+        /// Subsequent write operations will trigger a new block allocation.
+        _index = _views.size();
+
+        /// Receiver's index also points to its end of logical content.
+        rhs._index = rhs._views.size();
+        return turbo::OkStatus();
+    }
+
+    turbo::Status IOBufBase::append_copy_to(IOBufBase &rhs) {
+        if (_borrowing) {
+            return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
+        }
+        if (rhs._borrowing) {
+            return turbo::unavailable_error("target locked: block is currently under borrowing transaction");
+        }
+        if (this == &rhs || _total_size == 0) {
+            return turbo::OkStatus();
+        }
+
+        // Iterate over all committed blocks of this IOBuf
+        for (size_t i = _view_start; i < _views.size(); ++i) {
+            const auto &v = _views[i];
+            if (v.length == 0) break;   // no more data
+            // Append the block's data to rhs (copy)
+            auto status = rhs.append(v.block->data + v.offset, v.length);
+            if (!status.ok()) return status;
+        }
+        return turbo::OkStatus();
+    }
+
+
+    turbo::Status IOBufBase::custom(size_t n) {
+        if (_borrowing) {
+            return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
+        }
+        if (n > _total_size) {
+            return turbo::out_of_range_error("not enough buffer to custom [",_total_size, " vs ", n, "]");
+        }
+        size_t remin = n;
+        while (remin > 0) {
+            auto &v = _views[_view_start];
+            if (remin > v.length) {
+                remin -= v.length;
+                release_block(v.block);
+                v.block = nullptr;
+                v.status = BlockStatus::Umount;
+                ++_view_start;
+            } else if (remin == v.length) {
+                /// this core is most complex, carefull
+                /// 1. the latst immutable and custom all
+                /// 2. the data end with _index some block
+                v.length = 0;
+                v.offset += remin;
+                remin = 0;
+                if (_index > _view_start ) {
+                    release_block(v.block);
+                    v.block = nullptr;
+                    v.status = BlockStatus::Umount;
+                    ++_view_start;
+                }
+                /// _index == _view_start
+                /// still have space to write,
+                /// do not release this
+            }
+            else {
+                v.offset += remin;
+                v.length -= remin;
+                remin = 0;
+            }
+
+        }
+        _total_size -= n;
+        if (_total_size == 0 && _view_start == _index) {
+            /// all customed
+            auto n = _views.size() - _view_start;
+            for (size_t i = _view_start; i < n; ++i) {
+                _views[i] = _views[_view_start + i];
+            }
+            _views.resize(n);
+            _view_start = 0;
+            _index = 0;
+        }
+
+        return turbo::OkStatus();
+    }
+} // namespace fermat

@@ -16,7 +16,10 @@
 # below are examples, after initialization, modify it to your own.
 ###########################################################################
 ###kmcmake_example
-file(GLOB_RECURSE SRC "*.cpp" "*.cc")
+set(SRC
+        memory/maclloc.cc
+        io/iobuf_base.cc
+)
 kmcmake_cc_library(
         NAMESPACE ${PROJECT_NAME}
         NAME fermat

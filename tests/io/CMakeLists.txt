@@ -21,7 +21,9 @@ kmcmake_cc_test(
         CXXOPTS
         ${KMCMAKE_CXX_OPTIONS}
         -fno-access-control
+        -Wno-unused-result
         LINKS
+        fermat::fermat_static
         GTest::gtest
         GTest::gtest_main
         ${KMCMAKE_DEPS_LINK}

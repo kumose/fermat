@@ -24,23 +24,6 @@
 #include <turbo/utility/status.h>
 
 namespace fermat {
-    template<typename C>
-    class Appender {
-    public:
-        using container_type = C;
-
-        virtual ~Appender() = default;
-
-        virtual turbo::Status reserve(size_t n) = 0;
-
-        virtual turbo::Status append(const void *data, size_t n) = 0;
-
-        turbo::Status append(std::string_view data) {
-            return append(data.data(), data.size());
-        }
-    };
-
-
     class IOBufBase {
     public:
         struct Block {
@@ -52,17 +35,6 @@ namespace fermat {
 
             bool is_shared() const noexcept {
                 return ref_count.load(std::memory_order_acquire) > 1;
-            }
-
-            /// @brief The actual life-cycle controller
-            void release() {
-                // Use acq_rel to ensure visibility across threads
-                if (ref_count.fetch_sub(1, std::memory_order_acq_rel) == 1) {
-                    // 1. First, call the destructor to free 'data'
-                    this->~Block();
-                    // 2. Then, return the memory of the Header (this) to the pool
-                    alloc.deallocate(this, 1);
-                }
             }
 
             /// @brief Increment reference for sharing
@@ -96,6 +68,7 @@ namespace fermat {
             uint32_t end_offset() const { return offset + length; }
 
             turbo::span<char> write_able() {
+                KLOG(INFO) << block->capacity;
                 return turbo::span<char>(block->data + length + offset, block->capacity - length - offset);
             }
         };
@@ -103,9 +76,63 @@ namespace fermat {
     public:
         virtual ~IOBufBase() = default;
 
-        bool share_able_to(const IOBufBase &rhs) {
+        [[nodiscard]] bool share_able_to(const IOBufBase &rhs) {
             return _alignment == rhs._alignment && _block_size >= rhs._block_size;
         }
+
+        [[nodiscard]] size_t block_size() {
+            return _block_size;
+        }
+
+        [[nodiscard]] size_t alignment() {
+            return _alignment;
+        }
+
+        turbo::Result<size_t> write_able_size() const;
+
+        turbo::Result<turbo::span<char> > borrow();
+
+        turbo::Result<std::vector<turbo::span<char> > > borrow(size_t byte_size, std::optional<int> combine);
+
+        void commit(size_t n);
+
+
+        turbo::Result<size_t> shrink();
+
+        turbo::Result<size_t> shrink_immutable();
+
+        turbo::Status append(std::string_view data);
+
+        turbo::Status append(void *data, size_t size);
+
+
+        std::string_view block_view(size_t idx) const;
+
+        size_t prepend_blocks() const {
+            return _view_start;
+        }
+
+        /// @brief Total logical bytes in the IOBuf.
+        [[nodiscard]] size_t size() const {
+            return _total_size;
+        }
+
+
+        [[nodiscard]] size_t blocks() const {
+            return _views.size() - _view_start;
+        }
+
+        turbo::Status prepend_to(IOBufBase &lhs);
+
+        turbo::Status prepend(IOBufBase &&lhs);
+
+        turbo::Status append(IOBufBase &&lhs);
+
+        turbo::Status append_to(IOBufBase &rhs);
+
+        const BlockView *peek(size_t idx) const;
+
+        turbo::Status custom(size_t n);
 
     protected:
         static Allocator<Block> alloc;
@@ -114,8 +141,72 @@ namespace fermat {
 
         void release_block(Block *block);
 
+        void alloc_block(size_t n, bool combine);
+
+        size_t do_shrink_immutable();
+
+        size_t do_shrink();
+
+        void do_release();
+
+        turbo::Result<std::vector<turbo::span<char> > > get_combine_write_able(size_t byte_size, int combine);
+
+        turbo::Status prepend_share_to(IOBufBase &lhs);
+
+        turbo::Status prepend_copy_to(IOBufBase &lhs);
+
+        turbo::Status append_share_to(IOBufBase &rhs);
+
+        turbo::Status append_copy_to(IOBufBase &rhs);
+
     protected:
         size_t _alignment{0};
         size_t _block_size{0};
+
+    protected:
+        std::vector<BlockView> _views;
+        size_t _total_size{0};
+        size_t _index{0};
+        size_t _view_start{0};
+        bool _borrowing{false};
     };
+
+    ///////////////////////////////////////////////////////////////////////////
+    ///
+
+    inline turbo::Result<size_t> IOBufBase::shrink() {
+        if (_borrowing) {
+            return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
+        }
+        return do_shrink();
+    }
+
+    inline turbo::Result<size_t> IOBufBase::shrink_immutable() {
+        if (_borrowing) {
+            return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
+        }
+        return do_shrink_immutable();
+    }
+
+    /// @brief Access a specific block as a string_view for read-only inspection.
+    inline std::string_view IOBufBase::block_view(size_t idx) const {
+        auto ridx = idx + _view_start;
+        if (ridx >= _views.size() || _views[ridx].length == 0) {
+            return {};
+        }
+
+        const auto &v = _views[ridx];
+        return {v.block->data + v.offset, v.length};
+    }
+
+    inline const IOBufBase::BlockView *IOBufBase::peek(size_t idx) const {
+        auto ridx = idx + _view_start;
+        if (ridx >= _views.size() || _views[ridx].length == 0) {
+            return nullptr;
+        }
+
+        const auto &v = _views[ridx];
+        return &v;
+    }
+
 } // namespace fermat
