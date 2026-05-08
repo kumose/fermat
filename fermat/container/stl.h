@@ -13,10 +13,24 @@
 // limitations under the License.
 //
 
-#include <fermat/foo.h>
-#include <iostream>
+#pragma once
 
-int main() {
-    std::cout<<foo( 10)<<std::endl;
-    return 0;
-}
+#include <string>
+#include <vector>
+#include <fermat/memory/allocator.h>
+
+/// fermat/container/stl.h
+
+namespace fermat {
+
+    /// string
+    template<typename Char, size_t Alignment = kDefaultAlignedSize>
+    using AlignedBasicString = std::basic_string<Char, std::char_traits<Char>, AlignedAllocator<Char, Alignment> >;
+
+    template<size_t Alignment = kDefaultAlignedSize>
+    using AlignedString = AlignedBasicString<char, Alignment>;
+
+    template<typename T, size_t Alignment = kDefaultAlignedSize>
+    using AlignedVector = std::vector<T, AlignedAllocator<T, Alignment> >;
+
+} // namespace fermat

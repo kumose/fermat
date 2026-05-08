@@ -13,8 +13,16 @@
 # limitations under the License.
 #
 
-configure_file(${PROJECT_SOURCE_DIR}/tests/config.h.in ${PROJECT_SOURCE_DIR}/tests/config.h @ONLY)
-
-find_package(GTest REQUIRED)
-add_subdirectory(io)
-
+kmcmake_cc_test(
+        NAME iobuf_test
+        MODULE io
+        SOURCES
+        iobuf_test.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        LINKS
+        GTest::gtest
+        GTest::gtest_main
+        ${KMCMAKE_DEPS_LINK}
+)

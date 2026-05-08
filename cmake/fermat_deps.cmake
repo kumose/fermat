@@ -59,6 +59,8 @@ endif ()
 find_package(Threads REQUIRED)
 kmcmake_private_find_package(Threads REQUIRED)
 list(APPEND KMCMAKE_SYSTEM_DYLINK Threads::Threads)
+find_package(turbo REQUIRED)
+find_package(mimalloc REQUIRED)
 
 ############################################################
 #
@@ -68,6 +70,8 @@ list(APPEND KMCMAKE_SYSTEM_DYLINK Threads::Threads)
 ##########################################################
 set(KMCMAKE_DEPS_LINK
         #${TURBO_LIB}
+        mimalloc-static
+        turbo::turbo_static
         ${KMCMAKE_SYSTEM_DYLINK}
         )
 list(REMOVE_DUPLICATES KMCMAKE_DEPS_LINK)

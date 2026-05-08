@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-#include <fermat/foo.h>
 
-int foo(int a) {
-    return  a +1;
-}
+#include <fermat/memory/malloc.h>
+
+namespace fermat {
+
+
+}  // namespace fermat
