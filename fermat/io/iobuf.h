@@ -15,14 +15,7 @@
 
 #pragma once
 
-#include <turbo/container/span.h>
-#include <fermat/container/stl.h>
-#include <fermat/memory/allocator.h>
-#include <type_traits>
-#include <turbo/log/check.h>
-#include <turbo/log/logging.h>
-#include <turbo/utility/status.h>
-#include <fermat/io/iobuf_base.h>
+#include <fermat/io/customer.h>
 
 namespace fermat {
     template<size_t Alignment = 64, size_t BlockSize = 4096>
@@ -153,7 +146,7 @@ namespace fermat {
         if (n == 0 || _total_size == 0) return 0;
 
         /// INVARIANT: Cannot modify the logical head during an active borrowing session.
-        DKCHECK(!_borrowing) << "logic error: pop_front during borrowing";
+        DKCHECK(!_lease.borrowed()) << "logic error: pop_front during borrowing";
 
         size_t to_pop = std::min(n, _total_size);
         size_t left = to_pop;

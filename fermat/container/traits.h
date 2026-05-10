@@ -19,6 +19,7 @@
 #include <vector>
 #include <cstring>
 #include <turbo/utility/status.h>
+#include <turbo/log/logging.h>
 
 namespace fermat {
     namespace container_internal {
@@ -58,6 +59,15 @@ namespace fermat {
         template<typename T>
         struct HasAppend<T, void_t<decltype(std::declval<T>().append(std::declval<const char *>(),
                                                                      std::declval<size_t>()))> >
+                : std::true_type {
+        };
+
+        template<typename T, typename = void>
+        struct HasPushBack : std::false_type {
+        };
+
+        template<typename T>
+        struct HasPushBack<T, void_t<decltype(std::declval<T>().push_back(std::declval<char>()))> >
                 : std::true_type {
         };
 
@@ -108,6 +118,16 @@ namespace fermat {
         struct HasSetSize<T, void_t<decltype(std::declval<T>().set_size(std::declval<size_t>()))> >
                 : std::true_type {
         };
+
+        /// fixed container
+        template<typename T, typename = void>
+        struct HasMaxSize : std::false_type {
+        };
+
+        template<typename T>
+        struct HasMaxSize<T, void_t<decltype(std::declval<T>().max_size())> >
+                : std::true_type {
+        };
     }
 
 
@@ -115,19 +135,30 @@ namespace fermat {
     // ContainerTraits: provides reserve() and append() for contiguous char containers
     // Requirement: T has value_type = char, and member functions: reserve, resize, data, size.
     // -----------------------------------------------------------------------------
-    template<typename T, typename = void>
+    template<typename T, typename Enabler = void>
     struct ContainerTraits {
+        using container_tag = void;
+
         static void reserve(T &, size_t) = delete;
 
         static void append(T &, const char *, size_t) = delete;
     };
 
+    struct VectorContainerTag {
+    };
+
     template<typename T>
-    struct ContainerTraits<T, std::enable_if_t<container_internal::HasData<T>::value &&
+    struct ContainerTraits<T, std::enable_if_t<container_internal::HasPushBack<T>::value &&
+                                               !container_internal::HasAppend<T>::value &&
+                                               container_internal::HasData<T>::value &&
                                                container_internal::HasSize<T>::value &&
                                                container_internal::HasReserve<T>::value &&
                                                container_internal::HasResize<T>::value &&
                                                container_internal::HasValueTypeChar<T>::value> > {
+        static constexpr bool is_dynamic_container = true;
+
+        using container_tag = VectorContainerTag;
+
         static turbo::Status reserve(T &c, size_t n) {
             c.reserve(n);
             return turbo::Status();
@@ -136,7 +167,32 @@ namespace fermat {
         static turbo::Status append(T &c, const char *data, size_t len) {
             size_t old_size = c.size();
             c.resize(old_size + len);
-            std::memcpy(reinterpret_cast<const T*>(c.data()) + old_size, data, len);
+            std::memcpy(c.data() + old_size, data, len);
+            return turbo::Status();
+        }
+    };
+
+    struct StringContainerTag {
+    };
+
+    template<typename T>
+    struct ContainerTraits<T, std::enable_if_t<container_internal::HasAppend<T>::value &&
+                                               container_internal::HasData<T>::value &&
+                                               container_internal::HasSize<T>::value &&
+                                               container_internal::HasReserve<T>::value &&
+                                               container_internal::HasResize<T>::value &&
+                                               container_internal::HasValueTypeChar<T>::value> > {
+        static constexpr bool is_dynamic_container = true;
+
+        using container_tag = StringContainerTag;
+
+        static turbo::Status reserve(T &c, size_t n) {
+            c.reserve(n);
+            return turbo::Status();
+        }
+
+        static turbo::Status append(T &c, const char *data, size_t len) {
+            c.append(data, len);
             return turbo::Status();
         }
     };
@@ -146,17 +202,25 @@ namespace fermat {
     // Requirements: T has data(), size(), value_type char, and set_size().
     // Does not have reserve() or resize().
     // -----------------------------------------------------------------------------
+
+    struct FixedContainerTag {
+    };
+
     template<typename T>
     struct ContainerTraits<T, std::enable_if_t<container_internal::HasData<T>::value &&
                                                container_internal::HasSize<T>::value &&
                                                container_internal::HasValueTypeChar<T>::value &&
                                                !container_internal::HasReserve<T>::value &&
                                                !container_internal::HasResize<T>::value &&
-                                               container_internal::HasSetSize<T>::value> > {
+                                               container_internal::HasSetSize<T>::value &&
+                                               container_internal::HasMaxSize<T>::value> > {
+        static constexpr bool is_dynamic_container = true;
+        using container_tag = FixedContainerTag;
         // Pre-allocate or check capacity; for fixed-size, only check.
         static turbo::Status reserve(T &c, size_t n) {
-            if (c.size() < n) {
-                return turbo::out_of_range_error("ContainerTraits::reserve: capacity insufficient");
+            if (c.max_size() < n) {
+                return turbo::out_of_range_error("ContainerTraits::reserve: capacity insufficient [ ", c.max_size(), " vs ",
+                                                 n, " ]");
             }
             return turbo::Status();
         }
@@ -164,10 +228,10 @@ namespace fermat {
         // Append data, assuming enough capacity, and update logical size via set_size.
         static turbo::Status append(T &c, const char *data, size_t len) {
             size_t old_size = c.size(); // current logical size
-            if (old_size + len > c.size()) {
+            if (old_size + len > c.max_size()) {
                 return turbo::out_of_range_error("ContainerTraits::append: not enough space");
             }
-            std::memcpy(reinterpret_cast<const T*>(c.data()) + old_size, data, len);
+            std::memcpy(c.data() + old_size, data, len);
             c.set_size(old_size + len);
             return turbo::Status();
         }

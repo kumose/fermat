@@ -33,4 +33,22 @@ namespace fermat {
     template<typename T, size_t Alignment = kDefaultAlignedSize>
     using AlignedVector = std::vector<T, AlignedAllocator<T, Alignment> >;
 
+
+
+    /// @brief Alias for std::basic_string using fermat::Allocator.
+    /// @tparam Char Character type (e.g., char, wchar_t).
+    template<typename Char>
+    using FermatBasicString = std::basic_string<Char, std::char_traits<Char>, Allocator<Char>>;
+
+    /// @brief Convenience alias for FermatBasicString<char>.
+    using FermatString = FermatBasicString<char>;
+
+    /// @brief Alias for std::vector using fermat::Allocator.
+    /// @tparam T Element type.
+    template<typename T>
+    using FermatBasicVector = std::vector<T, Allocator<T>>;
+
+    /// @brief Convenience alias for FermatBasicVector<char> (common byte buffer).
+    using FermatVector = FermatBasicVector<char>;
+
 } // namespace fermat

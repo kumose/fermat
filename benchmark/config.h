@@ -13,9 +13,13 @@
 // limitations under the License.
 //
 
-#include <fermat/memory/malloc.h>
+#pragma once
 
-namespace fermat {
+#include <string>
 
+namespace testing {
 
-}  // namespace fermat
+    inline std::string benchmark_root() {
+        return "/home/jeff/github/kumose/fermat/benchmark";
+    }
+}  // namespace testing

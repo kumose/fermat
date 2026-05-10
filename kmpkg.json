@@ -2,8 +2,7 @@
   "dependencies": [
     "benchmark",
     "gtest",
-    "turbo",
-    "xflow",
-    "mimalloc"
+    "mimalloc",
+    "turbo"
   ]
 }

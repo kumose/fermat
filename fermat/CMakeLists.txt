@@ -17,8 +17,9 @@
 ###########################################################################
 ###kmcmake_example
 set(SRC
-        memory/maclloc.cc
         io/iobuf_base.cc
+        io/peeker.cc
+        memory/arena.cc
 )
 kmcmake_cc_library(
         NAMESPACE ${PROJECT_NAME}

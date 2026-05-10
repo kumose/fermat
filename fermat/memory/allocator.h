@@ -17,6 +17,7 @@
 
 #include <fermat/memory/malloc.h>
 #include <memory>
+#include <turbo/log/logging.h>
 
 namespace fermat {
     /// @brief STL compatible allocator using mimalloc with default alignment.
@@ -154,7 +155,6 @@ namespace fermat {
             if (n > max_size()) {
                 throw std::bad_array_new_length();
             }
-
             size_t total_bytes = n * sizeof(T);
             /// Request a 'good size' from mimalloc to optimize bucket usage.
             void *ptr = AlignedMalloc<Alignment>::good_alloc(&total_bytes);
@@ -166,11 +166,10 @@ namespace fermat {
         /// @brief Deallocate memory previously allocated with allocate.
         void deallocate(T *p, size_t n) noexcept {
             if (p == nullptr) return;
-
             /// We must pass the exact same size used in mi_aligned_alloc to mi_free_size_aligned.
             size_t total_bytes = n * sizeof(T);
             size_t rn = AlignedMalloc<Alignment>::good_alloc_size(total_bytes);
-            AlignedMalloc<Alignment>::good_free(p, rn);
+            AlignedMalloc<Alignment>::good_free(p);
         }
 
         /// @brief Maximum number of elements that can be allocated.

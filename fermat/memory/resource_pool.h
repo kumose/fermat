@@ -18,285 +18,276 @@
 #include <fermat/memory/allocator.h>
 #include <atomic>
 #include <mutex>
-#include <turbo/base/nullability.h>
+#include <turbo/strings/str_format.h>
 
 namespace fermat {
-    /// @brief Zero-storage proxy that operates on resource metadata.
-    /// It derives metadata addresses from the base ID pointer.
+    // -----------------------------------------------------------------------------
+    // ResourceId: 64-bit ID encoding (block_id, slot_id, version, user)
+    // -----------------------------------------------------------------------------
     struct ResourceId {
-        /// @brief Physical layout: Immutable index + Atomic status.
-        struct ControlBlock {
-            uint16_t _block; /// Byte 0-1: Physical Block ID
-            uint16_t _slot; /// Byte 2-3: Physical Slot ID
-            std::atomic<uint16_t> _version; /// Byte 4-5: Atomic Version
-            std::atomic<uint16_t> _user; /// Byte 6-7: Atomic User Space
-        };
+        static constexpr uint64_t kInvalidId = 0;
+        static constexpr uint64_t kVersionMask = 0xFFFFULL << 32;
+        static constexpr uint64_t kUserMask = 0xFFFFULL << 48;
 
-        /// @brief Constructor derives sibling pointers from the provided base.
-        /// @param rid Raw pointer (wrapped in Nonnull) to the 64-bit metadata.
-        explicit ResourceId(turbo::Nonnull<int64_t *> rid) noexcept {
-            /// Since rid is just a pointer, we cast it to our structured ControlBlock.
-            auto *base = reinterpret_cast<ControlBlock *>(rid);
-            block_ptr = &base->_block;
-            slot_ptr = &base->_slot;
-            version_ptr = &base->_version;
-            user_ptr = &base->_user;
+        explicit ResourceId(uint64_t val = kInvalidId) noexcept : raw_(val) {
         }
 
-        uint16_t *block_ptr{nullptr};
-        uint16_t *slot_ptr{nullptr};
-        std::atomic<uint16_t> *version_ptr{nullptr};
-        std::atomic<uint16_t> *user_ptr{nullptr};
+        uint64_t encode() const noexcept { return raw_; }
 
-        // --- Metadata Getters ---
+        uint16_t block_id() const noexcept { return static_cast<uint16_t>(raw_ >> 0); }
+        uint16_t slot_id() const noexcept { return static_cast<uint16_t>(raw_ >> 16); }
+        uint16_t version() const noexcept { return static_cast<uint16_t>(raw_ >> 32); }
+        uint16_t user_space() const noexcept { return static_cast<uint16_t>(raw_ >> 48); }
 
-        [[nodiscard]] uint16_t block_id() const noexcept { return *block_ptr; }
-        [[nodiscard]] uint16_t slot_id() const noexcept { return *slot_ptr; }
-
-        [[nodiscard]] uint16_t version(std::memory_order order = std::memory_order_relaxed) const noexcept {
-            return version_ptr->load(order);
+        void set_block_id(uint16_t v) noexcept {
+            raw_ = (raw_ & ~0xFFFFULL) | v;
         }
 
-        [[nodiscard]] uint16_t user_space(std::memory_order order = std::memory_order_relaxed) const noexcept {
-            return user_ptr->load(order);
+        void set_slot_id(uint16_t v) noexcept {
+            raw_ = (raw_ & ~(0xFFFFULL << 16)) | (static_cast<uint64_t>(v) << 16);
         }
 
-        // --- Metadata Setters ---
-
-        /// @brief Set physical Block ID (Non-atomic).
-        void set_block_id(uint16_t val) noexcept { *block_ptr = val; }
-
-        /// @brief Set physical Slot ID (Non-atomic).
-        void set_slot_id(uint16_t val) noexcept { *slot_ptr = val; }
-
-        /// @brief Set version with custom barrier.
-        void set_version(uint16_t val, std::memory_order order = std::memory_order_release) noexcept {
-            version_ptr->store(val, order);
+        void set_version(uint16_t v) noexcept {
+            raw_ = (raw_ & ~kVersionMask) | (static_cast<uint64_t>(v) << 32);
         }
 
-        /// @brief Update user space with custom barrier.
-        void set_user_space(uint16_t val, std::memory_order order = std::memory_order_release) noexcept {
-            user_ptr->store(val, order);
+        void set_user_space(uint16_t v) noexcept {
+            raw_ = (raw_ & ~kUserMask) | (static_cast<uint64_t>(v) << 48);
         }
 
-        // --- Lifecycle Management ---
+        void next_version() noexcept { set_version(version() + 1); }
 
-        /// @brief Atomic version bump for ABA protection.
-        void next_version(std::memory_order order = std::memory_order_release) noexcept {
-            version_ptr->fetch_add(1, order);
+        std::string to_string() const {
+            return turbo::str_format("{block:%d, slot:%d, version:%d, user:%d}",
+                                     block_id(), slot_id(), version(), user_space());
         }
 
-        /// @brief Reconstruct the 64-bit ID for the user.
-        [[nodiscard]] int64_t encode() const noexcept {
-            /// Cast to atomic<int64_t> for a consistent 8-byte snapshot.
-            auto *atomic_id = reinterpret_cast<const std::atomic<int64_t> *>(block_ptr);
-            return atomic_id->load(std::memory_order_acquire);
-        }
+    private:
+        uint64_t raw_;
     };
 
-    static constexpr uint16_t kDefaultBlockSize = 8096;
-    static constexpr uint16_t kDefaultSlotSize = 4096;
 
-    template<typename T, size_t BlockSize = kDefaultBlockSize,
-        size_t SlotSize = kDefaultSlotSize, size_t TlsCache = 1024, size_t Batch = 64>
+    /// @brief Fixed-size object pool with versioned slots, CAS, and TLS caching.
+    ///
+    /// @tparam T          Object type.
+    /// @tparam BlockSize  Maximum number of blocks.
+    /// @tparam SlotSize   Slots per block.
+    /// @tparam TlsCache   Max free indices per thread cache.
+    /// @tparam Batch      Number of slots to fetch from global list to TLS.
+    ///
+    /// ### ABA Problem and Solution
+    /// Traditional pools allow stale IDs to access reallocated slots (ABA).
+    /// This pool stores an atomic version counter per slot.
+    /// - On every `get_uninitialize()` or `put_raw()`, the slot's version is
+    ///   incremented atomically (CAS).
+    /// - The returned ID contains the current version.
+    /// - `find()` checks that the stored version matches the slot's version.
+    /// - Old IDs have mismatched versions and become invalid.
+    ///
+    /// ### Concurrency Model
+    /// - Per‑slot version CAS gives lock‑free allocation/free on the slot.
+    /// - Global free list and TLS caches use a mutex, but the hot path (TLS hit) is lock‑free.
+    /// - Version is 16‑bit. Overflow is harmless; accidental match probability is negligible.
+    ///
+    /// ### TLS Caching
+    /// - Each thread caches free slot indices in `tls_free_list_`.
+    /// - Allocation: pop from TLS; if empty, fetch a batch from global list under mutex.
+    /// - Release: push to TLS; if TLS size > TlsCache, move half to global list under mutex.
+    /// - Reduces global contention and improves locality.
+    ///
+    /// ### Memory Layout
+    /// - `Block` contains `std::atomic<uint16_t> version[SlotSize]` and `T data[SlotSize]`.
+    /// - `version` array is cache‑line aligned to avoid false sharing.
+    template<typename T, size_t BlockSize = 8, size_t SlotSize = 64,
+        size_t TlsCache = 1024, size_t Batch = 64>
     class ResourcePool {
     public:
-        ~ResourcePool() {
-            std::unique_lock lock(_blocks_mutex);
-            for (size_t i = 0; i < _blocks.size(); ++i) {
-                auto *block = _blocks[i];
-                auto n = block->n;
-                Malloc::good_free(block, n);
-            }
-            _blocks.clear();
-        }
-
         struct Block {
-            size_t n{0};
+            // Version per slot (atomic). Placed in a separate array to avoid false sharing.
+            alignas(64) std::atomic<uint16_t> version[SlotSize];
             T data[SlotSize];
         };
 
-        static ResourcePool &instance() {
-            static ResourcePool ins;
-            return ins;
+        ~ResourcePool() {
+            std::lock_guard lock(blocks_mutex_);
+            for (Block *blk: blocks_) {
+                Malloc::good_free(blk);
+            }
         }
 
-        static T *find(const ResourceId &rid) {
-            auto &pool = instance();
+        static ResourcePool &instance() {
+            static ResourcePool pool;
+            return pool;
+        }
+
+        // Find object by 64-bit ID. Returns nullptr if ID invalid or version mismatch.
+        static T *find(int64_t id) {
+            ResourceId rid(id);
             uint16_t bid = rid.block_id();
             uint16_t sid = rid.slot_id();
-
-            // Thread-safe access because _blocks only grows
-            if (bid >= pool._blocks.size()) return nullptr;
-            if (sid >= SlotSize) return nullptr;
-            return &pool._blocks[bid]->data[sid];
-        }
-
-        static T *find(int64_t id) {
-            ResourceId rid(&id);
-            return find(rid);
-        }
-
-        static T *get_uninitialize(int64_t &rid) {
             auto &pool = instance();
-            /// 1. Check thread-local cache first
-            if (tls_free_list.empty()) {
-                /// 2. If empty, fetch from global or allocate new block
-                if (!pool.fetch_to_tls()) return nullptr;
+            if (bid >= pool.blocks_.size() || sid >= SlotSize) return nullptr;
+            Block *blk = pool.blocks_[bid];
+            uint16_t cur_ver = blk->version[sid].load(std::memory_order_acquire);
+            if (cur_ver != rid.version()) return nullptr;
+            return &blk->data[sid];
+        }
+
+        // Allocate an uninitialized object. Returns pointer and sets `rid_out` to the new ID.
+        static T *get_uninitialize(int64_t &rid_out) {
+            auto &pool = instance();
+
+            // 1. Obtain a free slot index from TLS or global free list.
+            uint32_t idx;
+            if (!pool.acquire_free_slot(idx)) return nullptr;
+
+            uint16_t bid = static_cast<uint16_t>(idx >> 16);
+            uint16_t sid = static_cast<uint16_t>(idx & 0xFFFF);
+            Block *blk = pool.blocks_[bid];
+            std::atomic<uint16_t> &ver_atom = blk->version[sid];
+
+            // 2. CAS to increment version (allocate to new user)
+            uint16_t old_ver = ver_atom.load(std::memory_order_relaxed);
+            uint16_t new_ver = old_ver + 1;
+            if (!ver_atom.compare_exchange_strong(old_ver, new_ver,
+                                                  std::memory_order_acq_rel)) {
+                // Rare: concurrent modification; fallback to retry via a different slot.
+                // For simplicity, push the slot back and retry recursively (or loop).
+                pool.release_slot(idx);
+                return get_uninitialize(rid_out); // recursion, but depth limited
             }
 
-            rid = tls_free_list.back();
-            tls_free_list.pop_back();
-
-            return find(rid);
+            ResourceId rid;
+            rid.set_block_id(bid);
+            rid.set_slot_id(sid);
+            rid.set_version(new_ver);
+            rid_out = rid.encode();
+            return &blk->data[sid];
         }
 
-        /// @brief Primary allocation logic using the proxy.
-        static T *get_uninitialize(ResourceId &rid_proxy) {
-            auto &pool = instance();
-            if (tls_free_list.empty()) {
-                if (!pool.fetch_to_tls()) return nullptr;
-            }
-
-            int64_t raw_id = tls_free_list.back();
-            tls_free_list.pop_back();
-            ResourceId get_id(&raw_id);
-            rid_proxy.set_block_id(get_id.block_id());
-            rid_proxy.set_slot_id(get_id.slot_id());
-            rid_proxy.set_version(get_id.version());
-            rid_proxy.set_user_space(get_id.user_space());
-
-            return &pool._blocks[get_id.block_id()]->data[get_id.slot_id()];
-        }
-
-        /// @brief Helper to acquire and construct an object.
+        // Construct object with arguments and allocate.
         template<typename... Args>
-        static T *get(ResourceId &rid, Args &&... args) {
-            auto ptr = get_uninitialize(rid);
-            if (ptr == nullptr) {
-                return nullptr;
-            }
+        static T *get(int64_t &rid, Args &&... args) {
+            T *ptr = get_uninitialize(rid);
+            if (!ptr) return nullptr;
             new(ptr) T(std::forward<Args>(args)...);
             return ptr;
         }
 
-        template<typename... Args>
-        static T *get(int64_t &rid, Args &&... args) {
-            ResourceId rid_proxy(&rid);
-            return get(rid_proxy, std::forward<Args>(args)...);
-        }
+        // Release raw object (without destructor). The ID must be valid.
+        static void put_raw(int64_t rid_val) {
+            ResourceId rid(rid_val);
+            uint16_t bid = rid.block_id();
+            uint16_t sid = rid.slot_id();
+            auto &pool = instance();
+            if (bid >= pool.blocks_.size() || sid >= SlotSize) return;
+            Block *blk = pool.blocks_[bid];
+            std::atomic<uint16_t> &ver_atom = blk->version[sid];
 
-        static void put_raw(const ResourceId &rid) {
-            if (tls_free_list.size() < TlsCache) {
-                tls_free_list.push_back(rid.encode());
+            uint16_t old_ver = rid.version();
+            uint16_t new_ver = old_ver + 1;
+            // CAS to increment version; if fails, the ID is already stale.
+            if (!ver_atom.compare_exchange_strong(old_ver, new_ver,
+                                                  std::memory_order_acq_rel)) {
+                // Stale ID, ignore (already freed or reused).
                 return;
             }
-            std::vector<int64_t> ids;
-            ids.reserve(tls_free_list.size());
-            ids.swap(tls_free_list);
-            tls_free_list.push_back(rid.encode());
-            auto n = ids.size() / 2;
-            for (size_t i = 0; i < n; ++i) {
-                tls_free_list.push_back(ids.back());
-                ids.pop_back();
-            }
-            instance().return_to_global(ids);
+            // Slot is now free (version increased). Return the index to free list.
+            uint32_t idx = (static_cast<uint32_t>(bid) << 16) | sid;
+            pool.release_slot(idx);
         }
 
-        static void put(const ResourceId &rid) {
-            auto ptr = find(rid);
-            if (ptr == nullptr) {
-                return;
-            }
-            destroy(ptr);
-            put_raw(rid);
-        }
-
-        static void put_raw(int64_t rid) {
-            ResourceId rid_proxy(&rid);
-            put_raw(rid_proxy);
-        }
-
+        // Release constructed object (calls destructor then put_raw).
         static void put(int64_t rid) {
-            ResourceId rid_proxy(&rid);
-            put_raw(rid_proxy);
+            T *ptr = find(rid);
+            if (!ptr) return;
+            ptr->~T();
+            put_raw(rid);
         }
 
     private:
         ResourcePool() {
-            std::unique_lock lk(_blocks_mutex);
-            _blocks.clear();
-            _blocks.reserve(BlockSize);
-            if (!create_block()) {
-                throw std::bad_alloc();
-            }
-        }
-
-        /// @brief Helper to destroy and return an object.
-        static void destroy(T *ptr) {
-            if (ptr) {
-                ptr->~T();
-            }
-        }
-
-        bool fetch_to_tls(size_t n = Batch) {
-            if (n == 0) {
-                return true;
-            }
-            std::unique_lock lk(_blocks_mutex);
-
-            if (_g_free_list.size() < n && _blocks.size() < BlockSize) {
-                if (!create_block()) {
-                    return false;
-                }
-            }
-
-            auto real_size = std::min(_g_free_list.size(), n);
-            if (real_size == 0 ) {
-                return false;
-            }
-            for (size_t i = 0; i < real_size; ++i) {
-                tls_free_list.push_back(_g_free_list.back());
-                _g_free_list.pop_back();
-            }
-            return true;
-        }
-
-        bool return_to_global(const std::vector<int64_t> &ids) {
-            std::unique_lock lk(_blocks_mutex);
-            for (size_t i = 0; i < ids.size(); ++i) {
-                _g_free_list.push_back(ids[i]);
-            }
-            return true;
+            std::lock_guard lock(blocks_mutex_);
+            blocks_.reserve(BlockSize);
+            if (!create_block()) throw std::bad_alloc();
         }
 
         bool create_block() {
-            auto n = sizeof(Block);
-            auto ptr = reinterpret_cast<Block *>(Malloc::good_alloc(&n));
-            if (!ptr) {
-                return false;
+            size_t n = sizeof(Block);
+            void *mem = Malloc::good_alloc(&n);
+            if (!mem) return false;
+            Block *blk = new(mem) Block;
+            // Initialize versions to 1 (odd number)
+            for (size_t i = 0; i < SlotSize; ++i) {
+                blk->version[i].store(1, std::memory_order_relaxed);
             }
-            ptr->n = n;
-            _blocks.push_back(ptr);
-            auto bid = _blocks.size() - 1;
-            for (size_t i = 0; i < SlotSize; i++) {
-                int64_t id;
-                ResourceId rid(&id);
-                rid.set_block_id(bid);
-                rid.set_slot_id(i);
-                rid.set_version(1);
-                _g_free_list.push_back(id);
+            blocks_.push_back(blk);
+            uint16_t bid = static_cast<uint16_t>(blocks_.size() - 1);
+            for (uint16_t sid = 0; sid < SlotSize; ++sid) {
+                uint32_t idx = (static_cast<uint32_t>(bid) << 16) | sid;
+                free_list_global_.push_back(idx);
             }
             return true;
         }
 
+        bool acquire_free_slot(uint32_t &out_idx) {
+            // 1. Try TLS cache
+            if (!tls_free_list_.empty()) {
+                out_idx = tls_free_list_.back();
+                tls_free_list_.pop_back();
+                return true;
+            }
+            // 2. Fetch batch from global
+            if (!fetch_to_tls()) return false;
+            out_idx = tls_free_list_.back();
+            tls_free_list_.pop_back();
+            return true;
+        }
+
+        bool fetch_to_tls() {
+            std::lock_guard lock(blocks_mutex_);
+            size_t needed = Batch;
+            while (free_list_global_.size() < needed && blocks_.size() < BlockSize) {
+                if (!create_block()) return false;
+            }
+            needed = std::min(free_list_global_.size(), needed);
+            if (needed == 0) return false;
+            for (size_t i = 0; i < needed; ++i) {
+                tls_free_list_.push_back(free_list_global_.back());
+                free_list_global_.pop_back();
+            }
+            return true;
+        }
+
+        void release_slot(uint32_t idx) {
+            if (tls_free_list_.size() < TlsCache) {
+                tls_free_list_.push_back(idx);
+                return;
+            }
+            // Cache full: move half to global (simple strategy)
+            std::vector<uint32_t> to_global;
+            to_global.reserve(tls_free_list_.size() / 2);
+            for (size_t i = 0; i < tls_free_list_.size() / 2; ++i) {
+                to_global.push_back(tls_free_list_.back());
+                tls_free_list_.pop_back();
+            }
+            {
+                std::lock_guard lock(blocks_mutex_);
+                for (uint32_t v: to_global) {
+                    free_list_global_.push_back(v);
+                }
+            }
+            tls_free_list_.push_back(idx);
+        }
+
     private:
-        std::vector<Block *> _blocks;
-        std::mutex _blocks_mutex;
-        std::vector<int64_t> _g_free_list;
-        static thread_local std::vector<int64_t> tls_free_list;
+        std::vector<Block *> blocks_;
+        mutable std::mutex blocks_mutex_;
+        std::vector<uint32_t> free_list_global_;
+
+        static thread_local std::vector<uint32_t> tls_free_list_;
     };
 
     template<typename T, size_t B, size_t S, size_t C, size_t BT>
-    thread_local std::vector<int64_t> ResourcePool<T, B, S, C, BT>::tls_free_list = {};
+    thread_local std::vector<uint32_t> ResourcePool<T, B, S, C, BT>::tls_free_list_;
 } // namespace fermat

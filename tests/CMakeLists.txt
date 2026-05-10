@@ -17,4 +17,4 @@ configure_file(${PROJECT_SOURCE_DIR}/tests/config.h.in ${PROJECT_SOURCE_DIR}/tes
 
 find_package(GTest REQUIRED)
 add_subdirectory(io)
-
+add_subdirectory(memory)

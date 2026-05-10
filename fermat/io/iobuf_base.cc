@@ -16,6 +16,118 @@
 #include <fermat/io/iobuf_base.h>
 
 namespace fermat {
+    void Lease::set(std::vector<turbo::span<char> > sp) {
+        _spans = std::move(sp);
+        for (const auto &s: _spans) {
+            _capacity += s.size();
+        }
+    }
+
+    void Lease::set(turbo::span<char> sp) {
+        _capacity = sp.size();
+        _spans.push_back(sp);
+    }
+
+    /// @brief Sequential write that automatically handles crossing span boundaries.
+    turbo::Status Lease::write(const char *data, size_t len) {
+        if (len == 0) return turbo::OkStatus();
+        if (_total_size + len > _capacity) {
+            return turbo::out_of_range_error("Lease capacity exceeded, size:", _total_size, " len:", len, " capacity:", _capacity);
+        }
+
+        size_t written = 0;
+        while (written < len && _index < _spans.size()) {
+            auto &current = _spans[_index];
+            size_t available = current.size() - _offset;
+            size_t can_copy = std::min(available, len - written);
+
+            if (can_copy > 0) {
+                std::memcpy(current.data() + _offset, data + written, can_copy);
+                _offset += can_copy;
+                _total_size += can_copy;
+                written += can_copy;
+            }
+
+            if (_offset == current.size()) {
+                _index++;
+                _offset = 0;
+            }
+        }
+        return turbo::OkStatus();
+    }
+
+    /// @brief Rewind the internal write cursor and total size.
+    void Lease::pop_back(size_t n) {
+        if (n == 0 || _total_size == 0) return;
+
+        size_t to_remove = std::min(n, _total_size);
+        _total_size -= to_remove;
+
+        while (to_remove > 0) {
+            if (to_remove <= _offset) {
+                _offset -= to_remove;
+                break;
+            }
+            to_remove -= _offset;
+            _index--;
+            _offset = _spans[_index].size();
+        }
+    }
+
+    /// @brief Reset all internal write markers.
+    void Lease::clear() {
+        _total_size = 0;
+        _index = 0;
+        _offset = 0;
+    }
+
+    void Lease::clear_lease() {
+        clear();
+        _capacity = 0;
+        _spans.clear();
+    }
+
+    void Lease::visit_remaining(const VisitorCallback &visitor) const {
+        if (_index >= _spans.size()) return;
+
+        size_t current_idx = _index;
+        size_t current_off = _offset;
+
+        while (current_idx < _spans.size()) {
+            const auto &span = _spans[current_idx];
+            // Amount of writable space in this span starting from current offset
+            size_t available = span.size() - current_off;
+            if (available > 0) {
+                // Provide the raw pointer to the caller
+                char *ptr = const_cast<char *>(span.data() + current_off);
+                // If visitor returns false, stop iterating further spans
+                if (!visitor(ptr, available)) break;
+            }
+            // Move to next span, reset offset to 0
+            ++current_idx;
+            current_off = 0;
+        }
+    }
+
+    void Lease::advance(size_t n) {
+        if (n == 0 || _total_size + n > _capacity) return;
+
+        size_t to_move = n;
+        while (to_move > 0 && _index < _spans.size()) {
+            size_t available = _spans[_index].size() - _offset;
+            size_t can_advance = std::min(available, to_move);
+
+            _offset += can_advance;
+            _total_size += can_advance;
+            to_move -= can_advance;
+
+            if (_offset == _spans[_index].size()) {
+                _index++;
+                _offset = 0;
+            }
+        }
+    }
+
     Allocator<IOBufBase::Block> IOBufBase::alloc;
 
     void IOBufBase::do_release() {
@@ -81,7 +193,7 @@ namespace fermat {
         if (_index == _views.size()) {
             return 0;
         }
-        if (_borrowing) {
+        if (_lease.borrowed()) {
             return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
         }
         size_t total_size{0};
@@ -92,18 +204,21 @@ namespace fermat {
         return total_size;
     }
 
-    turbo::Result<turbo::span<char> > IOBufBase::borrow() {
+    turbo::Result<Lease *> IOBufBase::borrow() {
+        if (_lease.borrowed()) {
+            return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
+        }
         TURBO_MOVE_OR_RAISE(auto wra, write_able_size());
         if (wra == 0) {
             alloc_block(1, false);
         }
         KCHECK(_views[_index].status == BlockStatus::Writeable) << " " << static_cast<int>(_views[_index].status);
         _views[_index].status = BlockStatus::Borrowing;
-        _borrowing = true;
-        return _views[_index].write_able();
+        _lease.set(_views[_index].write_able());
+        return &_lease;
     }
 
-    turbo::Result<std::vector<turbo::span<char> > > IOBufBase::borrow(
+    turbo::Result<Lease *> IOBufBase::borrow(
         size_t byte_size, std::optional<int> combine) {
         /// *combine > BlockSize go to big block mode
         if (combine.has_value() && *combine > _block_size) {
@@ -124,14 +239,14 @@ namespace fermat {
             wra += s.size();
             vec.push_back(s);
         }
-        _borrowing = true;
-        return vec;
+        _lease.set(vec);
+        return &_lease;
     }
 
 
-    turbo::Result<std::vector<turbo::span<char> > > IOBufBase::get_combine_write_able(
+    turbo::Result<Lease *> IOBufBase::get_combine_write_able(
         size_t byte_size, int combine) {
-        if (_borrowing) {
+        if (_lease.borrowed()) {
             return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
         }
         size_t n = (combine + _block_size - 1) / _block_size;
@@ -152,8 +267,8 @@ namespace fermat {
             wra += s.size();
             vec.push_back(s);
         }
-        _borrowing = true;
-        return vec;
+        _lease.set(vec);
+        return &_lease;
     }
 
     size_t IOBufBase::do_shrink_immutable() {
@@ -232,10 +347,14 @@ namespace fermat {
         return ret;
     }
 
-    void IOBufBase::commit(size_t n) {
-        if (!_borrowing || _index == _views.size()) {
+    void IOBufBase::commit(Lease *l) {
+        KCHECK(l == &_lease) << "Fatal: Lease does not belong to this IOBuf. "
+                     << "Expected internal lease address " << &_lease
+                     << ", got " << l << ". Possible double commit or foreign lease.";
+        if (!_lease.borrowed() || _index == _views.size()) {
             return;
         }
+        auto n = _lease.size();
         /// Starting point must be a writable owner block.
         /// If append() happened before commit(), it's a caller's logical error.
         if (n > 0) {
@@ -267,7 +386,7 @@ namespace fermat {
             }
         }
 
-        _borrowing = false;
+        _lease.clear_lease();
         for (auto bindex = _index; bindex < _views.size(); bindex++) {
             auto &v = _views[bindex];
             switch (v.status) {
@@ -294,27 +413,21 @@ namespace fermat {
         if (size == 0 || data == nullptr) return turbo::OkStatus();
 
         /// INVARIANT: No append allowed during an active borrowing session.
-        DKCHECK(!_borrowing) << "logic error: appending during borrowing";
+        DKCHECK(!_lease.borrowed()) << "logic error: appending during borrowing";
 
-        size_t left = size;
         char *src = static_cast<char *>(data);
 
-        while (left > 0) {
-            /// 1. "Borrow" space from the current write index.
-            /// If current block is full/Immutable/Reference, borrow() will handle allocation.
-            TURBO_MOVE_OR_RAISE(auto span, borrow());
 
-            size_t to_copy = std::min(span.size(), left);
-
-            /// 2. Physical Copy.
-            std::memcpy(span.data(), src, to_copy);
-
-            /// 3. "Commit" the debt.
-            commit(to_copy);
-
-            src += to_copy;
-            left -= to_copy;
+        TURBO_MOVE_OR_RAISE(auto span, borrow(size));
+        //LeaseClearGuard(this, span);
+        auto rs = span->write(src, size);
+        if (!rs.ok()) {
+            span->clear();
+            commit(span);
+            TURBO_RETURN_NOT_OK(rs);
         }
+
+        commit(span);
         return turbo::OkStatus();
     }
 
@@ -329,10 +442,10 @@ namespace fermat {
     /// @brief Share current assets to the front of lhs and seal local write access.
     turbo::Status IOBufBase::prepend_share_to(IOBufBase &lhs) {
         /// 1. Transaction & Identity Check.
-        if (_borrowing) {
+        if (_lease.borrowed()) {
             return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
         }
-        if (lhs._borrowing) {
+        if (lhs._lease.borrowed()) {
             return turbo::unavailable_error("target locked: block is currently under borrowing transaction");
         }
 
@@ -391,10 +504,10 @@ namespace fermat {
 
     turbo::Status IOBufBase::prepend_copy_to(IOBufBase &lhs) {
         // 1. Transaction checks
-        if (_borrowing) {
+        if (_lease.borrowed()) {
             return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
         }
-        if (lhs._borrowing) {
+        if (lhs._lease.borrowed()) {
             return turbo::unavailable_error("target locked: block is currently under borrowing transaction");
         }
         if (this == &lhs || _total_size == 0) {
@@ -410,7 +523,6 @@ namespace fermat {
         std::vector<BlockView> new_blocks;
         new_blocks.reserve(num_blocks);
 
-        char *src_start = nullptr; // we will iterate source fragments
         // Helper to iterate source IOBuf data without flattening
         size_t remaining = data_size;
         size_t src_idx = _view_start;
@@ -481,10 +593,10 @@ namespace fermat {
     /// --- Preappend (Move) ---
     turbo::Status IOBufBase::prepend(IOBufBase &&lhs) {
         /// 1. Transaction & Identity Check.
-        if (_borrowing) {
+        if (_lease.borrowed()) {
             return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
         }
-        if (lhs._borrowing) {
+        if (lhs._lease.borrowed()) {
             return turbo::unavailable_error("target locked: block is currently under borrowing transaction");
         }
         if (!lhs.share_able_to(*this)) {
@@ -542,10 +654,10 @@ namespace fermat {
     /// @brief Steal committed assets from lhs (Move semantics).
     turbo::Status IOBufBase::append(IOBufBase &&lhs) {
         /// 1. Transaction & Identity Check.
-        if (_borrowing) {
+        if (_lease.borrowed()) {
             return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
         }
-        if (lhs._borrowing) {
+        if (lhs._lease.borrowed()) {
             return turbo::unavailable_error("target locked: block is currently under borrowing transaction");
         }
 
@@ -605,10 +717,10 @@ namespace fermat {
     /// --- Append (Const Ref) ---
     /// @brief Share current committed assets to rhs and seal local write access.
     turbo::Status IOBufBase::append_share_to(IOBufBase &rhs) {
-        if (_borrowing) {
+        if (_lease.borrowed()) {
             return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
         }
-        if (rhs._borrowing) {
+        if (rhs._lease.borrowed()) {
             return turbo::unavailable_error("target locked: block is currently under borrowing transaction");
         }
         /// 1. Safety Check: Transaction isolation.
@@ -650,10 +762,10 @@ namespace fermat {
     }
 
     turbo::Status IOBufBase::append_copy_to(IOBufBase &rhs) {
-        if (_borrowing) {
+        if (_lease.borrowed()) {
             return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
         }
-        if (rhs._borrowing) {
+        if (rhs._lease.borrowed()) {
             return turbo::unavailable_error("target locked: block is currently under borrowing transaction");
         }
         if (this == &rhs || _total_size == 0) {
@@ -663,7 +775,7 @@ namespace fermat {
         // Iterate over all committed blocks of this IOBuf
         for (size_t i = _view_start; i < _views.size(); ++i) {
             const auto &v = _views[i];
-            if (v.length == 0) break;   // no more data
+            if (v.length == 0) break; // no more data
             // Append the block's data to rhs (copy)
             auto status = rhs.append(v.block->data + v.offset, v.length);
             if (!status.ok()) return status;
@@ -673,11 +785,11 @@ namespace fermat {
 
 
     turbo::Status IOBufBase::custom(size_t n) {
-        if (_borrowing) {
+        if (_lease.borrowed()) {
             return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
         }
         if (n > _total_size) {
-            return turbo::out_of_range_error("not enough buffer to custom [",_total_size, " vs ", n, "]");
+            return turbo::out_of_range_error("not enough buffer to custom [", _total_size, " vs ", n, "]");
         }
         size_t remin = n;
         while (remin > 0) {
@@ -695,7 +807,7 @@ namespace fermat {
                 v.length = 0;
                 v.offset += remin;
                 remin = 0;
-                if (_index > _view_start ) {
+                if (_index > _view_start) {
                     release_block(v.block);
                     v.block = nullptr;
                     v.status = BlockStatus::Umount;
@@ -704,22 +816,20 @@ namespace fermat {
                 /// _index == _view_start
                 /// still have space to write,
                 /// do not release this
-            }
-            else {
+            } else {
                 v.offset += remin;
                 v.length -= remin;
                 remin = 0;
             }
-
         }
         _total_size -= n;
-        if (_total_size == 0 && _view_start == _index) {
+        if (_total_size == 0 && _view_start == _index && _view_start != 0) {
             /// all customed
-            auto n = _views.size() - _view_start;
-            for (size_t i = _view_start; i < n; ++i) {
+            auto bn = _views.size() - _view_start;
+            for (size_t i = 0; i < bn; ++i) {
                 _views[i] = _views[_view_start + i];
             }
-            _views.resize(n);
+            _views.resize(bn);
             _view_start = 0;
             _index = 0;
         }
