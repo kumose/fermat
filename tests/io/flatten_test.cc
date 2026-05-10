@@ -48,7 +48,7 @@ private:
     size_t size_ = 0;
 };
 
-// Provide ContainerTraits for MockFixedBuffer so it can be used with ContainerReceiver
+// Provide ContainerTraits for MockFixedBuffer so it can be used with ContainerAppender
 // (The existing specialization for FixedContainerTag already works if MockFixedBuffer
 //  has the required methods: data(), size(), set_size().)
 
@@ -63,7 +63,7 @@ TEST_F(IOBufTest, CustomerToAlignedVector) {
     EXPECT_EQ(src.size(), payload.size());
 
     AlignedVector<char, 64> target;
-    ContainerReceiver<AlignedVector<char, 64>> receiver(target);
+    ContainerAppender<AlignedVector<char, 64>> receiver(target);
     auto status = Customer::custom(src, receiver, payload.size());
     ASSERT_TRUE(status.ok());
     EXPECT_EQ(target.size(), payload.size());
@@ -78,7 +78,7 @@ TEST_F(IOBufTest, CustomerToAlignedString) {
     EXPECT_EQ(src.size(), payload.size());
 
     AlignedString<64> target;
-    ContainerReceiver<AlignedString<64>> receiver(target);
+    ContainerAppender<AlignedString<64>> receiver(target);
     auto status = Customer::custom(src, receiver, payload.size());
     ASSERT_TRUE(status.ok());
     EXPECT_EQ(target.size(), payload.size());
@@ -93,7 +93,7 @@ TEST_F(IOBufTest, CustomerToStdString) {
     EXPECT_EQ(src.size(), payload.size());
 
     std::string target;
-    ContainerReceiver<std::string> receiver(target);
+    ContainerAppender<std::string> receiver(target);
     auto status = Customer::custom(src, receiver, payload.size());
     ASSERT_TRUE(status.ok());
     EXPECT_EQ(target, payload);
@@ -107,7 +107,7 @@ TEST_F(IOBufTest, ReaderCopiesWithoutDrain) {
     EXPECT_EQ(src.size(), payload.size());
 
     std::string target;
-    ContainerReceiver<std::string> receiver(target);
+    ContainerAppender<std::string> receiver(target);
     auto status = Reader::custom(src, receiver, payload.size());
     ASSERT_TRUE(status.ok());
     EXPECT_EQ(target, payload);
@@ -121,7 +121,7 @@ TEST_F(IOBufTest, CustomerToFixedBufferEnforcement) {
     EXPECT_EQ(src.size(), payload.size());
 
     MockFixedBuffer island(10);
-    ContainerReceiver<MockFixedBuffer> receiver(island);
+    ContainerAppender<MockFixedBuffer> receiver(island);
     auto status = Customer::custom(src, receiver, payload.size());
     EXPECT_FALSE(status.ok());
     EXPECT_EQ(status.code(), turbo::StatusCode::kOutOfRange);
@@ -145,7 +145,7 @@ TEST_F(IOBufTest, CustomerUntilCrossBlock) {
     src.commit(lease2);
 
     std::string target;
-    ContainerReceiver<std::string> receiver(target);
+    ContainerAppender<std::string> receiver(target);
     auto status = Customer::custom_until(src, receiver, ',');
     ASSERT_TRUE(status.ok());
     EXPECT_EQ(target, "hello");
@@ -159,7 +159,7 @@ TEST_F(IOBufTest, CustomerUntilNoDelimiter) {
     std::string payload = "no delimiter here";
     FillIOBuf(src, payload);
     std::string target;
-    ContainerReceiver<std::string> receiver(target);
+    ContainerAppender<std::string> receiver(target);
     auto status = Customer::custom_until(src, receiver, ',');
     ASSERT_TRUE(status.ok());
     EXPECT_EQ(target, payload);
@@ -173,7 +173,7 @@ TEST_F(IOBufTest, CustomerUntilFixedContainer) {
     std::string payload = "abc;def";
     FillIOBuf(src, payload);
     MockFixedBuffer target(10);
-    ContainerReceiver<MockFixedBuffer> receiver(target);
+    ContainerAppender<MockFixedBuffer> receiver(target);
     auto status = Customer::custom_until(src, receiver, ';');
     ASSERT_TRUE(status.ok());
     EXPECT_EQ(target.size(), 3);
@@ -187,7 +187,7 @@ TEST_F(IOBufTest, ReaderUntilDoesNotDrain) {
     std::string payload = "test,data";
     FillIOBuf(src, payload);
     std::string target;
-    ContainerReceiver<std::string> receiver(target);
+    ContainerAppender<std::string> receiver(target);
     auto status = Reader::custom_until(src, receiver, ',');
     ASSERT_TRUE(status.ok());
     EXPECT_EQ(target, "test");
@@ -203,7 +203,7 @@ TEST_F(IOBufTest, ReaderUntilDoesNotDrain) {
     EXPECT_EQ(src.size(), payload.size());
 
     AlignBuffer<char, 64> target;
-    ContainerReceiver<AlignBuffer<char, 64>> receiver(target);
+    ContainerAppender<AlignBuffer<char, 64>> receiver(target);
     auto status = Customer::custom(src, receiver, payload.size());
     ASSERT_TRUE(status.ok());
     EXPECT_EQ(target.size(), payload.size());
@@ -216,7 +216,7 @@ TEST_F(IOBufTest, ReaderUntilDoesNotDrain) {
     std::string payload = "prefix,separator,data";
     FillIOBuf(src, payload);
     AlignBuffer<char, 64> target;
-    ContainerReceiver<AlignBuffer<char, 64>> receiver(target);
+    ContainerAppender<AlignBuffer<char, 64>> receiver(target);
     auto status = Customer::custom_until(src, receiver, ',');
     ASSERT_TRUE(status.ok());
     EXPECT_EQ(std::string(target.data(), target.size()), "prefix");

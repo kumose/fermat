@@ -33,18 +33,18 @@ namespace fermat {
     };
 
     template<typename Container, typename Enabler = void>
-    class ContainerReceiver;
+    class ContainerAppender;
 
     template<typename Container>
-    class ContainerReceiver<Container, std::enable_if_t<std::is_same_v<VectorContainerTag, typename
+    class ContainerAppender<Container, std::enable_if_t<std::is_same_v<VectorContainerTag, typename
                                                             ContainerTraits<Container>::container_tag> ||
                                                         std::is_same_v<StringContainerTag, typename
                                                             ContainerTraits<Container>::container_tag>> > : public Receiver {
     public:
-        ContainerReceiver(Container &c) : _c(c) {
+        ContainerAppender(Container &c) : _c(c) {
         }
 
-        virtual ~ContainerReceiver() = default;
+        virtual ~ContainerAppender() = default;
 
         turbo::Status reserve(size_t n) override {
             TURBO_RETURN_NOT_OK(ContainerTraits<Container>::reserve(_c, n));
@@ -75,13 +75,13 @@ namespace fermat {
     };
 
     template<typename Container>
-    class ContainerReceiver<Container, std::enable_if_t<std::is_same_v<FixedContainerTag, typename
+    class ContainerAppender<Container, std::enable_if_t<std::is_same_v<FixedContainerTag, typename
                 ContainerTraits<Container>::container_tag> > > : public Receiver {
     public:
-        ContainerReceiver(Container &c) : _c(c) {
+        ContainerAppender(Container &c) : _c(c) {
         }
 
-        virtual ~ContainerReceiver() = default;
+        virtual ~ContainerAppender() = default;
 
         turbo::Status reserve(size_t n) override {
             TURBO_RETURN_NOT_OK(ContainerTraits<Container>::reserve(_c, n));
@@ -109,5 +109,56 @@ namespace fermat {
 
     private:
         Container &_c;
+    };
+
+    template<typename Container, typename Enabler = void>
+   class ContainerReceiver;
+
+    template<typename Container>
+    class ContainerReceiver<Container, std::enable_if_t<std::is_same_v<VectorContainerTag, typename
+                                                            ContainerTraits<Container>::container_tag> ||
+                                                        std::is_same_v<StringContainerTag, typename
+                                                            ContainerTraits<Container>::container_tag>> > : public Receiver {
+    public:
+        ContainerReceiver() = default;
+        ContainerReceiver(Container &&c) : _c(std::move(c)) {
+        }
+
+        virtual ~ContainerReceiver() = default;
+
+        turbo::Status reserve(size_t n) override {
+            TURBO_RETURN_NOT_OK(ContainerTraits<Container>::reserve(_c, n));
+            return  turbo::OkStatus();
+        }
+
+        turbo::Status append(const char *data, size_t len) override {
+            if (!data) {
+                return  turbo::invalid_argument_error("data pointer is nullptr");
+            }
+            if (len == 0 ) {
+                return  turbo::OkStatus();
+            }
+            ContainerTraits<Container>::append(_c, data, len);
+            return  turbo::OkStatus();
+        }
+
+        bool is_dynamic() const noexcept override {
+            return  true;
+        }
+
+        size_t size() const noexcept override {
+            return  _c.size();
+        }
+
+        Container release() {
+            return std::move(_c);
+        }
+
+        const Container &container() const noexcept {
+            return  _c;
+        }
+
+    private:
+        Container _c;
     };
 } // namespace fermat
