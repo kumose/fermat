@@ -20,6 +20,7 @@ set(SRC
         io/iobuf_base.cc
         io/peeker.cc
         memory/arena.cc
+        memory/resource_pool.cc
 )
 kmcmake_cc_library(
         NAMESPACE ${PROJECT_NAME}

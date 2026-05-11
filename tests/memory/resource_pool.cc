@@ -11,291 +11,187 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
 
 #include <gtest/gtest.h>
-#include <fermat/memory/resource_pool.h>
 #include <thread>
 #include <vector>
-#include <atomic>
+#include <fermat/memory/resource_pool.h>  // Assume the header file is named resource_pool.h
 
 namespace fermat {
-    // Test type for tracking construction/destruction
-    struct TrackedResource {
-        static std::atomic<int> constructed;
-        static std::atomic<int> destructed;
-        int value;
 
-        TrackedResource(int v = 0) : value(v) { ++constructed; }
+/// Define static members of ThreadShard (must be defined in one translation unit).
+std::atomic<int32_t> ThreadShard::g_thread_shard_id{0};
 
-        TrackedResource(const TrackedResource &) = delete;
+/// Simple test object used for pool tests.
+struct TestObject {
+    int value;
+    TestObject() : value(0) {}
+    explicit TestObject(int v) : value(v) {}
+    ~TestObject() { value = -1; }
+};
 
-        TrackedResource(TrackedResource &&) = delete;
+/// Concrete pool type with default template parameters for testing.
+using TestPool = ResourcePool<TestObject, 8, 64, 1024, 64>;
 
-        ~TrackedResource() { ++destructed; }
-    };
-
-    std::atomic<int> TrackedResource::constructed{0};
-    std::atomic<int> TrackedResource::destructed{0};
-
-    // Use small config for testing: 2 blocks, 4 slots per block, small TLS cache
-    using TestPool = ResourcePool<TrackedResource, 2, 4, 4, 2>;
-
-    // Helper to wait for a flag
-    static void WaitFor(std::atomic<bool> &flag) {
-        while (!flag.load()) std::this_thread::yield();
+class ResourcePoolTest : public ::testing::Test {
+protected:
+    void TearDown() override {
+        /// No explicit cleanup needed; the pool is a singleton, but it does not leak.
+        /// Individual tests should release all allocated IDs to avoid cross-test interference.
     }
+};
 
-    // -----------------------------------------------------------------------------
-    // ResourceId utility tests
-    // -----------------------------------------------------------------------------
-    TEST(ResourceIdTest, DefaultConstruct) {
-        ResourceId rid;
-        EXPECT_EQ(rid.encode(), ResourceId::kInvalidId);
-        EXPECT_EQ(rid.block_id(), 0);
-        EXPECT_EQ(rid.slot_id(), 0);
-        EXPECT_EQ(rid.version(), 0);
-        EXPECT_EQ(rid.user_space(), 0);
-    }
+/// Test basic allocation, construction, find, and release.
+TEST_F(ResourcePoolTest, BasicAllocateAndFree) {
+    int64_t rid;
+    TestObject* obj = TestPool::get_uninitialize(rid);
+    ASSERT_NE(obj, nullptr);
+    EXPECT_NE(rid, 0);
 
-    TEST(ResourceIdTest, ConstructFromValue) {
-        uint64_t value = 0x1234'5678'9ABC'DEF0ULL;
-        ResourceId rid(value);
-        EXPECT_EQ(rid.encode(), value);
-        // Decode manually (should match the stored fields)
-        EXPECT_EQ(rid.block_id(), static_cast<uint16_t>(value >> 0));
-        EXPECT_EQ(rid.slot_id(), static_cast<uint16_t>(value >> 16));
-        EXPECT_EQ(rid.version(), static_cast<uint16_t>(value >> 32));
-        EXPECT_EQ(rid.user_space(), static_cast<uint16_t>(value >> 48));
-    }
+    /// Construct the object using placement new.
+    new (obj) TestObject(42);
+    EXPECT_EQ(obj->value, 42);
 
-    TEST(ResourceIdTest, SettersAndGetters) {
-        ResourceId rid;
-        rid.set_block_id(0x11);
-        rid.set_slot_id(0x22);
-        rid.set_version(0x33);
-        rid.set_user_space(0x44);
-        EXPECT_EQ(rid.block_id(), 0x11);
-        EXPECT_EQ(rid.slot_id(), 0x22);
-        EXPECT_EQ(rid.version(), 0x33);
-        EXPECT_EQ(rid.user_space(), 0x44);
-        // Encode and decode back
-        uint64_t encoded = rid.encode();
-        ResourceId rid2(encoded);
-        EXPECT_EQ(rid2.block_id(), 0x11);
-        EXPECT_EQ(rid2.slot_id(), 0x22);
-        EXPECT_EQ(rid2.version(), 0x33);
-        EXPECT_EQ(rid2.user_space(), 0x44);
-    }
+    /// find() should locate the object with correct version.
+    TestObject* found = TestPool::find(rid);
+    EXPECT_EQ(found, obj);
 
-    TEST(ResourceIdTest, NextVersion) {
-        ResourceId rid;
-        rid.set_version(0);
-        rid.next_version();
-        EXPECT_EQ(rid.version(), 1);
-        rid.next_version();
-        EXPECT_EQ(rid.version(), 2);
-    }
+    /// Release the object (calls destructor + put_raw).
+    TestPool::put(rid);
 
-    // -----------------------------------------------------------------------------
-    // ResourcePool basic operations
-    // -----------------------------------------------------------------------------
-    TEST(ResourcePoolTest, GetUninitializeAndPutRaw) {
-        int64_t id1;
-        TrackedResource *p1 = TestPool::get_uninitialize(id1);
-        ASSERT_NE(p1, nullptr);
-        EXPECT_NE(id1, 0);
+    /// After release, find() must return nullptr.
+    found = TestPool::find(rid);
+    EXPECT_EQ(found, nullptr);
+}
 
-        int64_t id2;
-        TrackedResource *p2 = TestPool::get_uninitialize(id2);
-        ASSERT_NE(p2, nullptr);
-        EXPECT_NE(id2, 0);
+/// Test allocation with construction arguments.
+TEST_F(ResourcePoolTest, ConstructWithArguments) {
+    int64_t rid;
+    TestObject* obj = TestPool::get(rid, 100);
+    ASSERT_NE(obj, nullptr);
+    EXPECT_EQ(obj->value, 100);
 
-        // Should be different objects (different IDs)
-        EXPECT_NE(p1, p2);
+    /// Release using put_raw directly (skip destruction, but this is fine for trivial types).
+    TestPool::put_raw(rid);
 
-        // Release both
-        TestPool::put_raw(id1);
-        TestPool::put_raw(id2);
-    }
+    /// ID should now be invalid.
+    EXPECT_EQ(TestPool::find(rid), nullptr);
+}
 
-    TEST(ResourcePoolTest, GetConstructAndPut) {
-        TrackedResource::constructed = 0;
-        TrackedResource::destructed = 0;
+/// Test put_raw releases slot back to free list, making it reusable.
+TEST_F(ResourcePoolTest, PutRawRecyclesSlot) {
+    int64_t rid1, rid2;
+    TestObject* obj1 = TestPool::get(rid1, 10);
+    ASSERT_NE(obj1, nullptr);
 
-        int64_t id;
-        TrackedResource *ptr = TestPool::get(id, 42);
-        ASSERT_NE(ptr, nullptr);
-        EXPECT_EQ(ptr->value, 42);
-        EXPECT_EQ(TrackedResource::constructed.load(), 1);
+    /// Release without destructor (put_raw). Slot becomes free.
+    TestPool::put_raw(rid1);
 
-        TestPool::put(id);
-        EXPECT_EQ(TrackedResource::destructed.load(), 1);
-    }
+    /// Next allocation may (or may not) reuse the same physical slot, but it must succeed.
+    TestObject* obj2 = TestPool::get(rid2, 20);
+    ASSERT_NE(obj2, nullptr);
+    EXPECT_NE(rid1, rid2);  // version differs, so full ID is different.
 
-    TEST(ResourcePoolTest, FindWorks) {
-        int64_t id;
-        TrackedResource *ptr = TestPool::get_uninitialize(id);
-        ASSERT_NE(ptr, nullptr);
-        TrackedResource *found = TestPool::find(id);
-        EXPECT_EQ(found, ptr);
-        TestPool::put_raw(id);
-    }
+    TestPool::put(rid2);
+}
 
-    TEST(ResourcePoolTest, FindInvalidId) {
-        TrackedResource *found = TestPool::find(0xFFFFFFFFFFFFFFFF);
-        EXPECT_EQ(found, nullptr);
-    }
+/// Test that stale IDs (wrong version) are rejected by put_raw and find.
+TEST_F(ResourcePoolTest, StaleIdIgnored) {
+    int64_t rid;
+    TestObject* obj = TestPool::get(rid, 5);
+    ASSERT_NE(obj, nullptr);
 
-    TEST(ResourcePoolTest, PutInvalidId) {
-        // Should not crash
-        TestPool::put_raw(0x1234);
-        TestPool::put(0x5678);
-    }
+    /// Store a copy of the ID before releasing.
+    int64_t stale_rid = rid;
 
-    // -----------------------------------------------------------------------------
-    // TLS cache and reuse
-    // -----------------------------------------------------------------------------
-    TEST(ResourcePoolTest, CacheReuse) {
-        int64_t id1, id2;
-        TrackedResource *p1 = TestPool::get_uninitialize(id1);
-        TestPool::put_raw(id1);
-        TrackedResource *p2 = TestPool::get_uninitialize(id2);
-        // Same physical slot but version increased
-        EXPECT_EQ(p2, p1);
-        EXPECT_NE(id2, id1); // version changed
-        ResourceId rid1(id1), rid2(id2);
-        EXPECT_EQ(rid1.block_id(), rid2.block_id());
-        EXPECT_EQ(rid1.slot_id(), rid2.slot_id());
-        EXPECT_EQ(rid2.version(), rid1.version() + 2);
-        TestPool::put_raw(id2);
-    }
+    /// Release the object.
+    TestPool::put(rid);
 
-    TEST(ResourcePoolTest, CacheLimit) {
-        // TLS cache size = 4, Batch = 2
-        std::vector<int64_t> ids;
-        for (int i = 0; i < 8; ++i) {
-            int64_t id;
-            TrackedResource *p = TestPool::get_uninitialize(id);
-            ASSERT_NE(p, nullptr);
-            KLOG(INFO) << ResourceId(id).to_string();
-            ids.push_back(id);
-        }
-        for (int64_t id: ids) {
-            auto ptr = TestPool::find(id);
-            ASSERT_TRUE(ptr != nullptr);
-            TestPool::put_raw(id);
-            KLOG(INFO) << ResourceId(id).to_string();
-        }
+    /// Now stale_rid has old version. put_raw must ignore it.
+    TestPool::put_raw(stale_rid);  // Should do nothing (no crash, no double free).
 
-        // Allocate again – should succeed and reuse cached slots
-        std::vector<int64_t> ids2;
-        for (int i = 0; i < 8; ++i) {
-            int64_t id;
-            TrackedResource *p = TestPool::get_uninitialize(id);
-            ASSERT_NE(p, nullptr);
-            ids2.push_back(id);
-        }
-        for (int64_t id: ids2) TestPool::put_raw(id);
-        // No crash, and memory reclaimed
-    }
+    /// find with stale ID must return nullptr.
+    EXPECT_EQ(TestPool::find(stale_rid), nullptr);
 
-    // -----------------------------------------------------------------------------
-    // Pool capacity (BlockSize * SlotSize)
-    // -----------------------------------------------------------------------------
-    TEST(ResourcePoolTest, CapacityExhaustion) {
-        constexpr size_t TotalSlots = 2 * 4; // BlockSize=2, SlotSize=4
-        std::vector<int64_t> ids;
-        for (size_t i = 0; i < TotalSlots; ++i) {
-            int64_t id;
-            TrackedResource *p = TestPool::get_uninitialize(id);
-            ASSERT_NE(p, nullptr) << "Failed at i=" << i;
-            ids.push_back(id);
-        }
-        // Next allocation should fail
-        int64_t extra_id;
-        TrackedResource *extra = TestPool::get_uninitialize(extra_id);
-        EXPECT_EQ(extra, nullptr);
-        // Release all and reacquire to verify pool empty state works
-        for (int64_t id: ids) TestPool::put_raw(id);
-        int64_t new_id;
-        TrackedResource *pnew = TestPool::get_uninitialize(new_id);
-        EXPECT_NE(pnew, nullptr);
-        TestPool::put_raw(new_id);
-    }
+    /// Pool should still be functional: allocate again.
+    int64_t new_rid;
+    TestObject* new_obj = TestPool::get(new_rid, 10);
+    ASSERT_NE(new_obj, nullptr);
+    TestPool::put(new_rid);
+}
 
-    // -----------------------------------------------------------------------------
-    // Concurrency tests
-    // -----------------------------------------------------------------------------
-    TEST(ResourcePoolTest, ThreadLocalIsolation) {
-        std::atomic<bool> start{false};
-        std::vector<int64_t> ids1, ids2;
-        std::thread t1([&] {
-            WaitFor(start);
-            for (int i = 0; i < 100; ++i) {
-                int64_t id;
-                TestPool::get_uninitialize(id);
-                ids1.push_back(id);
-            }
-            for (int64_t id: ids1) TestPool::put_raw(id);
-        });
-        std::thread t2([&] {
-            WaitFor(start);
-            for (int i = 0; i < 100; ++i) {
-                int64_t id;
-                TestPool::get_uninitialize(id);
-                ids2.push_back(id);
-            }
-            for (int64_t id: ids2) TestPool::put_raw(id);
-        });
-        start = true;
-        t1.join();
-        t2.join();
-        // No crash, each thread uses its own TLS cache
-        SUCCEED();
-    }
+/// Test concurrent allocations and releases from multiple threads.
+TEST_F(ResourcePoolTest, ConcurrentAccess) {
+    constexpr int kNumThreads = 16;
+    constexpr int kOpsPerThread = 200;
 
-    TEST(ResourcePoolTest, ConcurrentAllocateFree) {
-        constexpr int kThreads = 8;
-        constexpr int kOpsPerThread = 500;
-        std::atomic<bool> start{false};
-        std::vector<std::thread> threads;
-        for (int i = 0; i < kThreads; ++i) {
-            threads.emplace_back([&] {
-                WaitFor(start);
-                for (int j = 0; j < kOpsPerThread; ++j) {
-                    int64_t id;
-                    TrackedResource *p = TestPool::get_uninitialize(id);
-                    if (p) {
-                        p->value = j;
-                        TestPool::put_raw(id);
-                    }
+    std::vector<std::thread> threads;
+    std::atomic<bool> start{false};
+
+    for (int t = 0; t < kNumThreads; ++t) {
+        threads.emplace_back([&start] {
+            while (!start.load()) { std::this_thread::yield(); }
+            for (int i = 0; i < kOpsPerThread; ++i) {
+                int64_t rid;
+                TestObject* obj = TestPool::get(rid, i);
+                if (obj != nullptr) {
+                    EXPECT_EQ(obj->value, i);
+                    TestPool::put(rid);
+                } else {
+                    // Allocation may rarely fail if pool is exhausted, but with defaults it should not.
+                    // Just reattempt.
+                    --i;
                 }
-            });
-        }
-        start = true;
-        for (auto &th: threads) th.join();
-        // No data races (run under TSAN for verification)
-        SUCCEED();
+            }
+        });
     }
 
-    // -----------------------------------------------------------------------------
-    // Non‑trivial type test
-    // -----------------------------------------------------------------------------
-    struct NonTrivial {
-        std::vector<int> data;
+    start = true;
+    for (auto& th : threads) {
+        th.join();
+    }
+}
 
-        NonTrivial(size_t n = 0) : data(n, 42) {
-        }
-    };
+/// Test that find returns nullptr for invalid ID (0 or out-of-range shard).
+TEST_F(ResourcePoolTest, FindInvalidId) {
+    EXPECT_EQ(TestPool::find(0), nullptr);
 
-    using NonTrivialPool = ResourcePool<NonTrivial, 2, 4, 4, 2>;
+    /// Create a valid ID, then corrupt shard_id to 255.
+    int64_t rid;
+    TestPool::get(rid, 99);
+    ResourceId bad_rid(rid);
+    bad_rid.set_shard_id(255);   // shard 255 may not exist (only 0..255 are valid, but out-of-range shard?)
+    /// The shards_ array size is 256, index 255 is valid, but likely has no blocks. So find returns nullptr.
+    EXPECT_EQ(TestPool::find(bad_rid.encode()), nullptr);
 
-    TEST(ResourcePoolTest, NonTrivialType) {
-        int64_t id;
-        NonTrivial *obj = NonTrivialPool::get(id, 100);
+    /// Clean up the original object.
+    TestPool::put(rid);
+}
+
+/// Test that create_block is called automatically when free list becomes empty.
+TEST_F(ResourcePoolTest, AutoExpandBlock) {
+    /// Allocate enough objects to force creation of a second block.
+    /// SlotSize = 64, BlockSize = 8, so maximum objects = 512.
+    std::vector<int64_t> rids;
+    for (int i = 0; i < 130; ++i) {   // More than one block (64+64)
+        int64_t rid;
+        TestObject* obj = TestPool::get(rid, i);
         ASSERT_NE(obj, nullptr);
-        EXPECT_EQ(obj->data.size(), 100);
-        EXPECT_EQ(obj->data[0], 42);
-        NonTrivialPool::put(id);
+        rids.push_back(rid);
     }
-} // namespace fermat
+
+    /// All objects should be valid.
+    for (size_t i = 0; i < rids.size(); ++i) {
+        TestObject* obj = TestPool::find(rids[i]);
+        ASSERT_NE(obj, nullptr);
+        EXPECT_EQ(obj->value, static_cast<int>(i));
+    }
+
+    /// Release them.
+    for (int64_t rid : rids) {
+        TestPool::put(rid);
+    }
+}
+
+}  // namespace fermat

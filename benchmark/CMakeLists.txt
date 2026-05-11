@@ -59,6 +59,24 @@ kmcmake_cc_bm(
         ${KMCMAKE_DEPS_LINK}
 )
 
+
+kmcmake_cc_bm(
+        NAME resource_bench
+        MODULE mem
+        SOURCES
+        resource_bench.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        benchmark::benchmark_main
+        benchmark::benchmark
+        ${KMCMAKE_DEPS_LINK}
+)
+
+
 #[[
 kmcmake_cc_bm(
         NAME find_char_bench
