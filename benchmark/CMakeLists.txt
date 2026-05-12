@@ -125,6 +125,22 @@ kmcmake_cc_bm(
         ${KMCMAKE_DEPS_LINK}
 )
 
+kmcmake_cc_bm(
+        NAME buffer64_bench
+        MODULE mem
+        SOURCES
+        buffer64_bench.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        benchmark::benchmark_main
+        benchmark::benchmark
+        ${KMCMAKE_DEPS_LINK}
+)
+
 
 #[[
 kmcmake_cc_bm(
