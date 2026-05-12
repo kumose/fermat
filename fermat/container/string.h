@@ -101,6 +101,9 @@ namespace fermat {
     template<class Char, size_t Alignment = 0>
     class kstring_core {
     public:
+        using allocator_type = BytesPoolAllocator<Char, Alignment>;
+
+    public:
         kstring_core() noexcept { reset(); }
 
         kstring_core(const kstring_core &rhs) {
@@ -227,84 +230,18 @@ namespace fermat {
         }
 
 
-        static constexpr size_t kTinySize = 64;
-        static constexpr size_t kSmallSize = 256;
-        static constexpr size_t kMediumSize = 512;
-        static constexpr size_t kBigSize = 1024;
-
         size_t around_capacity(size_t n) {
-            if (n <= 64) {
-                return kTinySize;
-            } else if (n <= kSmallSize) {
-                return kSmallSize;
-            } else if (n <= kMediumSize) {
-                return kMediumSize;
-            } else if (n <= kBigSize) {
-                return kBigSize;
-            } else {
-                return mi_malloc_good_size(n);
-            }
+            return allocator_type::pooled_alloc_size(n);
         }
 
         Char *alloc(size_t *n) {
-            Char *ptr = nullptr;
-            if (*n <= 64) {
-                ptr = reinterpret_cast<Char *>(AlignedBytesAllocator<Char, kTinySize, Alignment>::allocate());
-                *n = kTinySize;
-            } else if (*n <= kSmallSize) {
-                ptr = reinterpret_cast<Char *>(AlignedBytesAllocator<Char, kSmallSize, Alignment>::allocate());
-                *n = kSmallSize;
-            } else if (*n <= kMediumSize) {
-                ptr = reinterpret_cast<Char *>(AlignedBytesAllocator<Char, kMediumSize, Alignment>::allocate());
-                *n = kMediumSize;
-            } else if (*n <= kBigSize) {
-                ptr = reinterpret_cast<Char *>(AlignedBytesAllocator<Char, kBigSize, Alignment>::allocate());
-                *n = kBigSize;
-            } else {
-                auto bytes = *n * sizeof(Char);
-                if constexpr (Alignment > 0) {
-                    ptr = static_cast<Char *>(AlignedMalloc<Alignment>::good_alloc(&bytes));
-                } else {
-                    ptr = static_cast<Char *>(Malloc::good_alloc(&bytes));
-                }
-                *n = bytes / sizeof(Char);
-            }
-            if (!ptr) {
-                throw std::length_error("");
-            }
-            return ptr;
+            return allocator_type::pooled_alloc(n);
         }
 
         void deallocate() {
             if (data_ && data_ != &kZero) {
                 auto n = capacity_ + 1;
-                switch (n) {
-                    case 0:
-                        break;
-                    case kTinySize: {
-                        AlignedBytesAllocator<Char, kTinySize, Alignment>::deallocate(data_);
-                        break;
-                    }
-                    case kSmallSize: {
-                        AlignedBytesAllocator<Char, kSmallSize, Alignment>::deallocate(data_);
-                        break;
-                    }
-                    case kMediumSize: {
-                        AlignedBytesAllocator<Char, kMediumSize, Alignment>::deallocate(data_);
-                        break;
-                    }
-                    case kBigSize: {
-                        AlignedBytesAllocator<Char, kBigSize, Alignment>::deallocate(data_);
-                        break;
-                    }
-                    default:
-                        if constexpr (Alignment > 0) {
-                            AlignedMalloc<Alignment>::good_free(data_);
-                        } else {
-                            Malloc::good_free(data_);
-                        }
-                        break;
-                }
+                allocator_type::pooled_free(data_, n);
             }
 
             data_ = nullptr;
@@ -1452,66 +1389,15 @@ namespace fermat {
 
     template<typename E, class T, class A, class S>
     inline typename BasicString<E, T, A, S>::size_type
-    BasicString<E, T, A, S>::find(
-        const value_type *needle,
-        const size_type pos,
-        const size_type nsize) const {
-        auto const size = this->size();
-        // nsize + pos can overflow (eg pos == npos), guard against that by checking
-        // that nsize + pos does not wrap around.
-        if (nsize + pos > size || nsize + pos < pos) {
-            return npos;
-        }
+    BasicString<E, T, A, S>::find(const value_type *needle, const size_type pos, const size_type nsize) const {
+        const size_type total_size = this->size();
 
-        if (nsize == 0) {
-            return pos;
-        }
-        // Don't use std::search, use a Boyer-Moore-like trick by comparing
-        // the last characters first
-        auto const haystack = data();
-        auto const nsize_1 = nsize - 1;
-        auto const lastNeedle = needle[nsize_1];
+        // String_view is a non-owning wrapper, cost-free to construct.
+        // We use it to delegate the heavy-lifting search to the standard library.
+        std::basic_string_view<E> haystack_view(this->data(), total_size);
+        std::basic_string_view<E> needle_view(needle, nsize);
 
-        // Boyer-Moore skip value for the last char in the needle. Zero is
-        // not a valid value; skip will be computed the first time it's
-        // needed.
-        size_type skip = 0;
-
-        const E *i = haystack + pos;
-        auto iEnd = haystack + size - nsize_1;
-
-        while (i < iEnd) {
-            // Boyer-Moore: match the last element in the needle
-            while (i[nsize_1] != lastNeedle) {
-                if (++i == iEnd) {
-                    // not found
-                    return npos;
-                }
-            }
-            // Here we know that the last char matches
-            // Continue in pedestrian mode
-            for (size_t j = 0;;) {
-                assert(j < nsize);
-                if (i[j] != needle[j]) {
-                    // Not found, we can skip
-                    // Compute the skip value lazily
-                    if (skip == 0) {
-                        skip = 1;
-                        while (skip <= nsize_1 && needle[nsize_1 - skip] != lastNeedle) {
-                            ++skip;
-                        }
-                    }
-                    i += skip;
-                    break;
-                }
-                // Check if done searching
-                if (++j == nsize) {
-                    // Yay
-                    return i - haystack;
-                }
-            }
-        }
-        return npos;
+        return haystack_view.find(needle_view, pos);
     }
 
     template<typename E, class T, class A, class S>
