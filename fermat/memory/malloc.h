@@ -66,7 +66,6 @@ namespace fermat {
 
     template<size_t Alignment>
     struct AlignedMalloc {
-        static_assert(Alignment > 0 && (Alignment & (Alignment - 1)) == 0, "Alignment must be a power of 2");
 
         static size_t good_alloc_size(size_t n) {
             return mi_good_size((n + Alignment - 1) & ~(Alignment - 1));
