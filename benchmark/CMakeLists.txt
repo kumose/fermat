@@ -92,6 +92,39 @@ kmcmake_cc_bm(
         ${KMCMAKE_DEPS_LINK}
 )
 
+kmcmake_cc_bm(
+        NAME vector_bench
+        MODULE mem
+        SOURCES
+        vector_bench.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        benchmark::benchmark_main
+        benchmark::benchmark
+        ${KMCMAKE_DEPS_LINK}
+)
+
+
+kmcmake_cc_bm(
+        NAME buffer_bench
+        MODULE mem
+        SOURCES
+        buffer_bench.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        benchmark::benchmark_main
+        benchmark::benchmark
+        ${KMCMAKE_DEPS_LINK}
+)
+
 
 #[[
 kmcmake_cc_bm(

@@ -81,4 +81,20 @@ namespace fermat::container_internal {
         assert(e >= b);
         memmove(d, b, (e - b) * sizeof(*b));
     }
+
+    template<class SizeType, class IntSourceType>
+    inline void AssertValueFitsInType(IntSourceType n, const char *assertMessage) {
+        TURBO_UNUSED(n);
+        TURBO_UNUSED(assertMessage);
+
+        if constexpr (std::is_signed_v<IntSourceType>)
+            KCHECK(n >= 0) << "Attempting to initialize/insert a Buffer with a negative number of elements!";
+
+        [[maybe_unused]] constexpr bool kSizeTypeMaxIsEnough =
+                static_cast<uintmax_t>(std::numeric_limits<IntSourceType>::max()) <=
+                static_cast<uintmax_t>(std::numeric_limits<SizeType>::max());
+        KCHECK(
+            kSizeTypeMaxIsEnough || static_cast<IntSourceType>(std::numeric_limits<SizeType>::max()) >=
+            n) << assertMessage;
+    }
 } // namespace fermat

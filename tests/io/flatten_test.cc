@@ -20,7 +20,7 @@
 #include <fermat/io/customer.h>   // provides Customer, Reader
 #include <string_view>
 #include <tests/io/io_test.h>
-#include <fermat/container/buffer.h>
+#include <fermat/container/old_buffer.h>
 
 namespace fermat {
 
@@ -196,14 +196,14 @@ TEST_F(IOBufTest, ReaderUntilDoesNotDrain) {
     EXPECT_EQ(src.flatten(), payload);
 }
 
-    TEST_F(IOBufTest, CustomerToAlignBuffer) {
+    TEST_F(IOBufTest, CustomerToOldABuffer) {
     TestIOBuf src;
-    std::string payload = "Hello, AlignBuffer!";
+    std::string payload = "Hello, OldABuffer!";
     FillIOBuf(src, payload);
     EXPECT_EQ(src.size(), payload.size());
 
-    AlignBuffer<char, 64> target;
-    ContainerAppender<AlignBuffer<char, 64>> receiver(target);
+    OldABuffer<char, 64> target;
+    ContainerAppender<OldABuffer<char, 64>> receiver(target);
     auto status = Customer::custom(src, receiver, payload.size());
     ASSERT_TRUE(status.ok());
     EXPECT_EQ(target.size(), payload.size());
@@ -211,12 +211,12 @@ TEST_F(IOBufTest, ReaderUntilDoesNotDrain) {
     EXPECT_EQ(src.size(), 0);  // source consumed
 }
 
-    TEST_F(IOBufTest, CustomerUntilToAlignBuffer) {
+    TEST_F(IOBufTest, CustomerUntilToOldABuffer) {
     TestIOBuf src;
     std::string payload = "prefix,separator,data";
     FillIOBuf(src, payload);
-    AlignBuffer<char, 64> target;
-    ContainerAppender<AlignBuffer<char, 64>> receiver(target);
+    OldABuffer<char, 64> target;
+    ContainerAppender<OldABuffer<char, 64>> receiver(target);
     auto status = Customer::custom_until(src, receiver, ',');
     ASSERT_TRUE(status.ok());
     EXPECT_EQ(std::string(target.data(), target.size()), "prefix");

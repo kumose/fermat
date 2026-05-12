@@ -236,4 +236,13 @@ namespace fermat {
             return turbo::Status();
         }
     };
+
+    template <typename T, typename = void>
+    struct has_equality_operator : std::false_type {};
+
+    template <typename T>
+    struct has_equality_operator<T, std::void_t<decltype(std::declval<T>() == std::declval<T>())>>
+        : std::true_type {};
+
+    static_assert(has_equality_operator<int>::value);
 } // namespace fermat

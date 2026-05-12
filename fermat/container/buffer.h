@@ -15,307 +15,1934 @@
 
 #pragma once
 
-#include <string>
-#include <fermat/memory/allocator.h>
+#include <algorithm>
+#include <atomic>
+#include <cassert>
+#include <cstddef>
+#include <cstring>
+#include <iosfwd>
+#include <limits>
+#include <stdexcept>
+#include <type_traits>
+#include <utility>
+#include <turbo/strings/str_format.h>
+#include <fermat/memory/object_pool.h>
+#include <fermat/container/utility.h>
+#include <fermat/container/traits.h>
 
 namespace fermat {
     template<typename T, size_t Alignment>
-    class BasicBuffer {
-    public:
-        BasicBuffer() = default;
+    struct BufferBase {
+        using allocator_type = BytesPoolAllocator<T, Alignment>;
+        typedef size_t size_type;
+        typedef ptrdiff_t difference_type;
 
-        ~BasicBuffer() {
-            if (data) {
-                AlignedMalloc<Alignment>::good_free(data);
-            }
-        }
+        static const size_type npos = (size_type) -1; /// 'npos' means non-valid position or simply non-position.
+        static const size_type kMaxSize = (size_type) -2;
+        /// -1 is reserved for 'npos'. It also happens to be slightly beneficial that kMaxSize is a value less than -1, as it helps us deal with potential integer wraparound issues.
 
-        void grow(size_t gsize) {
-            if (gsize == 0) {
-                return;
-            }
-            auto n = (gsize + size) * sizeof(T);
+        size_type GetNewCapacity(size_type currentSize);
 
-            auto ptr = AlignedMalloc<Alignment>::good_alloc(&n);
-            if (!ptr) throw std::bad_alloc();
-            if (data && size > 0) {
-                memcpy(ptr, data, size * sizeof(T));
-            }
-            data = reinterpret_cast<T *>(ptr);
-            size = n / sizeof(T);
-        }
-
-        turbo::span<T> seize() {
-            turbo::span<T> span(data, size);
-            data = nullptr;
-            size = 0;
-            return span;
-        }
-
-        T *data{nullptr};
-        size_t size{0};
-    };
-
-
-    /// @brief A growable buffer for trivially copyable types, designed for data passing.
-    /// @tparam T Element type (must be trivially copyable).
-    /// @tparam Alignment Required alignment (power of two).
-    template<typename T, size_t Alignment = kDefaultAlignedSize>
-    class AlignBuffer {
-        static_assert(std::is_trivially_copyable_v<T>, "T must be trivially copyable");
+    protected:
+        T *_begin{nullptr};
+        T *_end{nullptr};
+        T *_capacity_end{nullptr};
 
     public:
-        // ----- type aliases -----
-        using value_type = T;
-        using size_type = size_t;
-        using difference_type = ptrdiff_t;
-        using pointer = T *;
-        using const_pointer = const T *;
-        using reference = T &;
-        using const_reference = const T &;
-        using iterator = T *;
-        using const_iterator = const T *;
-        using reverse_iterator = std::reverse_iterator<iterator>;
-        using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+        BufferBase() = default;
+
+        BufferBase(size_type n);
+
+        virtual ~BufferBase();
+
+    protected:
+        virtual T *do_allocate(size_type *n);
+
+        virtual size_type do_allocate_size(size_type n);
+
+        virtual void do_free(T *p, size_type n);
+
+        void uninitialized_n(size_t n);
+    }; // BufferBase
+
+
+    /// Buffer
+    ///
+    /// Implements a dynamic array.
+    ///
+    template<typename T, size_t Alignment = 0>
+    class Buffer : public BufferBase<T, Alignment> {
+
+        // --- The Safety Lock ---
+        // Since we've optimized all paths (append, resize, assign) to use bitwise
+        // operations (memcpy/memset) and skipped destructor calls, we MUST
+        // ensure T is trivially copyable and has a trivial destructor.
+        static_assert(std::is_trivially_copyable_v<T>,
+                      "fermat::Buffer only supports trivially copyable types.");
+        static_assert(std::is_trivially_destructible_v<T>,
+                      "fermat::Buffer only supports types with trivial destructors.");
+
+        typedef BufferBase<T, Alignment> base_type;
+        typedef Buffer<T, Alignment> this_type;
+
+        template<class T2, class Allocator2, class U>
+        friend typename Buffer<T2, Alignment>::size_type erase_unsorted(Buffer<T2, Alignment> &c, const U &value);
+
+        template<class T2, class Allocator2, class P>
+        friend typename Buffer<T2, Alignment>::size_type erase_unsorted_if(Buffer<T2, Alignment> &c, P predicate);
+
+    protected:
+        using base_type::_begin;
+        using base_type::_end;
+        using base_type::_capacity_end;
+        using base_type::do_allocate;
+        using base_type::do_allocate_size;
+        using base_type::do_free;
 
     public:
-        // ----- constructors / destructor -----
-        AlignBuffer() noexcept = default;
+        typedef T value_type;
+        typedef T *pointer;
+        typedef const T *const_pointer;
+        typedef T &reference;
+        typedef const T &const_reference;
+        // Maintainer note: We want to leave iterator defined as T* -- at least in release builds -- as this gives some algorithms an advantage that optimizers cannot get around.
+        typedef T *iterator;
+        // Note: iterator is simply T* right now, but this will likely change in the future, at least for debug builds.
+        typedef const T *const_iterator;
+        //       Do not write code that relies on iterator being T*. The reason it will
+        typedef std::reverse_iterator<iterator> reverse_iterator;
+        //       change in the future is that a debugging iterator system will be created.
+        typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
+        typedef typename base_type::size_type size_type;
+        typedef typename base_type::difference_type difference_type;
+        typedef typename base_type::allocator_type allocator_type;
 
-        AlignBuffer(size_type n) { resize(n); }
-        AlignBuffer(size_type n, const T &val) { assign(n, val); }
-        AlignBuffer(std::initializer_list<T> init) { assign(init.begin(), init.size()); }
+        using base_type::npos;
+        using base_type::GetNewCapacity;
 
-        template<class InputIt>
-        AlignBuffer(InputIt first, InputIt last) { assign(first, last); }
+        static_assert(!std::is_const<value_type>::value, "Buffer<T> value_type must be non-const.");
+        static_assert(!std::is_volatile<value_type>::value, "Buffer<T> value_type must be non-volatile.");
 
-        AlignBuffer(const AlignBuffer &) = delete; // no copy (ownership semantics)
+    public:
+        Buffer() noexcept;
 
-        virtual ~AlignBuffer() noexcept = default;
+        explicit Buffer(size_type n);
 
-        AlignBuffer &operator=(const AlignBuffer &) = delete;
+        Buffer(size_type n, const value_type &value);
+
+        Buffer(const this_type &x);
+
+        Buffer(this_type &&x) noexcept;
+
+        Buffer(std::initializer_list<value_type> ilist);
+
+        // note: this has pre-C++11 semantics:
+        // this constructor is equivalent to the constructor Buffer(static_cast<size_type>(first), static_cast<value_type>(last), allocator) if InputIterator is an integral type.
+        template<typename InputIterator>
+        Buffer(InputIterator first, InputIterator last);
+
+        ~Buffer();
+
+        this_type &operator=(const this_type &x);
+
+        this_type &operator=(std::initializer_list<value_type> ilist);
+
+        this_type &operator=(this_type &&x);
+
+        void swap(this_type &x);
+
+        void assign(size_type n, const value_type &value);
+
+        template<typename InputIterator>
+        void assign(InputIterator first, InputIterator last);
+
+        void assign(std::initializer_list<value_type> ilist);
+
+        void assign(const T* data, size_type n);
+
+        iterator begin() noexcept;
+
+        const_iterator begin() const noexcept;
+
+        const_iterator cbegin() const noexcept;
+
+        iterator end() noexcept;
+
+        const_iterator end() const noexcept;
+
+        const_iterator cend() const noexcept;
+
+        reverse_iterator rbegin() noexcept;
+
+        const_reverse_iterator rbegin() const noexcept;
+
+        const_reverse_iterator crbegin() const noexcept;
+
+        reverse_iterator rend() noexcept;
+
+        const_reverse_iterator rend() const noexcept;
+
+        const_reverse_iterator crend() const noexcept;
+
+        bool empty() const noexcept;
+
+        size_type size() const noexcept;
+
+        size_type capacity() const noexcept;
+
+        void resize(size_type n, const value_type &value);
+
+        void resize(size_type n);
+
+        void reserve(size_type n);
+
+        void set_capacity(size_type n = base_type::npos);
+
+        // Revises the capacity to the user-specified value. Resizes the container to match the capacity if the requested capacity n is less than the current size. If n == npos then the capacity is reallocated (if necessary) such that capacity == size.
+        void shrink_to_fit(); // C++11 function which is the same as set_capacity().
+
+        pointer data() noexcept;
+
+        const_pointer data() const noexcept;
+
+        reference operator[](size_type n);
+
+        const_reference operator[](size_type n) const;
+
+        reference at(size_type n);
+
+        const_reference at(size_type n) const;
+
+        reference front();
+
+        const_reference front() const;
+
+        reference back();
+
+        const_reference back() const;
+
+        void pop_back();
+
+        iterator insert(const_iterator position, const value_type &value);
+
+        iterator insert(const_iterator position, size_type n, const value_type &value);
+
+        iterator insert(const_iterator position, value_type &&value);
+
+        iterator insert(const_iterator position, std::initializer_list<value_type> ilist);
+
+        // note: this has pre-C++11 semantics:
+        // this function is equivalent to insert(const_iterator position, static_cast<size_type>(first), static_cast<value_type>(last)) if InputIterator is an integral type.
+        // ie. same as insert(const_iterator position, size_type n, const value_type& value)
+        template<typename InputIterator>
+        iterator insert(const_iterator position, InputIterator first, InputIterator last);
+
+        iterator erase_first(const T &value);
+
+        iterator erase_first_unsorted(const T &value);
+
+        // Same as erase, except it doesn't preserve order, but is faster because it simply copies the last item in the Buffer over the erased position.
+        reverse_iterator erase_last(const T &value);
+
+        reverse_iterator erase_last_unsorted(const T &value);
+
+        // Same as erase, except it doesn't preserve order, but is faster because it simply copies the last item in the Buffer over the erased position.
+
+        iterator erase(const_iterator position);
+
+        iterator erase(const_iterator first, const_iterator last);
+
+        iterator erase_unsorted(const_iterator position);
+
+        // Same as erase, except it doesn't preserve order, but is faster because it simply copies the last item in the Buffer over the erased position.
+
+        reverse_iterator erase(const_reverse_iterator position);
+
+        reverse_iterator erase(const_reverse_iterator first, const_reverse_iterator last);
+
+        reverse_iterator erase_unsorted(const_reverse_iterator position);
+
+        void clear() noexcept;
+
+        void reset_lose_memory() noexcept;
+
+        // This is a unilateral reset to an initially empty state. No destructors are called, no deallocation occurs.
+
+        bool validate() const noexcept;
+
+        void bestow(T *data, size_type size, size_type capacity) noexcept;
+
+        T *seize(size_type *size, size_type *capacity) noexcept;
+
+        /// additional api
+
+        void append(value_type value);
+
+        void append_confident(value_type value);
+
+        void append(const value_type *value, size_type size);
+
+        void append_confident(const value_type *value, size_type size);
+
+        reference append();
+
+        void *append_uninitialized();
+
+        bool is_stringify() const noexcept;
+
+    protected:
+        // These functions do the real work of maintaining the Buffer. You will notice
+        // that many of them have the same name but are specialized on iterator_tag
+        // (iterator categories). This is because in these cases there is an optimized
+        // implementation that can be had for some cases relative to others. Functions
+        // which aren't referenced are neither compiled nor linked into the application.
+        template<bool bMove>
+        struct should_move_or_copy_tag {
+        };
 
 
-        AlignBuffer(AlignBuffer &&other) noexcept
-            : _buffer(other._buffer), _size(other._size) {
-            other._buffer.data = nullptr;
-            other._buffer.size = 0;
-            other._size = 0;
+        // Allocates a pointer of array count n and copy-constructs it with [first,last).
+        pointer do_realloc(size_type *newCapacity, const T* first, const T* last);
+
+        template<typename Integer>
+        void DoInit(Integer n, Integer value, std::true_type);
+
+        template<typename InputIterator>
+        void DoInit(InputIterator first, InputIterator last, std::false_type);
+
+        template<typename InputIterator>
+        void DoInitFromIterator(InputIterator first, InputIterator last, std::input_iterator_tag);
+
+        template<typename ForwardIterator>
+        void DoInitFromIterator(ForwardIterator first, ForwardIterator last, std::forward_iterator_tag);
+
+        template<typename Integer, bool bMove>
+        void DoAssign(Integer n, Integer value, std::true_type);
+
+        template<typename InputIterator, bool bMove>
+        void DoAssign(InputIterator first, InputIterator last, std::false_type);
+
+        void DoAssignValues(size_type n, const value_type &value);
+
+        template<typename InputIterator, bool bMove>
+        void DoAssignFromIterator(InputIterator first, InputIterator last, std::input_iterator_tag);
+
+        template<typename RandomAccessIterator, bool bMove>
+        void DoAssignFromIterator(RandomAccessIterator first, RandomAccessIterator last,
+                                  std::random_access_iterator_tag);
+
+        template<typename Integer>
+        void DoInsert(const_iterator position, Integer n, Integer value, std::true_type);
+
+        template<typename InputIterator>
+        void DoInsert(const_iterator position, InputIterator first, InputIterator last, std::false_type);
+
+        template<typename InputIterator>
+        void DoInsertFromIterator(const_iterator position, InputIterator first, InputIterator last,
+                                  std::input_iterator_tag);
+
+        template<typename BidirectionalIterator>
+        void DoInsertFromIterator(const_iterator position, BidirectionalIterator first, BidirectionalIterator last,
+                                  std::bidirectional_iterator_tag);
+
+        void DoInsertValues(const_iterator position, size_type n, const value_type &value);
+
+        void do_insert_values_end(size_type n); // Default constructs n values
+        void do_insert_values_end(size_type n, const value_type &value);
+
+        template<typename... Args>
+        void do_insert_value(const_iterator position, Args &&... args);
+
+        template<typename... Args>
+        void do_insert_value_end(Args &&... args);
+
+        void DoClearCapacity();
+
+        void DoGrow(size_type newCapacity);
+
+        void DoSwap(this_type &x);
+    }; // class Buffer
+
+
+    ///////////////////////////////////////////////////////////////////////
+    // BufferBase
+    ///////////////////////////////////////////////////////////////////////
+
+    template<typename T, size_t Alignment>
+    inline BufferBase<T, Alignment>::BufferBase(size_type n) {
+        uninitialized_n(n);
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline BufferBase<T, Alignment>::~BufferBase() {
+        if (_begin) {
+            do_free(_begin, _capacity_end - _begin);
         }
+    }
 
-        AlignBuffer &operator=(AlignBuffer &&other) noexcept {
-            if (this != &other) {
-                if (_buffer.data) AlignedMalloc<Alignment>::good_free(_buffer.data);
-                _buffer = other._buffer;
-                _size = other._size;
-                other._buffer.data = nullptr;
-                other._buffer.size = 0;
-                other._size = 0;
-            }
-            return *this;
+
+    template<typename T, size_t Alignment>
+    inline T *BufferBase<T, Alignment>::do_allocate(size_type *n) {
+        // If n is zero, then we allocate no memory and just return nullptr.
+        // This is fine, as our default ctor initializes with NULL pointers.
+        if (TURBO_LIKELY(n)) {
+            auto ptr = allocator_type::pooled_alloc(n);
+            return ptr;
+        } else {
+            return nullptr;
         }
+    }
 
-
-        // ----- iterators -----
-        iterator begin() noexcept { return _buffer.data; }
-        const_iterator begin() const noexcept { return _buffer.data; }
-        const_iterator cbegin() const noexcept { return _buffer.data; }
-        iterator end() noexcept { return _buffer.data + _size; }
-        const_iterator end() const noexcept { return _buffer.data + _size; }
-        const_iterator cend() const noexcept { return _buffer.data + _size; }
-        reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
-        const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator(end()); }
-        const_reverse_iterator crbegin() const noexcept { return const_reverse_iterator(end()); }
-        reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
-        const_reverse_iterator rend() const noexcept { return const_reverse_iterator(begin()); }
-        const_reverse_iterator crend() const noexcept { return const_reverse_iterator(begin()); }
-
-
-        // ----- element access -----
-        reference operator[](size_type pos) { return _buffer.data[pos]; }
-        const_reference operator[](size_type pos) const { return _buffer.data[pos]; }
-
-        reference at(size_type pos) {
-            if (pos >= _size) throw std::out_of_range("AlignBuffer::at");
-            return _buffer.data[pos];
+    template<typename T, size_t Alignment>
+    inline typename BufferBase<T, Alignment>::size_type BufferBase<T, Alignment>::do_allocate_size(size_type n) {
+        if (TURBO_LIKELY(n)) {
+            return allocator_type::pooled_alloc_size(n);
+        } else {
+            return 0;
         }
+    }
 
-        const_reference at(size_type pos) const {
-            if (pos >= _size) throw std::out_of_range("AlignBuffer::at");
-            return _buffer.data[pos];
+    template<typename T, size_t Alignment>
+    void BufferBase<T, Alignment>::uninitialized_n(size_t n) {
+        _begin = allocator_type::pooled_alloc(&n);
+        _end = _begin;
+        _capacity_end = _begin + n;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline void BufferBase<T, Alignment>::do_free(T *p, size_type n) {
+        if (p) {
+            allocator_type::pooled_free(p, n);
         }
-
-        reference front() { return _buffer.data[0]; }
-        const_reference front() const { return _buffer.data[0]; }
-        reference back() { return _buffer.data[_size - 1]; }
-        const_reference back() const { return _buffer.data[_size - 1]; }
-        T *data() noexcept { return _buffer.data; }
-        const T *data() const noexcept { return _buffer.data; }
-
-        // ----- capacity -----
-        size_type size() const noexcept { return _size; }
-        size_type capacity() const noexcept { return _buffer.size; }
-        bool empty() const noexcept { return _size == 0; }
-
-        void reserve(size_type n) {
-            if (n <= capacity()) return;
-            ensure_capacity(n - _size);
-        }
-
-        // ----- modifiers (only append/pop, no insert/erase in middle) -----
-        void clear() noexcept { _size = 0; }
-
-        void assign(size_type count, const T &value) {
-            resize(count);
-            for (size_type i = 0; i < count; ++i) _buffer.data[i] = value;
-        }
-
-        void assign(const T *first, const T *last) {
-            size_type len = last - first;
-            resize(len);
-            std::memcpy(_buffer.data, first, len * sizeof(T));
-        }
-
-        void assign(std::initializer_list<T> ilist) {
-            resize(ilist.size());
-            std::memcpy(_buffer.data, ilist.begin(), ilist.size() * sizeof(T));
-        }
-
-        template<class InputIt>
-        void assign(InputIt first, InputIt last) {
-            static_assert(std::is_same_v<typename std::iterator_traits<InputIt>::value_type, T>,
-                          "Incompatible iterator");
-            size_type len = std::distance(first, last);
-            resize(len);
-            for (size_type i = 0; i < len; ++i) _buffer.data[i] = *first++;
-        }
-
-        void push_back(const T &value) { append(value); }
-        void push_back(T &&value) { append(std::move(value)); }
-
-        template<class... Args>
-        reference emplace_back(Args &&... args) {
-            // For trivially copyable, emplace is same as push_back; we construct in place.
-            ensure_capacity(1);
-            ::new(static_cast<void *>(_buffer.data + _size)) T(std::forward<Args>(args)...);
-            ++_size;
-            return back();
-        }
-
-        void resize(size_type n) {
-            if (n > capacity()) reserve(n);
-            if (n > _size) {
-                std::memset(_buffer.data + _size, 0, (n - _size) * sizeof(T));
-            }
-            _size = n;
-        }
-
-        void swap(AlignBuffer &other) noexcept {
-            using std::swap;
-            swap(_buffer, other._buffer);
-            swap(_size, other._size);
-        }
-
-        // ----- memory ownership transfer -----
-        turbo::span<T> seize() {
-            auto span = _buffer.seize();
-            _size = 0;
-            return span;
-        }
-
-        // ----- comparison operators (non‑member) -----
-        friend bool operator==(const AlignBuffer &a, const AlignBuffer &b) {
-            if (a.size() != b.size()) return false;
-            return std::memcmp(a.data(), b.data(), a.size() * sizeof(T)) == 0;
-        }
-
-        friend bool operator!=(const AlignBuffer &a, const AlignBuffer &b) { return !(a == b); }
-
-        friend bool operator<(const AlignBuffer &a, const AlignBuffer &b) {
-            return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
-        }
-
-        friend bool operator>(const AlignBuffer &a, const AlignBuffer &b) { return b < a; }
-        friend bool operator<=(const AlignBuffer &a, const AlignBuffer &b) { return !(a > b); }
-        friend bool operator>=(const AlignBuffer &a, const AlignBuffer &b) { return !(a < b); }
+    }
 
 
-        /// @brief Append a single element (copy).
-        void append(const T &t) {
-            ensure_capacity(1);
-            _buffer.data[_size] = t;
-            ++_size;
-        }
-
-        /// @brief Append a range of elements (copy).
-        void append(const T *array, size_t n) {
-            if (n == 0) return;
-            ensure_capacity(n);
-            std::memcpy(_buffer.data + _size, array, n * sizeof(T));
-            _size += n;
-        }
-
-        /// @brief Append a single element (move, same as copy for trivial types).
-        void append(T &&t) {
-            ensure_capacity(1);
-            _buffer.data[_size] = std::move(t);
-            ++_size;
-        }
-
-        /// @brief Append a span of elements.
-        void append(turbo::span<T> span) { append(span.data(), span.size()); }
-
-        /// @brief Remove the last `n` elements (no destructor needed).
-        void pop_back(size_t n = 1) noexcept {
-            if (n > _size) {
-                _size = 0;
+    template<typename T, size_t Alignment>
+    inline typename BufferBase<T, Alignment>::size_type
+    BufferBase<T, Alignment>::GetNewCapacity(size_type currentSize) {
+        // This function must return a value larger than currentSize.
+        if (currentSize > 0) {
+            if (currentSize < (std::numeric_limits<size_type>::max() / 2)) {
+                return 2 * currentSize;
             } else {
-                _size -= n;
+                KCHECK(currentSize < std::numeric_limits<size_type>::max()) <<
+                                 "Buffer growth will overflow the value of the capacity! This is extremely bad!";
+                return std::numeric_limits<size_type>::max();
+            }
+        } else {
+            return 1;
+        }
+    }
+
+
+    ///////////////////////////////////////////////////////////////////////
+    // Buffer
+    ///////////////////////////////////////////////////////////////////////
+
+    template<typename T, size_t Alignment>
+    inline Buffer<T, Alignment>::Buffer() noexcept
+        : base_type() {
+        // Empty
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline Buffer<T, Alignment>::Buffer(size_type n)
+        : base_type(n) {
+        if (n > 0) {
+            // For trivial types, value-initialization is equivalent to zero-initialization.
+            // memset is highly optimized by libc and often uses SIMD/vector instructions.
+            std::memset(static_cast<void*>(_begin), 0, n * sizeof(T));
+        }
+        _end = _begin + n;
+    }
+
+    template<typename T, size_t Alignment>
+    inline Buffer<T, Alignment>::Buffer(size_type n, const value_type &value)
+        : base_type(n) {
+        if (n > 0) {
+            // For trivial types, simple assignment is sufficient and highly optimizable.
+            // Modern compilers will vectorize this loop into SIMD instructions.
+            for (size_type i = 0; i < n; ++i) {
+                _begin[i] = value;
             }
         }
+        _end = _begin + n;
+    }
 
-        std::enable_if_t<std::is_same_v<char, T> || std::is_same_v<char16_t, T> || std::is_same_v<char32_t, T>, const T
-            *> stringify() {
-            if (_size == 0) return reinterpret_cast<const T *>(&kNuller);
-            reserve(_size +1);
-            _buffer.data[_size] = T{0};
-            return reinterpret_cast<const T *>(&_buffer.data[0]);
+
+    template<typename T, size_t Alignment>
+    inline Buffer<T, Alignment>::Buffer(const this_type &x)
+        : base_type(x.size()) {
+        const size_type n = x.size();
+        if (n > 0) {
+            std::memcpy(static_cast<void*>(_begin),
+                        static_cast<const void*>(x._begin),
+                        n * sizeof(T));
+            _end = _begin + n;
+        }
+    }
+
+    template<typename T, size_t Alignment>
+    inline Buffer<T, Alignment>::Buffer(this_type &&x) noexcept {
+        DoSwap(x);
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline Buffer<T, Alignment>::Buffer(std::initializer_list<value_type> ilist)
+        : base_type() {
+        DoInit(ilist.begin(), ilist.end(), std::false_type());
+    }
+
+
+    template<typename T, size_t Alignment>
+    template<typename InputIterator>
+    inline Buffer<T, Alignment>::Buffer(InputIterator first, InputIterator last)
+        : base_type() {
+        DoInit(first, last, std::is_integral<InputIterator>());
+    }
+
+    template<typename T, size_t Alignment>
+    inline Buffer<T, Alignment>::~Buffer() {
+        // The destructor becomes an empty operation, allowing the compiler
+        // to optimize away the loop entirely.
+    }
+
+    template<typename T, size_t Alignment>
+    typename Buffer<T, Alignment>::this_type &
+    Buffer<T, Alignment>::operator=(const this_type &x) {
+        if (this != &x) // If not assigning to self...
+        {
+            DoAssign<const_iterator, false>(x.begin(), x.end(), std::false_type());
         }
 
-        std::enable_if_t<std::is_same_v<char, T> || std::is_same_v<char16_t, T> || std::is_same_v<char32_t, T>, std::basic_string_view<T>> to_string_view() const {
-            if (_size == 0) return  {};
-            return {reinterpret_cast<const T *>(&_buffer.data[0]), _size};
+        return *this;
+    }
+
+
+    template<typename T, size_t Alignment>
+    typename Buffer<T, Alignment>::this_type &
+    Buffer<T, Alignment>::operator=(std::initializer_list<value_type> ilist) {
+        typedef typename std::initializer_list<value_type>::iterator InputIterator;
+        typedef typename std::iterator_traits<InputIterator>::iterator_category IC;
+        DoAssignFromIterator<InputIterator, false>(ilist.begin(), ilist.end(), IC());
+        // initializer_list has const elements and so we can't move from them.
+        return *this;
+    }
+
+
+    template<typename T, size_t Alignment>
+    typename Buffer<T, Alignment>::this_type &
+    Buffer<T, Alignment>::operator=(this_type &&x) {
+        if (this != &x) {
+            DoClearCapacity();
+            // To consider: Are we really required to clear here? x is going away soon and will clear itself in its dtor.
+            swap(x);
+            // member swap handles the case that x has a different allocator than our allocator by doing a copy.
+        }
+        return *this;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline void Buffer<T, Alignment>::assign(size_type n, const value_type &value) {
+        DoAssignValues(n, value);
+    }
+
+
+    template<typename T, size_t Alignment>
+    template<typename InputIterator>
+    inline void Buffer<T, Alignment>::assign(InputIterator first, InputIterator last) {
+        // It turns out that the C++ std::Buffer<int, int> specifies a two argument
+        // version of assign that takes (int size, int value). These are not iterators,
+        // so we need to do a template compiler trick to do the right thing.
+        DoAssign<InputIterator, false>(first, last, std::is_integral<InputIterator>());
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline void Buffer<T, Alignment>::assign(std::initializer_list<value_type> ilist) {
+        typedef typename std::initializer_list<value_type>::iterator InputIterator;
+        typedef typename std::iterator_traits<InputIterator>::iterator_category IC;
+        DoAssignFromIterator<InputIterator, false>(ilist.begin(), ilist.end(), IC());
+        // initializer_list has const elements and so we can't move from them.
+    }
+
+    template<typename T, size_t Alignment>
+    inline void Buffer<T, Alignment>::assign(const T* data, size_type n) {
+        if (n > static_cast<size_type>(_capacity_end - _begin)) {
+            // Optimization: For assign, we don't need to preserve old data,
+            // so we can just reallocate or use a specialized path.
+            set_capacity(n);
         }
 
-        std::enable_if_t<std::is_same_v<char, T> || std::is_same_v<char16_t, T> || std::is_same_v<char32_t, T>, std::basic_string<T>> to_string() const {
-            if (_size == 0) return  {};
-            return {reinterpret_cast<const T *>(&_buffer.data[0]), _size};
+        if (n > 0) {
+            std::memcpy(static_cast<void*>(_begin), static_cast<const void*>(data), n * sizeof(T));
+        }
+        _end = _begin + n;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::iterator
+    Buffer<T, Alignment>::begin() noexcept {
+        return _begin;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::const_iterator
+    Buffer<T, Alignment>::begin() const noexcept {
+        return _begin;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::const_iterator
+    Buffer<T, Alignment>::cbegin() const noexcept {
+        return _begin;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::iterator
+    Buffer<T, Alignment>::end() noexcept {
+        return _end;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::const_iterator
+    Buffer<T, Alignment>::end() const noexcept {
+        return _end;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::const_iterator
+    Buffer<T, Alignment>::cend() const noexcept {
+        return _end;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::reverse_iterator
+    Buffer<T, Alignment>::rbegin() noexcept {
+        return reverse_iterator(_end);
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::const_reverse_iterator
+    Buffer<T, Alignment>::rbegin() const noexcept {
+        return const_reverse_iterator(_end);
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::const_reverse_iterator
+    Buffer<T, Alignment>::crbegin() const noexcept {
+        return const_reverse_iterator(_end);
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::reverse_iterator
+    Buffer<T, Alignment>::rend() noexcept {
+        return reverse_iterator(_begin);
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::const_reverse_iterator
+    Buffer<T, Alignment>::rend() const noexcept {
+        return const_reverse_iterator(_begin);
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::const_reverse_iterator
+    Buffer<T, Alignment>::crend() const noexcept {
+        return const_reverse_iterator(_begin);
+    }
+
+
+    template<typename T, size_t Alignment>
+    bool Buffer<T, Alignment>::empty() const noexcept {
+        return (_begin == _end);
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::size_type
+    Buffer<T, Alignment>::size() const noexcept {
+        return (size_type) (_end - _begin);
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::size_type
+    Buffer<T, Alignment>::capacity() const noexcept {
+        return (size_type) (_capacity_end - _begin);
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline void Buffer<T, Alignment>::resize(size_type n, const value_type &value) {
+        const size_type nPrevSize = static_cast<size_type>(_end - _begin);
+
+        if (n > nPrevSize) {
+            // Upsize: Use the optimized trivial fill path.
+            do_insert_values_end(n - nPrevSize, value);
+        } else {
+            // Downsize: Trivial elements require no formal destruction.
+            // This reduces the operation to a simple pointer assignment (O(1)).
+            _end = _begin + n;
+        }
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline void Buffer<T, Alignment>::resize(size_type n) {
+        const size_type nPrevSize = static_cast<size_type>(_end - _begin);
+
+        if (n > nPrevSize) {
+            // Upsize: Insert (n - nPrevSize) default-initialized elements.
+            // For trivial types, this is optimized to std::memset(..., 0, ...).
+            do_insert_values_end(n - nPrevSize);
+        } else {
+            // Downsize: No destruction needed for trivial types.
+            // We simply move the end pointer, making it O(1).
+            _end = _begin + n;
+        }
+    }
+
+    template<typename T, size_t Alignment>
+    void Buffer<T, Alignment>::reserve(size_type n) {
+        // If the user wants to reduce the reserved memory, there is the set_capacity function.
+        if (n > size_type(_capacity_end - _begin)) // If n > capacity ...
+            DoGrow(n);
+    }
+
+
+    template<typename T, size_t Alignment>
+    void Buffer<T, Alignment>::set_capacity(size_type n) {
+        const size_type nPrevSize = static_cast<size_type>(_end - _begin);
+
+        if (n == npos || n <= nPrevSize) {
+            // --- Case 1: Shrink or same size ---
+            if (n == 0) {
+                clear();
+            } else if (n < nPrevSize) {
+                // For trivial types, resize(n) just moves the _end pointer.
+                _end = _begin + n;
+            }
+            shrink_to_fit();
+        } else {
+            // --- Case 2: Expand capacity ---
+            auto nNewCapacity = n;
+            // Note: For trivial types, should_move_tag() is equivalent to bitwise copy.
+            pointer const pNewData = do_realloc(&nNewCapacity, _begin, _end);
+
+
+            do_free(_begin, static_cast<size_type>(_capacity_end - _begin));
+
+            _begin = pNewData;
+            _end = pNewData + nPrevSize;
+            _capacity_end = _begin + nNewCapacity;
+        }
+    }
+
+    template<typename T, size_t Alignment>
+    inline void Buffer<T, Alignment>::shrink_to_fit() {
+        // This is the simplest way to accomplish this, and it is as efficient as any other.
+        auto n = do_allocate_size(size());
+        if (n < capacity()) {
+            this_type temp = this_type(std::move_iterator<iterator>(begin()), std::move_iterator<iterator>(end()));
+
+            // Call DoSwap() rather than swap() as we know our allocators match and we don't want to invoke the code path
+            // handling non matching allocators as it imposes additional restrictions on the type of T to be copyable
+            DoSwap(temp);
+        }
+    }
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::pointer
+    Buffer<T, Alignment>::data() noexcept {
+        return _begin;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::const_pointer
+    Buffer<T, Alignment>::data() const noexcept {
+        return _begin;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::reference
+    Buffer<T, Alignment>::operator[](size_type n) {
+        // We allow the user to use a reference to v[0] of an empty container. But this was merely grandfathered in and ideally we shouldn't allow such access to [0].
+        //if (TURBO_UNLIKELY((n != 0) && (n >= (static_cast<size_type>(_end - _begin)))))
+        //    KCHECK(false) << "Buffer::operator[] -- out of range";
+
+        return *(_begin + n);
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::const_reference
+    Buffer<T, Alignment>::operator[](size_type n) const {
+        //if (TURBO_UNLIKELY(n >= (static_cast<size_type>(_end - _begin))))
+        //   KCHECK(false) << "Buffer::operator[] -- out of range";
+
+        return *(_begin + n);
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::reference
+    Buffer<T, Alignment>::at(size_type n) {
+        // The difference between at() and operator[] is it signals
+        // the requested position is out of range by throwing an
+        // out_of_range exception.
+
+        if (TURBO_UNLIKELY(n >= (static_cast<size_type>(_end - _begin))))
+            KCHECK(false) << "Buffer::at -- out of range";
+        return *(_begin + n);
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::const_reference
+    Buffer<T, Alignment>::at(size_type n) const {
+        if (TURBO_UNLIKELY(n >= (static_cast<size_type>(_end - _begin))))
+            KCHECK(false) << "Buffer::at -- out of range";
+
+        return *(_begin + n);
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::reference
+    Buffer<T, Alignment>::front() {
+        if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
+            // We don't allow the user to reference an empty container.
+            KCHECK(false) << "Buffer::front -- empty Buffer";
+
+        return *_begin;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::const_reference
+    Buffer<T, Alignment>::front() const {
+        if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
+            // We don't allow the user to reference an empty container.
+            KCHECK(false) << "Buffer::front -- empty Buffer";
+
+        return *_begin;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::reference
+    Buffer<T, Alignment>::back() {
+        // if _end is nullptr the expression (_end - 1) is undefined behaviour.
+        // any use of back() with an empty Buffer is thus conceptually wrong.
+        if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
+            KCHECK(false) << "Buffer::back -- empty Buffer";
+
+        return *(_end - 1);
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::const_reference
+    Buffer<T, Alignment>::back() const {
+        // if _end is nullptr the expression (_end - 1) is undefined behaviour.
+        // any use of back() with an empty Buffer is thus conceptually wrong.
+        if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
+            KCHECK(false) << "Buffer::back -- empty Buffer";
+
+        return *(_end - 1);
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline void Buffer<T, Alignment>::append(value_type value) {
+        if (TURBO_LIKELY(_end < _capacity_end)) {
+            *_end++ = value;
+        } else {
+            do_insert_value_end(value);
+        }
+    }
+
+    template<typename T, size_t Alignment>
+    void Buffer<T, Alignment>::append_confident(value_type value) {
+        *_end++ = value;
+    }
+
+    template<typename T, size_t Alignment>
+    void Buffer<T, Alignment>::append(const value_type *value, size_type size) {
+        if (TURBO_UNLIKELY(size == 0)) return;
+
+        // Check if we need to expand the buffer
+        if (TURBO_UNLIKELY(size > static_cast<size_type>(_capacity_end - _end))) {
+            reserve(this->size() + size);
         }
 
-        turbo::span<const T> to_span() const {
-            if (_size == 0) return {};
-            return {reinterpret_cast<const T *>(&_buffer.data[0]), _size};
+        // Perform bitwise copy for trivial types
+        std::memcpy(static_cast<void *>(_end), static_cast<const void *>(value), size * sizeof(T));
+        _end += size;
+    }
+
+    template<typename T, size_t Alignment>
+    void Buffer<T, Alignment>::append_confident(const value_type *value, size_type size) {
+        if (TURBO_UNLIKELY(size == 0)) return;
+
+        // Direct memcpy without any bounds or capacity logic.
+        // Maximize throughput for pre-reserved ingestion.
+        std::memcpy(static_cast<void *>(_end), static_cast<const void *>(value), size * sizeof(T));
+        _end += size;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::reference
+    Buffer<T, Alignment>::append() {
+        if (_end < _capacity_end)
+            *_end++ = T{};
+        else
+            do_insert_value_end();
+
+        return *(_end - 1); // Same as return back();
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline void *Buffer<T, Alignment>::append_uninitialized() {
+        if (_end == _capacity_end) {
+            const size_type nPrevSize = size_type(_end - _begin);
+            const size_type nNewCapacity = GetNewCapacity(nPrevSize);
+            DoGrow(nNewCapacity);
         }
 
-        turbo::span<T> mutable_span() {
-            if (_size == 0) return {};
-            return {reinterpret_cast<T *>(&_buffer.data[0]), _size};
+        return _end++;
+    }
+
+    template<typename T, size_t Alignment>
+    [[nodiscard]] inline bool Buffer<T, Alignment>::is_stringify() const noexcept {
+        // Condition 1: Type size check. Supports char, char16_t, char32_t, etc.
+        // Condition 2: Capacity check. Ensures there's a slot for '\0' beyond _end.
+        if constexpr (sizeof(T) <= 4) {
+            return (_capacity_end > _end);
+        }
+        return false;
+    }
+
+    template<typename T, size_t Alignment>
+    inline void Buffer<T, Alignment>::pop_back() {
+        if (TURBO_UNLIKELY(_end <= _begin))
+            KCHECK(false) << "Buffer::pop_back -- empty Buffer";
+
+
+        --_end;
+        _end->~value_type();
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::iterator
+    Buffer<T, Alignment>::insert(const_iterator position, const value_type &value) {
+        if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
+            KCHECK(false) << "Buffer::insert -- invalid position";
+
+        // We implment a quick pathway for the case that the insertion position is at the end and we have free capacity for it.
+        const ptrdiff_t n = position - _begin; // Save this because we might reallocate.
+
+        if ((_end == _capacity_end) || (position != _end))
+            do_insert_value(position, value);
+        else {
+            *_end = value;
+            ++_end; // Increment this after the construction above in case the construction throws an exception.
         }
 
-    protected:
-        static constexpr uint64_t kNuller = '\0';
+        return _begin + n;
+    }
 
-    protected:
-        virtual void ensure_capacity(size_t extra) {
-            size_t needed = _size + extra;
-            if (needed <= capacity()) return;
-            // Growth policy: at least double, but never less than needed
-            size_t new_cap = std::max(capacity() * 2, needed);
-            _buffer.grow(new_cap - capacity());
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::iterator
+    Buffer<T, Alignment>::insert(const_iterator position, value_type &&value) {
+        return emplace(position, std::move(value));
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::iterator
+    Buffer<T, Alignment>::insert(const_iterator position, size_type n, const value_type &value) {
+        const ptrdiff_t p = position - _begin; // Save this because we might reallocate.
+        DoInsertValues(position, n, value);
+        return _begin + p;
+    }
+
+
+    template<typename T, size_t Alignment>
+    template<typename InputIterator>
+    inline typename Buffer<T, Alignment>::iterator
+    Buffer<T, Alignment>::insert(const_iterator position, InputIterator first, InputIterator last) {
+        const ptrdiff_t n = position - _begin; // Save this because we might reallocate.
+        DoInsert(position, first, last, std::is_integral<InputIterator>());
+        return _begin + n;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::iterator
+    Buffer<T, Alignment>::insert(const_iterator position, std::initializer_list<value_type> ilist) {
+        const ptrdiff_t n = position - _begin; // Save this because we might reallocate.
+        DoInsert(position, ilist.begin(), ilist.end(), std::false_type());
+        return _begin + n;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::iterator
+    Buffer<T, Alignment>::erase(const_iterator position) {
+        if (TURBO_UNLIKELY((position < _begin) || (position >= _end)))
+            KCHECK(false) << "Buffer::erase -- invalid position";
+
+        // C++11 stipulates that position is const_iterator, but the return value is iterator.
+        iterator destPosition = const_cast<value_type *>(position);
+
+        if ((position + 1) < _end)
+            std::move(destPosition + 1, _end, destPosition);
+        --_end;
+        _end->~value_type();
+        return destPosition;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::iterator
+    Buffer<T, Alignment>::erase(const_iterator first, const_iterator last) {
+        if (TURBO_UNLIKELY((first < _begin) || (first > _end) || (last < _begin) || (last > _end) || (last < first)))
+            KCHECK(false) << "Buffer::erase -- invalid position";
+
+        if (first != last) {
+            iterator const dest = const_cast<value_type *>(first);
+            iterator const src = const_cast<value_type *>(last);
+            const size_type num_to_move = static_cast<size_type>(_end - src);
+
+            if (num_to_move > 0) {
+                // Use memmove to safely handle potential (though unlikely here) overlap
+                // and perform high-speed bitwise copy for trivial types.
+                std::memmove(static_cast<void *>(dest), static_cast<const void *>(src), num_to_move * sizeof(T));
+            }
+
+            // T is trivial, so we simply adjust the end pointer without calling destroy.
+            _end -= (last - first);
         }
 
-    protected:
-        BasicBuffer<T, Alignment> _buffer;
-        size_t _size{0};
-    };
+        return const_cast<value_type *>(first);
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::iterator
+    Buffer<T, Alignment>::erase_unsorted(const_iterator position) {
+        if (TURBO_UNLIKELY((position < _begin) || (position >= _end)))
+            KCHECK(false) << "Buffer::erase -- invalid position";
+
+        // C++11 stipulates that position is const_iterator, but the return value is iterator.
+        iterator destPosition = const_cast<value_type *>(position);
+        *destPosition = std::move(*(_end - 1));
+
+        // pop_back();
+        --_end;
+        _end->~value_type();
+
+        return destPosition;
+    }
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::iterator Buffer<T, Alignment>::erase_first(const T &value) {
+        static_assert(has_equality_operator<T>::value, "T must be comparable");
+
+        iterator it = std::find(begin(), end(), value);
+
+        if (it != end())
+            return erase(it);
+        else
+            return it;
+    }
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::iterator
+    Buffer<T, Alignment>::erase_first_unsorted(const T &value) {
+        static_assert(has_equality_operator<T>::value, "T must be comparable");
+
+        iterator it = std::find(begin(), end(), value);
+
+        if (it != end())
+            return erase_unsorted(it);
+        else
+            return it;
+    }
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::reverse_iterator
+    Buffer<T, Alignment>::erase_last(const T &value) {
+        static_assert(has_equality_operator<T>::value, "T must be comparable");
+
+        reverse_iterator it = std::find(rbegin(), rend(), value);
+
+        if (it != rend())
+            return erase(it);
+        else
+            return it;
+    }
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::reverse_iterator
+    Buffer<T, Alignment>::erase_last_unsorted(const T &value) {
+        static_assert(has_equality_operator<T>::value, "T must be comparable");
+
+        reverse_iterator it = std::find(rbegin(), rend(), value);
+
+        if (it != rend())
+            return erase_unsorted(it);
+        else
+            return it;
+    }
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::reverse_iterator
+    Buffer<T, Alignment>::erase(const_reverse_iterator position) {
+        return reverse_iterator(erase((++position).base()));
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::reverse_iterator
+    Buffer<T, Alignment>::erase(const_reverse_iterator first, const_reverse_iterator last) {
+        // Version which erases in order from first to last.
+        // difference_type i(first.base() - last.base());
+        // while(i--)
+        //     first = erase(first);
+        // return first;
+
+        // Version which erases in order from last to first, but is slightly more efficient:
+        return reverse_iterator(erase(last.base(), first.base()));
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::reverse_iterator
+    Buffer<T, Alignment>::erase_unsorted(const_reverse_iterator position) {
+        return reverse_iterator(erase_unsorted((++position).base()));
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline void Buffer<T, Alignment>::clear() noexcept {
+        _end = _begin;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline void Buffer<T, Alignment>::reset_lose_memory() noexcept {
+        // The reset function is a special extension function which unilaterally
+        // resets the container to an empty state without freeing the memory of
+        // the contained objects. This is useful for very quickly tearing down a
+        // container built into scratch memory.
+        _begin = _end = _capacity_end = nullptr;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline void Buffer<T, Alignment>::swap(this_type &x) {
+        DoSwap(x);
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline typename Buffer<T, Alignment>::pointer
+    Buffer<T, Alignment>::do_realloc(size_type *newCapacity, const T* first, const T* last) {
+        // Allocate the new memory block. The actual capacity assigned is returned in newCapacity.
+        T *const p = do_allocate(newCapacity);
+
+        std::memcpy(static_cast<void*>(p),
+                  static_cast<const void*>(first),
+                  static_cast<size_type>(last - first) * sizeof(T));
+
+        return p;
+    }
+
+
+    template<typename T, size_t Alignment>
+    template<typename Integer>
+    inline void Buffer<T, Alignment>::DoInit(Integer n, Integer value, std::true_type) {
+        container_internal::AssertValueFitsInType<size_type>(
+            n, "Attempting to initialize a Buffer larger than can fit in a size_type!");
+
+        size_type count = static_cast<size_type>(n);
+        size_type nAllocatedCapacity = count;
+
+        // Allocate raw memory. do_allocate updates nAllocatedCapacity with actual size.
+        _begin = do_allocate(&nAllocatedCapacity);
+        _capacity_end = _begin + nAllocatedCapacity;
+        _end = _begin + count;
+
+        if (count > 0) {
+            // For trivial types, value-initialization is just a plain assignment.
+            // The compiler will splat 'value' into SIMD registers for high-speed filling.
+            const T val = static_cast<T>(value);
+            for (size_type i = 0; i < count; ++i) {
+                _begin[i] = val;
+            }
+        }
+    }
+
+    template<typename T, size_t Alignment>
+    template<typename InputIterator>
+    inline void Buffer<T, Alignment>::DoInit(InputIterator first, InputIterator last, std::false_type) {
+        typedef typename std::iterator_traits<InputIterator>::iterator_category IC;
+        DoInitFromIterator(first, last, IC());
+    }
+
+
+    template<typename T, size_t Alignment>
+    template<typename InputIterator>
+    inline void Buffer<T, Alignment>::DoInitFromIterator(InputIterator first, InputIterator last,
+                                                         std::input_iterator_tag) {
+        // To do: Use emplace_back instead of append(). Our emplace_back will work below without any ifdefs.
+        for (; first != last; ++first)
+            // InputIterators by definition actually only allow you to iterate through them once.
+            append(*first); // Thus the standard *requires* that we do this (inefficient) implementation.
+    } // Luckily, InputIterators are in practice almost never used, so this code will likely never get executed.
+
+
+    template<typename T, size_t Alignment>
+    template<typename ForwardIterator>
+    inline void Buffer<T, Alignment>::DoInitFromIterator(ForwardIterator first, ForwardIterator last,
+                                                         std::forward_iterator_tag) {
+        const auto d = std::distance(first, last);
+
+        container_internal::AssertValueFitsInType<size_type>(
+            d, "Attempting to initialize a Buffer larger than can fit in a size_type!");
+
+        const size_type n = static_cast<size_type>(d);
+        auto nn = n;
+        _begin = do_allocate(&nn);
+        _capacity_end = _begin + nn;
+        _end = _begin + n;
+
+        std::copy(first, last, _begin);
+    }
+
+
+    template<typename T, size_t Alignment>
+    template<typename Integer, bool bMove>
+    inline void Buffer<T, Alignment>::DoAssign(Integer n, Integer value, std::true_type) {
+        container_internal::AssertValueFitsInType<size_type>(
+            n, "Attempting to assign more values than can fit in a size_type!");
+        DoAssignValues(static_cast<size_type>(n), static_cast<value_type>(value));
+    }
+
+
+    template<typename T, size_t Alignment>
+    template<typename InputIterator, bool bMove>
+    inline void Buffer<T, Alignment>::DoAssign(InputIterator first, InputIterator last, std::false_type) {
+        typedef typename std::iterator_traits<InputIterator>::iterator_category IC;
+        DoAssignFromIterator<InputIterator, bMove>(first, last, IC());
+    }
+
+
+    template<typename T, size_t Alignment>
+    void Buffer<T, Alignment>::DoAssignValues(size_type n, const value_type &value) {
+        const size_type nCapacity = static_cast<size_type>(_capacity_end - _begin);
+
+        if (n > nCapacity) {
+            // --- Path 1: Insufficient capacity ---
+            // For trivial types, we don't need to preserve old data.
+            // Just free and reallocate to the exact or grown size.
+            size_type nNewCapacity = n;
+            pointer const pNewData = do_allocate(&nNewCapacity);
+
+            // Skip std::destroy for old elements as they are trivial
+            do_free(_begin, nCapacity);
+
+            _begin = pNewData;
+            _end = _begin + n;
+            _capacity_end = _begin + nNewCapacity;
+
+            // Perform bulk fill on the new memory
+            for (size_type i = 0; i < n; ++i) {
+                _begin[i] = value;
+            }
+        } else {
+            // --- Path 2: Fits in current capacity ---
+            // No need to distinguish between std::fill and uninitialized_fill.
+            // Direct assignment is sufficient for the entire range [0, n).
+            for (size_type i = 0; i < n; ++i) {
+                _begin[i] = value;
+            }
+
+            // Simply update the end pointer. No destruction needed for the tail.
+            _end = _begin + n;
+        }
+    }
+
+
+    template<typename T, size_t Alignment>
+    template<typename InputIterator, bool bMove>
+    void Buffer<T, Alignment>::DoAssignFromIterator(InputIterator first, InputIterator last, std::input_iterator_tag) {
+        iterator position(_begin);
+
+        while ((position != _end) && (first != last)) {
+            *position = *first;
+            ++first;
+            ++position;
+        }
+        if (first == last)
+            erase(position, _end);
+        else
+            insert(_end, first, last);
+    }
+
+
+    template<typename T, size_t Alignment>
+    template<typename RandomAccessIterator, bool bMove>
+    void Buffer<T, Alignment>::DoAssignFromIterator(RandomAccessIterator first, RandomAccessIterator last,
+                                                    std::random_access_iterator_tag) {
+        const auto d = std::distance(first, last);
+        container_internal::AssertValueFitsInType<size_type>(d, "Size overflow");
+        const size_type n = static_cast<size_type>(d);
+
+        const size_type nCapacity = static_cast<size_type>(_capacity_end - _begin);
+
+        if (n > nCapacity) {
+            // --- Path 1: Expansion needed ---
+            auto nNewCapacity = n;
+            // For trivial types, we don't need to preserve old data during assign,
+            // so we can just allocate new and free old.
+            // Or use do_realloc if it's optimized for pure allocation + copy.
+            pointer const pNewData = do_allocate(&nNewCapacity);
+
+            // Copy new data directly into the fresh buffer
+            std::copy(first, last, pNewData);
+
+            // No need to destroy trivial elements in old buffer
+            do_free(_begin, nCapacity);
+
+            _begin = pNewData;
+            _end = _begin + n;
+            _capacity_end = _begin + nNewCapacity;
+        } else {
+            // --- Path 2: Fits in current capacity ---
+            // For trivial types, "uninitialized" memory is just raw memory.
+            // We can treat [begin, end) and [end, capacity_end) as the same.
+            std::copy(first, last, _begin);
+
+            // Simply update the end pointer. No destruction needed for the "tail".
+            _end = _begin + n;
+        }
+    }
+
+
+    template<typename T, size_t Alignment>
+    template<typename Integer>
+    inline void Buffer<T, Alignment>::DoInsert(const_iterator position, Integer n, Integer value, std::true_type) {
+        container_internal::AssertValueFitsInType<size_type>(
+            n, "Attempting to insert more elements than can can fit in size_type!");
+
+        DoInsertValues(position, static_cast<size_type>(n), static_cast<value_type>(value));
+    }
+
+
+    template<typename T, size_t Alignment>
+    template<typename InputIterator>
+    inline void Buffer<T, Alignment>::DoInsert(const_iterator position, InputIterator first, InputIterator last,
+                                               std::false_type) {
+        typedef typename std::iterator_traits<InputIterator>::iterator_category IC;
+        DoInsertFromIterator(position, first, last, IC());
+    }
+
+
+    template<typename T, size_t Alignment>
+    template<typename InputIterator>
+    inline void Buffer<T, Alignment>::DoInsertFromIterator(const_iterator position, InputIterator first,
+                                                           InputIterator last, std::input_iterator_tag) {
+        for (; first != last; ++first, ++position)
+            position = insert(position, *first);
+    }
+
+
+    template<typename T, size_t Alignment>
+    template<typename BidirectionalIterator>
+    void Buffer<T, Alignment>::DoInsertFromIterator(const_iterator position, BidirectionalIterator first,
+                                                    BidirectionalIterator last, std::bidirectional_iterator_tag) {
+        if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
+            KCHECK(false) << "Buffer::insert -- invalid position";
+
+        if (first == last) return;
+
+        iterator destPosition = const_cast<value_type *>(position);
+        const auto d = std::distance(first, last);
+        container_internal::AssertValueFitsInType<size_type>(d, "Size overflow");
+        const size_type n = static_cast<size_type>(d);
+
+        const size_type nPosIndex = static_cast<size_type>(destPosition - _begin);
+        const size_type nFreeSpace = static_cast<size_type>(_capacity_end - _end);
+
+        if (n <= nFreeSpace) {
+            // --- In-place Path ---
+            const size_type nSuffixSize = static_cast<size_type>(_end - destPosition);
+
+            if (nSuffixSize > 0) {
+                // Shift suffix to the right by n positions.
+                // Use memmove because source and destination overlap.
+                std::memmove(static_cast<void *>(destPosition + n),
+                             static_cast<const void *>(destPosition),
+                             nSuffixSize * sizeof(T));
+            }
+
+            // Copy new data into the created gap.
+            std::copy(first, last, destPosition);
+            _end += n;
+        } else {
+            // --- Reallocation Path ---
+            const size_type nPrevSize = static_cast<size_type>(_end - _begin);
+            const size_type nGrowCapacity = GetNewCapacity(nPrevSize);
+            KCHECK(nPrevSize <= std::numeric_limits<size_type>::max() - n) << "Size overflow";
+
+            size_type nNewCapacity = std::max(nGrowCapacity, nPrevSize + n);
+            pointer const pNewData = do_allocate(&nNewCapacity);
+
+            // 1. Relocate prefix: [begin, position)
+            if (nPosIndex > 0) {
+                std::memcpy(static_cast<void *>(pNewData),
+                            static_cast<const void *>(_begin),
+                            nPosIndex * sizeof(T));
+            }
+
+            // 2. Copy source range into the middle: [first, last)
+            std::copy(first, last, pNewData + nPosIndex);
+
+            // 3. Relocate suffix: [position, end)
+            const size_type nSuffixSize = nPrevSize - nPosIndex;
+            if (nSuffixSize > 0) {
+                std::memcpy(static_cast<void *>(pNewData + nPosIndex + n),
+                            static_cast<const void *>(_begin + nPosIndex),
+                            nSuffixSize * sizeof(T));
+            }
+
+            // 4. Cleanup old memory without calling destructors.
+            do_free(_begin, static_cast<size_type>(_capacity_end - _begin));
+
+            _begin = pNewData;
+            _end = pNewData + nPrevSize + n;
+            _capacity_end = pNewData + nNewCapacity;
+        }
+    }
+
+
+    template<typename T, size_t Alignment>
+    void Buffer<T, Alignment>::DoInsertValues(const_iterator position, size_type n, const value_type &value) {
+        if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
+            KCHECK(false) << "Buffer::insert -- invalid position";
+
+        if (n == 0) return;
+
+        iterator destPosition = const_cast<value_type *>(position);
+        const size_type nPosIndex = static_cast<size_type>(destPosition - _begin);
+        const size_type nFreeSpace = static_cast<size_type>(_capacity_end - _end);
+
+        if (n <= nFreeSpace) {
+            // --- In-place Path ---
+            const value_type temp = value; // Capture value in case it's from within the buffer
+            const size_type num_to_move = static_cast<size_type>(_end - destPosition);
+
+            if (num_to_move > 0) {
+                // Shift existing elements to the right to make room for n new elements
+                std::memmove(static_cast<void *>(destPosition + n),
+                             static_cast<const void *>(destPosition),
+                             num_to_move * sizeof(T));
+            }
+
+            // Fill the created gap with the value
+            for (size_type i = 0; i < n; ++i) {
+                destPosition[i] = temp;
+            }
+            _end += n;
+        } else {
+            // --- Reallocation Path ---
+            const size_type nPrevSize = static_cast<size_type>(_end - _begin);
+            const size_type nGrowCapacity = GetNewCapacity(nPrevSize);
+
+            KCHECK(nPrevSize <= std::numeric_limits<size_type>::max() - n) << "Size overflow";
+
+            size_type nNewCapacity = std::max(nGrowCapacity, nPrevSize + n);
+            pointer const pNewData = do_allocate(&nNewCapacity);
+
+            // 1. Relocate the prefix [begin, position)
+            if (nPosIndex > 0) {
+                std::memcpy(static_cast<void *>(pNewData),
+                            static_cast<const void *>(_begin),
+                            nPosIndex * sizeof(T));
+            }
+
+            // 2. Fill the new n elements at pNewData + nPosIndex
+            pointer pInsertPos = pNewData + nPosIndex;
+            for (size_type i = 0; i < n; ++i) {
+                pInsertPos[i] = value;
+            }
+
+            // 3. Relocate the suffix [position, end)
+            const size_type nSuffixSize = nPrevSize - nPosIndex;
+            if (nSuffixSize > 0) {
+                std::memcpy(static_cast<void *>(pInsertPos + n),
+                            static_cast<const void *>(_begin + nPosIndex),
+                            nSuffixSize * sizeof(T));
+            }
+
+            // 4. Free old storage. No destruction required for trivial types.
+            do_free(_begin, static_cast<size_type>(_capacity_end - _begin));
+
+            _begin = pNewData;
+            _end = pNewData + nPrevSize + n;
+            _capacity_end = pNewData + nNewCapacity;
+        }
+    }
+
+    template<typename T, size_t Alignment>
+    void Buffer<T, Alignment>::DoClearCapacity()
+    // This function exists because set_capacity() currently indirectly requires value_type to be default-constructible,
+    {
+        // and some functions that need to clear our capacity (e.g. operator=) aren't supposed to require default-constructibility.
+        clear();
+        this_type temp(std::move(*this)); // This is the simplest way to accomplish this,
+        swap(temp); // and it is as efficient as any other.
+    }
+
+
+    template<typename T, size_t Alignment>
+    void Buffer<T, Alignment>::DoGrow(size_type newCapacity) {
+        // Allocate new memory block
+        pointer const pNewData = do_allocate(&newCapacity);
+        const size_type nPrevSize = static_cast<size_type>(_end - _begin);
+
+        if (nPrevSize > 0) {
+            // For trivial types, relocation is a simple bitwise copy.
+            std::memcpy(static_cast<void *>(pNewData),
+                        static_cast<const void *>(_begin),
+                        nPrevSize * sizeof(T));
+        }
+
+        // Free the old memory block.
+        do_free(_begin, static_cast<size_type>(_capacity_end - _begin));
+
+        // Update container_internal state pointers
+        _begin = pNewData;
+        _end = pNewData + nPrevSize;
+        _capacity_end = pNewData + newCapacity;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline void Buffer<T, Alignment>::DoSwap(this_type &x) {
+        std::swap(_begin, x._begin);
+        std::swap(_end, x._end);
+        std::swap(_capacity_end, x._capacity_end);
+    }
+
+    // The code duplication between this and the version that takes no value argument and default constructs the values
+    // is unfortunate but not easily resolved without relying on C++11 perfect forwarding.
+    template<typename T, size_t Alignment>
+    void Buffer<T, Alignment>::do_insert_values_end(size_type n, const value_type &value) {
+        const size_type nPrevSize = static_cast<size_type>(_end - _begin);
+        const size_type nFreeSpace = static_cast<size_type>(_capacity_end - _end);
+
+        if (n > nFreeSpace) {
+            // --- Reallocation Path ---
+            const size_type nGrowCapacity = GetNewCapacity(nPrevSize);
+            KCHECK(nPrevSize <= std::numeric_limits<size_type>::max() - n) << "Size overflow";
+
+            size_type nNewCapacity = std::max(nGrowCapacity, nPrevSize + n);
+            pointer const pNewData = do_allocate(&nNewCapacity);
+
+            // 1. Move existing data: Trivial move is just a memcpy
+            if (nPrevSize > 0) {
+                std::memcpy(static_cast<void *>(pNewData), static_cast<const void *>(_begin), nPrevSize * sizeof(T));
+            }
+
+            // 2. Fill new data: Use a simple loop for value fill (compiler will optimize this)
+            pointer pInsertPos = pNewData + nPrevSize;
+            for (size_type i = 0; i < n; ++i) {
+                pInsertPos[i] = value;
+            }
+
+            // 3. Free old memory
+            do_free(_begin, static_cast<size_type>(_capacity_end - _begin));
+
+            // 4. Update pointers
+            _begin = pNewData;
+            _end = pNewData + nPrevSize + n;
+            _capacity_end = pNewData + nNewCapacity;
+        } else {
+            // --- In-place Path ---
+            // Just fill the existing free space
+            for (size_type i = 0; i < n; ++i) {
+                _end[i] = value;
+            }
+            _end += n;
+        }
+    }
+
+    template<typename T, size_t Alignment>
+    void Buffer<T, Alignment>::do_insert_values_end(size_type n) {
+        const size_type nPrevSize = static_cast<size_type>(_end - _begin);
+        const size_type nFreeSpace = static_cast<size_type>(_capacity_end - _end);
+
+        if (n > nFreeSpace) {
+            // --- Reallocation Path ---
+            const size_type nGrowCapacity = GetNewCapacity(nPrevSize);
+            KCHECK(nPrevSize <= std::numeric_limits<size_type>::max() - n) << "Size overflow";
+
+            size_type nNewCapacity = std::max(nGrowCapacity, nPrevSize + n);
+            pointer const pNewData = do_allocate(&nNewCapacity);
+
+            // 1. Relocate existing data using memcpy (Trivial move is a bitwise copy)
+            if (nPrevSize > 0) {
+                std::memcpy(static_cast<void *>(pNewData), static_cast<const void *>(_begin), nPrevSize * sizeof(T));
+            }
+
+            // 2. Zero-initialize the newly added elements
+            std::memset(static_cast<void *>(pNewData + nPrevSize), 0, n * sizeof(T));
+
+            // 3. Free old memory without calling destructors (T is trivial)
+            do_free(_begin, static_cast<size_type>(_capacity_end - _begin));
+
+            // 4. Update buffer state
+            _begin = pNewData;
+            _end = pNewData + nPrevSize + n;
+            _capacity_end = pNewData + nNewCapacity;
+        } else {
+            // --- In-place Path ---
+            // Efficiently zero-initialize trailing memory
+            std::memset(static_cast<void *>(_end), 0, n * sizeof(T));
+            _end += n;
+        }
+    }
+
+    template<typename T, size_t Alignment>
+    template<typename... Args>
+    void Buffer<T, Alignment>::do_insert_value(const_iterator position, Args &&... args) {
+        if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
+            KCHECK(false) << "Buffer::insert/emplace -- invalid position";
+
+        iterator destPosition = const_cast<value_type *>(position);
+        const size_type nPosIndex = static_cast<size_type>(destPosition - _begin);
+
+        if (_end != _capacity_end) {
+            // --- In-place Path ---
+            // 1. Capture the value first in case it's a reference to an element inside this buffer.
+            // For trivial types, this is just a stack copy.
+            value_type value(std::forward<Args>(args)...);
+
+            // 2. Shift elements to the right. Use memmove because ranges overlap.
+            const size_type num_to_move = static_cast<size_type>(_end - destPosition);
+            if (num_to_move > 0) {
+                std::memmove(static_cast<void *>(destPosition + 1),
+                             static_cast<const void *>(destPosition),
+                             num_to_move * sizeof(T));
+            }
+
+            // 3. Simple assignment is sufficient for trivial types.
+            *destPosition = value;
+            ++_end;
+        } else {
+            // --- Reallocation Path ---
+            const size_type nPrevSize = static_cast<size_type>(_end - _begin);
+            size_type nNewCapacity = GetNewCapacity(nPrevSize);
+            pointer const pNewData = do_allocate(&nNewCapacity);
+
+            // 1. Construct the new value at the target index in the new buffer.
+            // Using placement new here to handle the variadic args correctly.
+            ::new(static_cast<void *>(pNewData + nPosIndex)) T(std::forward<Args>(args)...);
+
+            // 2. Copy the prefix: [begin, position)
+            if (nPosIndex > 0) {
+                std::memcpy(static_cast<void *>(pNewData),
+                            static_cast<const void *>(_begin),
+                            nPosIndex * sizeof(T));
+            }
+
+            // 3. Copy the suffix: [position, end)
+            const size_type nSuffixSize = nPrevSize - nPosIndex;
+            if (nSuffixSize > 0) {
+                std::memcpy(static_cast<void *>(pNewData + nPosIndex + 1),
+                            static_cast<const void *>(_begin + nPosIndex),
+                            nSuffixSize * sizeof(T));
+            }
+
+            // 4. Free old memory. No destruction needed for trivial types.
+            do_free(_begin, static_cast<size_type>(_capacity_end - _begin));
+
+            _begin = pNewData;
+            _end = pNewData + nPrevSize + 1;
+            _capacity_end = pNewData + nNewCapacity;
+        }
+    }
+
+    // assumes _end == _capacity_end, ie. create a new array and move existing elements into it while inserting the new element at the end.
+    template<typename T, size_t Alignment>
+    template<typename... Args>
+    void Buffer<T, Alignment>::do_insert_value_end(Args &&... args) {
+        const size_type nPrevSize = static_cast<size_type>(_end - _begin);
+        size_type nNewCapacity = GetNewCapacity(nPrevSize);
+        pointer const pNewData = do_allocate(&nNewCapacity);
+
+        // 1. Construct the new element first at the new tail.
+        // This is safe even if 'args' references elements in the old [_begin, _end) range.
+        ::new(static_cast<void *>(pNewData + nPrevSize)) T(std::forward<Args>(args)...);
+
+        // 2. Relocate existing trivial data using memcpy.
+        if (nPrevSize > 0) {
+            std::memcpy(static_cast<void *>(pNewData),
+                        static_cast<const void *>(_begin),
+                        nPrevSize * sizeof(T));
+        }
+
+        // 3. Free old storage. Destructors are skipped for trivial types.
+        do_free(_begin, static_cast<size_type>(_capacity_end - _begin));
+
+        // 4. Update container_internal pointers.
+        _begin = pNewData;
+        _end = pNewData + nPrevSize + 1;
+        _capacity_end = pNewData + nNewCapacity;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline bool Buffer<T, Alignment>::validate() const noexcept {
+        if (_end < _begin)
+            return false;
+        if (_capacity_end < _end)
+            return false;
+        return true;
+    }
+
+    template<typename T, size_t Alignment>
+    void Buffer<T, Alignment>::bestow(T *data, size_type size, size_type capacity) noexcept {
+        // 1. Pre-condition: Buffer must be empty to avoid accidental data loss.
+        if (TURBO_UNLIKELY(_begin != nullptr || data == nullptr)) {
+            KCHECK(_begin == nullptr) << "Buffer::bestow -- buffer is not empty";
+            return;
+        }
+
+        // 2. Alignment check: Ensure the external pointer meets hardware/SIMD requirements.
+        KCHECK(reinterpret_cast<uintptr_t>(data) % Alignment == 0)
+            << "Buffer::bestow -- pointer is not aligned to " << Alignment;
+
+        // 3. Ownership transfer: Assign external pointers to internal state.
+        _begin = data;
+        _end = data + size;
+        _capacity_end = data + capacity;
+    }
+
+    template<typename T, size_t Alignment>
+    T *Buffer<T, Alignment>::seize(size_type *out_size, size_type *out_capacity) noexcept {
+        if (_begin == nullptr) {
+            return nullptr;
+        }
+        T *raw_ptr = _begin;
+
+        if (out_size) *out_size = static_cast<size_type>(_end - _begin);
+        if (out_capacity) *out_capacity = static_cast<size_type>(_capacity_end - _begin);
+
+        // Reset buffer to a safe, empty state without freeing memory
+        _begin = nullptr;
+        _end = nullptr;
+        _capacity_end = nullptr;
+
+        return raw_ptr;
+    }
+
+
+    ///////////////////////////////////////////////////////////////////////
+    // global operators
+    ///////////////////////////////////////////////////////////////////////
+
+    template<typename T, size_t Alignment>
+    inline bool operator==(const Buffer<T, Alignment> &a, const Buffer<T, Alignment> &b) {
+        return ((a.size() == b.size()) && std::equal(a.begin(), a.end(), b.begin()));
+    }
+
+    template<typename T, size_t Alignment>
+    inline bool operator!=(const Buffer<T, Alignment> &a, const Buffer<T, Alignment> &b) {
+        return ((a.size() != b.size()) || !std::equal(a.begin(), a.end(), b.begin()));
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline bool operator<(const Buffer<T, Alignment> &a, const Buffer<T, Alignment> &b) {
+        return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline bool operator>(const Buffer<T, Alignment> &a, const Buffer<T, Alignment> &b) {
+        return b < a;
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline bool operator<=(const Buffer<T, Alignment> &a, const Buffer<T, Alignment> &b) {
+        return !(b < a);
+    }
+
+
+    template<typename T, size_t Alignment>
+    inline bool operator>=(const Buffer<T, Alignment> &a, const Buffer<T, Alignment> &b) {
+        return !(a < b);
+    }
+
+    template<typename T, size_t Alignment>
+    inline void swap(Buffer<T, Alignment> &a, Buffer<T, Alignment> &b) noexcept {
+        a.swap(b);
+    }
+
+
+    ///////////////////////////////////////////////////////////////////////
+    // erase / erase_if
+    //
+    // https://en.cppreference.com/w/cpp/container/Buffer/erase2
+    ///////////////////////////////////////////////////////////////////////
+    template<class T, size_t Alignment, class Allocator, class U>
+    typename Buffer<T, Alignment>::size_type erase(Buffer<T, Alignment> &c, const U &value) {
+        // Erases all elements that compare equal to value from the container.
+        auto origEnd = c.end();
+        auto newEnd = std::remove(c.begin(), origEnd, value);
+        auto numRemoved = std::distance(newEnd, origEnd);
+        c.erase(newEnd, origEnd);
+
+        return static_cast<typename Buffer<T, Alignment>::size_type>(numRemoved);
+    }
+
+    template<class T, size_t Alignment, class Allocator, class Predicate>
+    typename Buffer<T, Alignment>::size_type erase_if(Buffer<T, Alignment> &c, Predicate predicate) {
+        // Erases all elements that satisfy the predicate pred from the container.
+        auto origEnd = c.end();
+        auto newEnd = std::remove_if(c.begin(), origEnd, predicate);
+        auto numRemoved = std::distance(newEnd, origEnd);
+        c.erase(newEnd, origEnd);
+
+
+        return static_cast<typename Buffer<T, Alignment>::size_type>(numRemoved);
+    }
+
+
+    ///////////////////////////////////////////////////////////////////////
+    // erase_unsorted
+    //
+    // This serves a similar purpose as erase above but with the difference
+    // that it doesn't preserve the relative order of what is left in the
+    // Buffer.
+    //
+    // Effects: Removes all elements equal to value from the Buffer while
+    // optimizing for speed with the potential reordering of elements as a
+    // side effect.
+    //
+    // Complexity: Linear
+    //
+    ///////////////////////////////////////////////////////////////////////
+    template<class T, size_t Alignment, class Allocator, class U>
+    typename Buffer<T, Alignment>::size_type erase_unsorted(Buffer<T, Alignment> &c, const U &value) {
+        auto itRemove = c.begin();
+        auto ritMove = c.rbegin();
+
+        while (true) {
+            // Find the next element that needs to be removed from the front
+            itRemove = std::find(itRemove, ritMove.base(), value);
+            if (itRemove == ritMove.base())
+                break;
+
+            // Find the next element that should NOT be removed from the back
+            ritMove = std::find_if(ritMove, std::make_reverse_iterator(itRemove),
+                                   [&value](const T &elem) { return !(elem == value); });
+
+            if (itRemove == ritMove.base())
+                break;
+
+            // For trivial types, simple assignment is as fast as move.
+            // We overwrite the 'to-be-removed' slot with a 'valid' element from the tail.
+            *itRemove = *ritMove;
+
+            ++itRemove;
+            ++ritMove;
+        }
+
+        // Number of elements to be removed is the distance from the new end to the old end.
+        auto numRemoved = std::distance(itRemove, c.end());
+
+        // Destructors are no-ops for trivial types, so we simply adjust the tail pointer.
+        c._end = itRemove;
+
+        return static_cast<typename Buffer<T, Alignment>::size_type>(numRemoved);
+    }
+
+    ///////////////////////////////////////////////////////////////////////
+    // erase_unsorted_if
+    //
+    // This serves a similar purpose as erase_if above but with the
+    // difference that it doesn't preserve the relative order of what is
+    // left in the Buffer.
+    //
+    // Effects: Removes all elements that return true for the predicate
+    // while optimizing for speed with the potential reordering of elements
+    // as a side effect.
+    //
+    // Complexity: Linear
+    //
+    ///////////////////////////////////////////////////////////////////////
+    template<class T, size_t Alignment, class Allocator, class Predicate>
+    typename Buffer<T, Alignment>::size_type erase_unsorted_if(Buffer<T, Alignment> &c, Predicate predicate) {
+        auto itRemove = c.begin();
+        auto ritMove = c.rbegin();
+
+        while (true) {
+            // Find the first element from the front that matches the predicate
+            itRemove = std::find_if(itRemove, ritMove.base(), predicate);
+            if (itRemove == ritMove.base())
+                break;
+
+            // Find the first element from the back that does NOT match the predicate
+            ritMove = std::find_if(ritMove, std::make_reverse_iterator(itRemove),
+                                   [&predicate](const T &elem) { return !predicate(elem); });
+
+            if (itRemove == ritMove.base())
+                break;
+
+            // Overwrite the element to be removed with a valid one from the tail
+            *itRemove = *ritMove;
+
+            ++itRemove;
+            ++ritMove;
+        }
+
+        // Calculate how many elements were logically removed
+        auto numRemoved = std::distance(itRemove, c.end());
+
+        // Update the end of the buffer. No destruction is necessary for trivial types.
+        c._end = itRemove;
+
+        return static_cast<typename Buffer<T, Alignment>::size_type>(numRemoved);
+    }
 } // namespace fermat

@@ -311,6 +311,32 @@ namespace fermat {
             return ptr;
         }
 
+        static size_t pooled_alloc_size(size_t n) {
+            if (n <= 64) {
+                return  kTinySize;
+            } else if (n <= kSmallSize) {
+               return  kSmallSize;
+            } else if (n <= kMediumSize) {
+                return kMediumSize;
+            } else if (n <= kBigSize) {
+                return kBigSize;
+            } else if (n <= kPageSize) {
+               return kPageSize;
+            } else {
+                size_t bytes;
+                if (!checked_muladd(&bytes, n, sizeof(sizeof(T)), 0UL)) {
+                    return std::numeric_limits<size_t>::max();
+                }
+                size_t nn;
+                if constexpr (Alignment > 0) {
+                    nn = AlignedMalloc<Alignment>::good_alloc_size(bytes);
+                } else {
+                    nn = Malloc::good_alloc_size(bytes);
+                }
+                return nn / sizeof(T);
+            }
+        }
+
         static void pooled_free(T *ptr, size_t n) {
             switch (n) {
                 case 0:
