@@ -18,11 +18,10 @@
 #include <string>
 #include <vector>
 #include <fermat/memory/allocator.h>
-
+#include <fermat/container/traits.h>
 /// fermat/container/stl.h
 
 namespace fermat {
-
     /// string
     template<typename Char, size_t Alignment = kDefaultAlignedSize>
     using AlignedBasicString = std::basic_string<Char, std::char_traits<Char>, AlignedAllocator<Char, Alignment> >;
@@ -34,11 +33,41 @@ namespace fermat {
     using AlignedVector = std::vector<T, AlignedAllocator<T, Alignment> >;
 
 
+    template<size_t Alignment>
+    struct is_contiguous_string_visitor<AlignedString<Alignment> > : std::true_type {
+        static constexpr size_t kAlignment = Alignment;
+    };
+
+    template<size_t Alignment>
+    struct is_contiguous_string_receiver<AlignedString<Alignment> > : std::true_type {
+        static constexpr size_t kAlignment = 0;
+    };
+
+    template<size_t Alignment>
+    struct is_contiguous_string_visitor<AlignedVector<char, Alignment> > : std::true_type {
+        static constexpr size_t kAlignment = Alignment;
+    };
+
+    template<size_t Alignment>
+    struct is_contiguous_vector_receiver<AlignedVector<char, Alignment> > : std::true_type {
+        static constexpr size_t kAlignment = 0;
+    };
+
+    template<size_t Alignment>
+    struct is_contiguous_vector_receiver<AlignedVector<int8_t, Alignment> > : std::true_type {
+        static constexpr size_t kAlignment = 0;
+    };
+
+    template<size_t Alignment>
+    struct is_contiguous_vector_receiver<AlignedVector<uint8_t, Alignment> > : std::true_type {
+        static constexpr size_t kAlignment = 0;
+    };
+
 
     /// @brief Alias for std::basic_string using fermat::Allocator.
     /// @tparam Char Character type (e.g., char, wchar_t).
     template<typename Char>
-    using FermatBasicString = std::basic_string<Char, std::char_traits<Char>, Allocator<Char>>;
+    using FermatBasicString = std::basic_string<Char, std::char_traits<Char>, Allocator<Char> >;
 
     /// @brief Convenience alias for FermatBasicString<char>.
     using FermatString = FermatBasicString<char>;
@@ -46,9 +75,8 @@ namespace fermat {
     /// @brief Alias for std::vector using fermat::Allocator.
     /// @tparam T Element type.
     template<typename T>
-    using FermatBasicVector = std::vector<T, Allocator<T>>;
+    using FermatBasicVector = std::vector<T, Allocator<T> >;
 
     /// @brief Convenience alias for FermatBasicVector<char> (common byte buffer).
     using FermatVector = FermatBasicVector<char>;
-
 } // namespace fermat

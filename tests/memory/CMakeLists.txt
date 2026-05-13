@@ -78,22 +78,6 @@ kmcmake_cc_test(
 )
 
 kmcmake_cc_test(
-        NAME simple_resource_pool
-        MODULE mem
-        SOURCES
-        simple_resource_pool.cc
-        CXXOPTS
-        ${KMCMAKE_CXX_OPTIONS}
-        -fno-access-control
-        -Wno-unused-result
-        LINKS
-        fermat::fermat_static
-        GTest::gtest
-        GTest::gtest_main
-        ${KMCMAKE_DEPS_LINK}
-)
-
-kmcmake_cc_test(
         NAME resource_pool
         MODULE mem
         SOURCES

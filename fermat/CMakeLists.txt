@@ -17,8 +17,7 @@
 ###########################################################################
 ###kmcmake_example
 set(SRC
-        io/iobuf_base.cc
-        io/peeker.cc
+        io/iobuf.cc
         memory/arena.cc
         memory/resource_pool.cc
         fake.cc

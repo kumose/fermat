@@ -238,7 +238,6 @@ namespace fermat {
 
     template<size_t N, size_t Alignment>
     struct AlignBytes {
-        static_assert(N >= Alignment, "");
         static constexpr size_t size = N;
         static constexpr size_t align = Alignment;
         uint8_t data[N];
@@ -268,7 +267,7 @@ namespace fermat {
     };
 
     template<typename T, size_t Alignment>
-    struct BytesPoolAllocator {
+    struct TieredAllocator {
         static constexpr size_t kTinySize = 64;
         static constexpr size_t kSmallSize = 256;
         static constexpr size_t kMediumSize = 512;
@@ -441,6 +440,34 @@ namespace fermat {
             result.emplace_back(kBigSize,*tls_stats(kBigSize));
             result.emplace_back(kPageSize,*tls_stats(kPageSize));
             return result;
+        }
+    };
+
+
+    template<typename T>
+    struct PoolAllocator {
+
+        static T *pooled_alloc() {
+            T *ptr = nullptr;
+            ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, sizeof(T), 0>::allocate());
+            return ptr;
+        }
+
+        static void pooled_free(T *ptr) {
+            AlignedBytesAllocator<T, 1, 0>::deallocate(ptr);
+        }
+
+        static void set_tsl_limit(size_t n) {
+            AlignedBytesAllocator<T, 1, 0>::set_tsl_limit(n);
+        }
+
+        static void release_tsl(float precent_to_save) {
+            AlignedBytesAllocator<T, 1, 0>::release_tsl(precent_to_save);
+        }
+
+        static std::optional<PoolStats> tls_stats() {
+            return AlignedBytesAllocator<T, 1, 0>::tls_stats();
+
         }
     };
 

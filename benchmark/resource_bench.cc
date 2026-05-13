@@ -6,7 +6,6 @@
 #include <vector>
 
 #include <fermat/memory/resource_pool.h>
-#include <fermat/deprecate/resource_pool.h> // The sharded ResourcePool
 
 namespace fermat {
 
@@ -22,7 +21,6 @@ struct TestObject {
 
 // Type aliases for both pool implementations
 using ShardedPool = ResourcePool<TestObject, 8, 64, 1024, 64>;
-using SimplePool = SimpleResourcePool<TestObject, 32, 1024, 1024, 64>;
 
 // Helper to allocate and immediately release an object (warm up)
 template<typename Pool>
@@ -97,13 +95,6 @@ BENCHMARK_TEMPLATE(BM_MultiThread, ShardedPool)
     ->Unit(benchmark::kMicrosecond)
     ->UseRealTime();
 
-// Register benchmarks for SimplePool
-BENCHMARK_TEMPLATE(BM_AllocFree, SimplePool)->Unit(benchmark::kNanosecond);
-BENCHMARK_TEMPLATE(BM_GetPut, SimplePool)->Unit(benchmark::kNanosecond);
-BENCHMARK_TEMPLATE(BM_MultiThread, SimplePool)
-    ->Arg(1)->Arg(2)->Arg(4)->Arg(8)->Arg(16)
-    ->Unit(benchmark::kMicrosecond)
-    ->UseRealTime();
 
 // Optional: compare under contention by pinning threads to cores? Not needed.
 

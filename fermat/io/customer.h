@@ -18,14 +18,16 @@
 #include <turbo/container/span.h>
 #include <fermat/container/stl.h>
 #include <fermat/container/traits.h>
-#include <fermat/container/receiver.h>
+#include <fermat/io/receiver.h>
 #include <fermat/memory/allocator.h>
 #include <type_traits>
 #include <turbo/log/check.h>
 #include <turbo/log/logging.h>
 #include <turbo/utility/status.h>
-#include <fermat/io/iobuf_base.h>
+#include <fermat/io/iobuf.h>
 #include <fermat/io/peeker.h>
+
+#include "iobuf.h"
 
 namespace fermat {
 
@@ -39,7 +41,8 @@ namespace fermat {
         /// @param target The destination container (must satisfy ContainerTraits).
         /// @param n Maximum number of bytes to read.
         /// @return OkStatus on success (even if fewer than `n` bytes were read).
-        static turbo::Status custom(IOBufBase &source, Receiver &target, size_t n) {
+        template<size_t Alignment, size_t BlockSize>
+        static turbo::Status custom(IOBuf<Alignment, BlockSize> &source, Receiver &target, size_t n) {
             if (n == 0) return turbo::OkStatus();
 
             // Limit to what is actually available
@@ -52,7 +55,7 @@ namespace fermat {
             if (!status.ok()) return status;
 
             // Use Peeker for zero‑copy, cross‑block reading
-            Peeker peeker(&source);
+            Peeker<IOBuf<Alignment, BlockSize>> peeker(&source);
             size_t remaining = readable;
             KLOG(INFO) << remaining;
             while (remaining > 0) {
@@ -72,13 +75,14 @@ namespace fermat {
             return turbo::OkStatus();
         }
 
-        static turbo::Status custom_until(IOBufBase &source, Receiver &target, char c) {
+        template<size_t Alignment, size_t BlockSize>
+        static turbo::Status custom_until(IOBuf<Alignment, BlockSize> &source, Receiver &target, char c) {
             // Use Peeker for zero‑copy, cross‑block reading
-            Peeker peeker(&source);
+            Peeker<IOBuf<Alignment, BlockSize>> peeker(&source);
             auto offset = peeker.find_first_offset(c);
             auto n = source.size();
             auto cus_n = 0;
-            if (offset != Peeker::kNPos) {
+            if (offset != Peeker<IOBuf<Alignment, BlockSize>>::kNPos) {
                 n = offset;
                 cus_n = 1;
             }

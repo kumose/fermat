@@ -33,7 +33,7 @@
 namespace fermat {
     template<typename T, size_t Alignment>
     struct BufferBase {
-        using allocator_type = BytesPoolAllocator<T, Alignment>;
+        using allocator_type = TieredAllocator<T, Alignment>;
         typedef size_t size_type;
         typedef ptrdiff_t difference_type;
 
@@ -72,7 +72,6 @@ namespace fermat {
     ///
     template<typename T, size_t Alignment = 0>
     class Buffer : public BufferBase<T, Alignment> {
-
         // --- The Safety Lock ---
         // Since we've optimized all paths (append, resize, assign) to use bitwise
         // operations (memcpy/memset) and skipped destructor calls, we MUST
@@ -158,7 +157,7 @@ namespace fermat {
 
         void assign(std::initializer_list<value_type> ilist);
 
-        void assign(const T* data, size_type n);
+        void assign(const T *data, size_type n);
 
         iterator begin() noexcept;
 
@@ -302,7 +301,7 @@ namespace fermat {
 
 
         // Allocates a pointer of array count n and copy-constructs it with [first,last).
-        pointer do_realloc(size_type *newCapacity, const T* first, const T* last);
+        pointer do_realloc(size_type *newCapacity, const T *first, const T *last);
 
         template<typename Integer>
         void DoInit(Integer n, Integer value, std::true_type);
@@ -454,7 +453,7 @@ namespace fermat {
         if (n > 0) {
             // For trivial types, value-initialization is equivalent to zero-initialization.
             // memset is highly optimized by libc and often uses SIMD/vector instructions.
-            std::memset(static_cast<void*>(_begin), 0, n * sizeof(T));
+            std::memset(static_cast<void *>(_begin), 0, n * sizeof(T));
         }
         _end = _begin + n;
     }
@@ -478,8 +477,8 @@ namespace fermat {
         : base_type(x.size()) {
         const size_type n = x.size();
         if (n > 0) {
-            std::memcpy(static_cast<void*>(_begin),
-                        static_cast<const void*>(x._begin),
+            std::memcpy(static_cast<void *>(_begin),
+                        static_cast<const void *>(x._begin),
                         n * sizeof(T));
             _end = _begin + n;
         }
@@ -572,7 +571,7 @@ namespace fermat {
     }
 
     template<typename T, size_t Alignment>
-    inline void Buffer<T, Alignment>::assign(const T* data, size_type n) {
+    inline void Buffer<T, Alignment>::assign(const T *data, size_type n) {
         if (n > static_cast<size_type>(_capacity_end - _begin)) {
             // Optimization: For assign, we don't need to preserve old data,
             // so we can just reallocate or use a specialized path.
@@ -580,7 +579,7 @@ namespace fermat {
         }
 
         if (n > 0) {
-            std::memcpy(static_cast<void*>(_begin), static_cast<const void*>(data), n * sizeof(T));
+            std::memcpy(static_cast<void *>(_begin), static_cast<const void *>(data), n * sizeof(T));
         }
         _end = _begin + n;
     }
@@ -1173,13 +1172,13 @@ namespace fermat {
 
     template<typename T, size_t Alignment>
     inline typename Buffer<T, Alignment>::pointer
-    Buffer<T, Alignment>::do_realloc(size_type *newCapacity, const T* first, const T* last) {
+    Buffer<T, Alignment>::do_realloc(size_type *newCapacity, const T *first, const T *last) {
         // Allocate the new memory block. The actual capacity assigned is returned in newCapacity.
         T *const p = do_allocate(newCapacity);
 
-        std::memcpy(static_cast<void*>(p),
-                  static_cast<const void*>(first),
-                  static_cast<size_type>(last - first) * sizeof(T));
+        std::memcpy(static_cast<void *>(p),
+                    static_cast<const void *>(first),
+                    static_cast<size_type>(last - first) * sizeof(T));
 
         return p;
     }
@@ -1945,4 +1944,24 @@ namespace fermat {
 
         return static_cast<typename Buffer<T, Alignment>::size_type>(numRemoved);
     }
+
+    template<size_t Alignment>
+    struct is_contiguous_string_visitor<Buffer<char, Alignment> > : std::true_type {
+        static constexpr size_t kAlignment = Alignment;
+    };
+
+    template<size_t Alignment>
+    struct is_contiguous_vector_receiver<Buffer<char, Alignment> > : std::true_type {
+        static constexpr size_t kAlignment = 0;
+    };
+
+    template<size_t Alignment>
+    struct is_contiguous_vector_receiver<Buffer<int8_t, Alignment> > : std::true_type {
+        static constexpr size_t kAlignment = 0;
+    };
+
+    template<size_t Alignment>
+    struct is_contiguous_vector_receiver<Buffer<uint8_t, Alignment> > : std::true_type {
+        static constexpr size_t kAlignment = 0;
+    };
 } // namespace fermat

@@ -1,0 +1,363 @@
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:16:
+/home/jeff/github/kumose/fermat/fermat/container/vector_map.h: In instantiation of ‘std::pair<typename RandomAccessContainer::iterator, bool> fermat::VectorMap<Key, T, Compare, RandomAccessContainer>::insert(fermat::VectorMap<Key, T, Compare, RandomAccessContainer>::key_type&&) [with Key = int; T = fermat::TestObject; Compare = std::less<int>; RandomAccessContainer = fermat::Vector<std::pair<int, fermat::TestObject>, 0>; typename RandomAccessContainer::iterator = std::pair<int, fermat::TestObject>*; fermat::VectorMap<Key, T, Compare, RandomAccessContainer>::key_type = int]’:
+/home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:132:37:   required from here
+/home/jeff/github/kumose/fermat/fermat/container/vector_map.h:593:20: error: no matching function for call to ‘std::pair<int, fermat::TestObject>::pair(const fermat::pair_first_construct_t&, std::remove_reference<int&>::type)’
+  593 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                    ^~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:452:9: note: candidate: ‘template<class ... _Args1, long unsigned int ..._Indexes1, class ... _Args2, long unsigned int ..._Indexes2> std::pair<_T1, _T2>::pair(std::tuple<_Args1 ...>&, std::tuple<_Args2 ...>&, std::_Index_tuple<_Indexes1 ...>, std::_Index_tuple<_Indexes2 ...>) [with _Args1 = {_Args1 ...}; long unsigned int ..._Indexes1 = {_Indexes1 ...}; _Args2 = {_Args2 ...}; long unsigned int ..._Indexes2 = {_Indexes2 ...}; _T1 = int; _T2 = fermat::TestObject]’
+  452 |         pair(tuple<_Args1...>&, tuple<_Args2...>&,
+      |         ^~~~
+/usr/include/c++/11/bits/stl_pair.h:452:9: note:   template argument deduction/substitution failed:
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:16:
+/home/jeff/github/kumose/fermat/fermat/container/vector_map.h:593:20: note:   types ‘std::tuple<_Tps ...>’ and ‘const fermat::pair_first_construct_t’ have incompatible cv-qualifiers
+  593 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                    ^~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:387:9: note: candidate: ‘template<class ... _Args1, class ... _Args2> std::pair<_T1, _T2>::pair(std::piecewise_construct_t, std::tuple<_Args1 ...>, std::tuple<_Args2 ...>) [with _Args1 = {_Args1 ...}; _Args2 = {_Args2 ...}; _T1 = int; _T2 = fermat::TestObject]’
+  387 |         pair(piecewise_construct_t, tuple<_Args1...>, tuple<_Args2...>);
+      |         ^~~~
+/usr/include/c++/11/bits/stl_pair.h:387:9: note:   template argument deduction/substitution failed:
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:16:
+/home/jeff/github/kumose/fermat/fermat/container/vector_map.h:593:20: note:   mismatched types ‘std::tuple<_Tps ...>’ and ‘int’
+  593 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                    ^~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:381:28: note: candidate: ‘template<class _U1, class _U2, typename std::enable_if<(std::_PCC<((! std::is_same<int, Int>::value) || (! std::is_same<fermat::TestObject, _U2>::value)), int, fermat::TestObject>::_MoveConstructiblePair<_U1, _U2>() && (! std::_PCC<((! std::is_same<int, Int>::value) || (! std::is_same<fermat::TestObject, _U2>::value)), int, fermat::TestObject>::_ImplicitlyMoveConvertiblePair<_U1, _U2>())), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(std::pair<_U1, _U2>&&) [with _U1 = _U1; _U2 = _U2; typename std::enable_if<(std::_PCC<((! std::is_same<_T1, _U1>::value) || (! std::is_same<_T2, _U2>::value)), _T1, _T2>::_MoveConstructiblePair<_U1, _U2>() && (! std::_PCC<((! std::is_same<_T1, _U1>::value) || (! std::is_same<_T2, _U2>::value)), _T1, _T2>::_ImplicitlyMoveConvertiblePair<_U1, _U2>())), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  381 |         explicit constexpr pair(pair<_U1, _U2>&& __p)
+      |                            ^~~~
+/usr/include/c++/11/bits/stl_pair.h:381:28: note:   template argument deduction/substitution failed:
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:16:
+/home/jeff/github/kumose/fermat/fermat/container/vector_map.h:593:20: note:   types ‘std::pair<_T1, _T2>’ and ‘const fermat::pair_first_construct_t’ have incompatible cv-qualifiers
+  593 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                    ^~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:371:19: note: candidate: ‘template<class _U1, class _U2, typename std::enable_if<(std::_PCC<((! std::is_same<int, Int>::value) || (! std::is_same<fermat::TestObject, _U2>::value)), int, fermat::TestObject>::_MoveConstructiblePair<_U1, _U2>() && std::_PCC<((! std::is_same<int, Int>::value) || (! std::is_same<fermat::TestObject, _U2>::value)), int, fermat::TestObject>::_ImplicitlyMoveConvertiblePair<_U1, _U2>()), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(std::pair<_U1, _U2>&&) [with _U1 = _U1; _U2 = _U2; typename std::enable_if<(std::_PCC<((! std::is_same<_T1, _U1>::value) || (! std::is_same<_T2, _U2>::value)), _T1, _T2>::_MoveConstructiblePair<_U1, _U2>() && std::_PCC<((! std::is_same<_T1, _U1>::value) || (! std::is_same<_T2, _U2>::value)), _T1, _T2>::_ImplicitlyMoveConvertiblePair<_U1, _U2>()), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  371 |         constexpr pair(pair<_U1, _U2>&& __p)
+      |                   ^~~~
+/usr/include/c++/11/bits/stl_pair.h:371:19: note:   template argument deduction/substitution failed:
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:16:
+/home/jeff/github/kumose/fermat/fermat/container/vector_map.h:593:20: note:   types ‘std::pair<_T1, _T2>’ and ‘const fermat::pair_first_construct_t’ have incompatible cv-qualifiers
+  593 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                    ^~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:361:28: note: candidate: ‘template<class _U1, class _U2, typename std::enable_if<(_MoveConstructiblePair<_U1, _U2>() && (! _ImplicitlyMoveConvertiblePair<_U1, _U2>())), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(_U1&&, _U2&&) [with _U1 = _U1; _U2 = _U2; typename std::enable_if<(std::_PCC<true, _T1, _T2>::_MoveConstructiblePair<_U1, _U2>() && (! std::_PCC<true, _T1, _T2>::_ImplicitlyMoveConvertiblePair<_U1, _U2>())), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  361 |         explicit constexpr pair(_U1&& __x, _U2&& __y)
+      |                            ^~~~
+/usr/include/c++/11/bits/stl_pair.h:361:28: note:   template argument deduction/substitution failed:
+/usr/include/c++/11/bits/stl_pair.h:360:38: error: no type named ‘type’ in ‘struct std::enable_if<false, bool>’
+  360 |                          bool>::type=false>
+      |                                      ^~~~~
+/usr/include/c++/11/bits/stl_pair.h:352:19: note: candidate: ‘template<class _U1, class _U2, typename std::enable_if<(_MoveConstructiblePair<_U1, _U2>() && _ImplicitlyMoveConvertiblePair<_U1, _U2>()), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(_U1&&, _U2&&) [with _U1 = _U1; _U2 = _U2; typename std::enable_if<(std::_PCC<true, _T1, _T2>::_MoveConstructiblePair<_U1, _U2>() && std::_PCC<true, _T1, _T2>::_ImplicitlyMoveConvertiblePair<_U1, _U2>()), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  352 |         constexpr pair(_U1&& __x, _U2&& __y)
+      |                   ^~~~
+/usr/include/c++/11/bits/stl_pair.h:352:19: note:   template argument deduction/substitution failed:
+/usr/include/c++/11/bits/stl_pair.h:351:38: error: no type named ‘type’ in ‘struct std::enable_if<false, bool>’
+  351 |                          bool>::type=true>
+      |                                      ^~~~
+/usr/include/c++/11/bits/stl_pair.h:343:17: note: candidate: ‘template<class _U2, typename std::enable_if<_CopyMovePair<false, int, _U2>(), bool>::type <anonymous> > std::pair<_T1, _T2>::pair(const _T1&, _U2&&) [with _U2 = _U2; typename std::enable_if<std::_PCC<true, _T1, _T2>::_CopyMovePair<false, _T1, _U2>(), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  343 |        explicit pair(const _T1& __x, _U2&& __y)
+      |                 ^~~~
+/usr/include/c++/11/bits/stl_pair.h:343:17: note:   template argument deduction/substitution failed:
+/usr/include/c++/11/bits/stl_pair.h:342:38: error: no type named ‘type’ in ‘struct std::enable_if<false, bool>’
+  342 |                          bool>::type=false>
+      |                                      ^~~~~
+/usr/include/c++/11/bits/stl_pair.h:336:18: note: candidate: ‘template<class _U2, typename std::enable_if<_CopyMovePair<true, int, _U2>(), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(const _T1&, _U2&&) [with _U2 = _U2; typename std::enable_if<std::_PCC<true, _T1, _T2>::_CopyMovePair<true, _T1, _U2>(), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  336 |        constexpr pair(const _T1& __x, _U2&& __y)
+      |                  ^~~~
+/usr/include/c++/11/bits/stl_pair.h:336:18: note:   template argument deduction/substitution failed:
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:16:
+/home/jeff/github/kumose/fermat/fermat/container/vector_map.h:593:34: note:   cannot convert ‘fermat::pair_first_construct’ (type ‘const fermat::pair_first_construct_t’) to type ‘const int&’
+  593 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                          ~~~~~~~~^~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:329:27: note: candidate: ‘template<class _U1, typename std::enable_if<_MoveCopyPair<false, _U1, fermat::TestObject>(), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(_U1&&, const _T2&) [with _U1 = _U1; typename std::enable_if<std::_PCC<true, _T1, _T2>::_MoveCopyPair<false, _U1, _T2>(), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  329 |        explicit constexpr pair(_U1&& __x, const _T2& __y)
+      |                           ^~~~
+/usr/include/c++/11/bits/stl_pair.h:329:27: note:   template argument deduction/substitution failed:
+/usr/include/c++/11/bits/stl_pair.h:328:38: error: no type named ‘type’ in ‘struct std::enable_if<false, bool>’
+  328 |                          bool>::type=false>
+      |                                      ^~~~~
+/usr/include/c++/11/bits/stl_pair.h:322:18: note: candidate: ‘template<class _U1, typename std::enable_if<_MoveCopyPair<true, _U1, fermat::TestObject>(), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(_U1&&, const _T2&) [with _U1 = _U1; typename std::enable_if<std::_PCC<true, _T1, _T2>::_MoveCopyPair<true, _U1, _T2>(), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  322 |        constexpr pair(_U1&& __x, const _T2& __y)
+      |                  ^~~~
+/usr/include/c++/11/bits/stl_pair.h:322:18: note:   template argument deduction/substitution failed:
+/usr/include/c++/11/bits/stl_pair.h:321:38: error: no type named ‘type’ in ‘struct std::enable_if<false, bool>’
+  321 |                          bool>::type=true>
+      |                                      ^~~~
+/usr/include/c++/11/bits/stl_pair.h:309:28: note: candidate: ‘template<class _U1, class _U2, typename std::enable_if<(std::_PCC<((! std::is_same<int, Int>::value) || (! std::is_same<fermat::TestObject, _U2>::value)), int, fermat::TestObject>::_ConstructiblePair<_U1, _U2>() && (! std::_PCC<((! std::is_same<int, Int>::value) || (! std::is_same<fermat::TestObject, _U2>::value)), int, fermat::TestObject>::_ImplicitlyConvertiblePair<_U1, _U2>())), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(const std::pair<_U1, _U2>&) [with _U1 = _U1; _U2 = _U2; typename std::enable_if<(std::_PCC<((! std::is_same<_T1, _U1>::value) || (! std::is_same<_T2, _U2>::value)), _T1, _T2>::_ConstructiblePair<_U1, _U2>() && (! std::_PCC<((! std::is_same<_T1, _U1>::value) || (! std::is_same<_T2, _U2>::value)), _T1, _T2>::_ImplicitlyConvertiblePair<_U1, _U2>())), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  309 |         explicit constexpr pair(const pair<_U1, _U2>& __p)
+      |                            ^~~~
+/usr/include/c++/11/bits/stl_pair.h:309:28: note:   template argument deduction/substitution failed:
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:16:
+/home/jeff/github/kumose/fermat/fermat/container/vector_map.h:593:20: note:   ‘const fermat::pair_first_construct_t’ is not derived from ‘const std::pair<_T1, _T2>’
+  593 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                    ^~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:300:19: note: candidate: ‘template<class _U1, class _U2, typename std::enable_if<(std::_PCC<((! std::is_same<int, Int>::value) || (! std::is_same<fermat::TestObject, _U2>::value)), int, fermat::TestObject>::_ConstructiblePair<_U1, _U2>() && std::_PCC<((! std::is_same<int, Int>::value) || (! std::is_same<fermat::TestObject, _U2>::value)), int, fermat::TestObject>::_ImplicitlyConvertiblePair<_U1, _U2>()), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(const std::pair<_U1, _U2>&) [with _U1 = _U1; _U2 = _U2; typename std::enable_if<(std::_PCC<((! std::is_same<_T1, _U1>::value) || (! std::is_same<_T2, _U2>::value)), _T1, _T2>::_ConstructiblePair<_U1, _U2>() && std::_PCC<((! std::is_same<_T1, _U1>::value) || (! std::is_same<_T2, _U2>::value)), _T1, _T2>::_ImplicitlyConvertiblePair<_U1, _U2>()), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  300 |         constexpr pair(const pair<_U1, _U2>& __p)
+      |                   ^~~~
+/usr/include/c++/11/bits/stl_pair.h:300:19: note:   template argument deduction/substitution failed:
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:16:
+/home/jeff/github/kumose/fermat/fermat/container/vector_map.h:593:20: note:   ‘const fermat::pair_first_construct_t’ is not derived from ‘const std::pair<_T1, _T2>’
+  593 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                    ^~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:276:26: note: candidate: ‘template<class _U1, class _U2, typename std::enable_if<(_ConstructiblePair<_U1, _U2>() && (! _ImplicitlyConvertiblePair<_U1, _U2>())), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(const _T1&, const _T2&) [with _U1 = _U1; _U2 = _U2; typename std::enable_if<(std::_PCC<true, _T1, _T2>::_ConstructiblePair<_U1, _U2>() && (! std::_PCC<true, _T1, _T2>::_ImplicitlyConvertiblePair<_U1, _U2>())), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  276 |       explicit constexpr pair(const _T1& __a, const _T2& __b)
+      |                          ^~~~
+/usr/include/c++/11/bits/stl_pair.h:276:26: note:   template argument deduction/substitution failed:
+/usr/include/c++/11/bits/stl_pair.h:275:38: error: no type named ‘type’ in ‘struct std::enable_if<false, bool>’
+  275 |                          bool>::type=false>
+      |                                      ^~~~~
+/usr/include/c++/11/bits/stl_pair.h:266:17: note: candidate: ‘template<class _U1, class _U2, typename std::enable_if<(_ConstructiblePair<_U1, _U2>() && _ImplicitlyConvertiblePair<_U1, _U2>()), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(const _T1&, const _T2&) [with _U1 = _U1; _U2 = _U2; typename std::enable_if<(std::_PCC<true, _T1, _T2>::_ConstructiblePair<_U1, _U2>() && std::_PCC<true, _T1, _T2>::_ImplicitlyConvertiblePair<_U1, _U2>()), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  266 |       constexpr pair(const _T1& __a, const _T2& __b)
+      |                 ^~~~
+/usr/include/c++/11/bits/stl_pair.h:266:17: note:   template argument deduction/substitution failed:
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:16:
+/home/jeff/github/kumose/fermat/fermat/container/vector_map.h:593:34: note:   cannot convert ‘fermat::pair_first_construct’ (type ‘const fermat::pair_first_construct_t’) to type ‘const int&’
+  593 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                          ~~~~~~~~^~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:245:26: note: candidate: ‘template<class _U1, class _U2, typename std::enable_if<std::__and_<std::is_default_constructible<_U1>, std::is_default_constructible<_Dp>, std::__not_<std::__and_<std::__is_implicitly_default_constructible<_U1>, std::__is_implicitly_default_constructible<_U2> > > >::value, bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair() [with _U1 = _U1; _U2 = _U2; typename std::enable_if<std::__and_<std::is_default_constructible<_U1>, std::is_default_constructible<_U2>, std::__not_<std::__and_<std::__is_implicitly_default_constructible<_U1>, std::__is_implicitly_default_constructible<_U2> > > >::value, bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  245 |       explicit constexpr pair()
+      |                          ^~~~
+/usr/include/c++/11/bits/stl_pair.h:245:26: note:   template argument deduction/substitution failed:
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:16:
+/home/jeff/github/kumose/fermat/fermat/container/vector_map.h:593:20: note:   candidate expects 0 arguments, 2 provided
+  593 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                    ^~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:232:26: note: candidate: ‘template<class _U1, class _U2, typename std::enable_if<std::__and_<std::__is_implicitly_default_constructible<_U1>, std::__is_implicitly_default_constructible<_U2> >::value, bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair() [with _U1 = _U1; _U2 = _U2; typename std::enable_if<std::__and_<std::__is_implicitly_default_constructible<_U1>, std::__is_implicitly_default_constructible<_U2> >::value, bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  232 |       _GLIBCXX_CONSTEXPR pair()
+      |                          ^~~~
+/usr/include/c++/11/bits/stl_pair.h:232:26: note:   template argument deduction/substitution failed:
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:16:
+/home/jeff/github/kumose/fermat/fermat/container/vector_map.h:593:20: note:   candidate expects 0 arguments, 2 provided
+  593 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                    ^~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:315:17: note: candidate: ‘std::pair<_T1, _T2>::pair(std::pair<_T1, _T2>&&) [with _T1 = int; _T2 = fermat::TestObject]’
+  315 |       constexpr pair(pair&&) = default;         ///< Move constructor
+      |                 ^~~~
+/usr/include/c++/11/bits/stl_pair.h:315:17: note:   candidate expects 1 argument, 2 provided
+/usr/include/c++/11/bits/stl_pair.h:314:17: note: candidate: ‘std::pair<_T1, _T2>::pair(const std::pair<_T1, _T2>&) [with _T1 = int; _T2 = fermat::TestObject]’
+  314 |       constexpr pair(const pair&) = default;    ///< Copy constructor
+      |                 ^~~~
+/usr/include/c++/11/bits/stl_pair.h:314:17: note:   candidate expects 1 argument, 2 provided
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:17:
+/home/jeff/github/kumose/fermat/fermat/container/vector_multimap.h: In instantiation of ‘fermat::VectorMultimap<Key, T, Compare, RandomAccessContainer>::iterator fermat::VectorMultimap<Key, T, Compare, RandomAccessContainer>::insert(fermat::VectorMultimap<Key, T, Compare, RandomAccessContainer>::key_type&&) [with Key = int; T = fermat::TestObject; Compare = std::less<int>; RandomAccessContainer = fermat::Vector<std::pair<int, fermat::TestObject>, 0>; fermat::VectorMultimap<Key, T, Compare, RandomAccessContainer>::iterator = std::pair<int, fermat::TestObject>*; fermat::VectorMultimap<Key, T, Compare, RandomAccessContainer>::key_type = int]’:
+/home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:373:25:   required from here
+/home/jeff/github/kumose/fermat/fermat/container/vector_multimap.h:572:20: error: no matching function for call to ‘std::pair<int, fermat::TestObject>::pair(const fermat::pair_first_construct_t&, std::remove_reference<int&>::type)’
+  572 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                    ^~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:452:9: note: candidate: ‘template<class ... _Args1, long unsigned int ..._Indexes1, class ... _Args2, long unsigned int ..._Indexes2> std::pair<_T1, _T2>::pair(std::tuple<_Args1 ...>&, std::tuple<_Args2 ...>&, std::_Index_tuple<_Indexes1 ...>, std::_Index_tuple<_Indexes2 ...>) [with _Args1 = {_Args1 ...}; long unsigned int ..._Indexes1 = {_Indexes1 ...}; _Args2 = {_Args2 ...}; long unsigned int ..._Indexes2 = {_Indexes2 ...}; _T1 = int; _T2 = fermat::TestObject]’
+  452 |         pair(tuple<_Args1...>&, tuple<_Args2...>&,
+      |         ^~~~
+/usr/include/c++/11/bits/stl_pair.h:452:9: note:   template argument deduction/substitution failed:
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:17:
+/home/jeff/github/kumose/fermat/fermat/container/vector_multimap.h:572:20: note:   types ‘std::tuple<_Tps ...>’ and ‘const fermat::pair_first_construct_t’ have incompatible cv-qualifiers
+  572 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                    ^~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:387:9: note: candidate: ‘template<class ... _Args1, class ... _Args2> std::pair<_T1, _T2>::pair(std::piecewise_construct_t, std::tuple<_Args1 ...>, std::tuple<_Args2 ...>) [with _Args1 = {_Args1 ...}; _Args2 = {_Args2 ...}; _T1 = int; _T2 = fermat::TestObject]’
+  387 |         pair(piecewise_construct_t, tuple<_Args1...>, tuple<_Args2...>);
+      |         ^~~~
+/usr/include/c++/11/bits/stl_pair.h:387:9: note:   template argument deduction/substitution failed:
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:17:
+/home/jeff/github/kumose/fermat/fermat/container/vector_multimap.h:572:20: note:   mismatched types ‘std::tuple<_Tps ...>’ and ‘int’
+  572 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                    ^~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:381:28: note: candidate: ‘template<class _U1, class _U2, typename std::enable_if<(std::_PCC<((! std::is_same<int, Int>::value) || (! std::is_same<fermat::TestObject, _U2>::value)), int, fermat::TestObject>::_MoveConstructiblePair<_U1, _U2>() && (! std::_PCC<((! std::is_same<int, Int>::value) || (! std::is_same<fermat::TestObject, _U2>::value)), int, fermat::TestObject>::_ImplicitlyMoveConvertiblePair<_U1, _U2>())), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(std::pair<_U1, _U2>&&) [with _U1 = _U1; _U2 = _U2; typename std::enable_if<(std::_PCC<((! std::is_same<_T1, _U1>::value) || (! std::is_same<_T2, _U2>::value)), _T1, _T2>::_MoveConstructiblePair<_U1, _U2>() && (! std::_PCC<((! std::is_same<_T1, _U1>::value) || (! std::is_same<_T2, _U2>::value)), _T1, _T2>::_ImplicitlyMoveConvertiblePair<_U1, _U2>())), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  381 |         explicit constexpr pair(pair<_U1, _U2>&& __p)
+      |                            ^~~~
+/usr/include/c++/11/bits/stl_pair.h:381:28: note:   template argument deduction/substitution failed:
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:17:
+/home/jeff/github/kumose/fermat/fermat/container/vector_multimap.h:572:20: note:   types ‘std::pair<_T1, _T2>’ and ‘const fermat::pair_first_construct_t’ have incompatible cv-qualifiers
+  572 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                    ^~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:371:19: note: candidate: ‘template<class _U1, class _U2, typename std::enable_if<(std::_PCC<((! std::is_same<int, Int>::value) || (! std::is_same<fermat::TestObject, _U2>::value)), int, fermat::TestObject>::_MoveConstructiblePair<_U1, _U2>() && std::_PCC<((! std::is_same<int, Int>::value) || (! std::is_same<fermat::TestObject, _U2>::value)), int, fermat::TestObject>::_ImplicitlyMoveConvertiblePair<_U1, _U2>()), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(std::pair<_U1, _U2>&&) [with _U1 = _U1; _U2 = _U2; typename std::enable_if<(std::_PCC<((! std::is_same<_T1, _U1>::value) || (! std::is_same<_T2, _U2>::value)), _T1, _T2>::_MoveConstructiblePair<_U1, _U2>() && std::_PCC<((! std::is_same<_T1, _U1>::value) || (! std::is_same<_T2, _U2>::value)), _T1, _T2>::_ImplicitlyMoveConvertiblePair<_U1, _U2>()), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  371 |         constexpr pair(pair<_U1, _U2>&& __p)
+      |                   ^~~~
+/usr/include/c++/11/bits/stl_pair.h:371:19: note:   template argument deduction/substitution failed:
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:17:
+/home/jeff/github/kumose/fermat/fermat/container/vector_multimap.h:572:20: note:   types ‘std::pair<_T1, _T2>’ and ‘const fermat::pair_first_construct_t’ have incompatible cv-qualifiers
+  572 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                    ^~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:361:28: note: candidate: ‘template<class _U1, class _U2, typename std::enable_if<(_MoveConstructiblePair<_U1, _U2>() && (! _ImplicitlyMoveConvertiblePair<_U1, _U2>())), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(_U1&&, _U2&&) [with _U1 = _U1; _U2 = _U2; typename std::enable_if<(std::_PCC<true, _T1, _T2>::_MoveConstructiblePair<_U1, _U2>() && (! std::_PCC<true, _T1, _T2>::_ImplicitlyMoveConvertiblePair<_U1, _U2>())), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  361 |         explicit constexpr pair(_U1&& __x, _U2&& __y)
+      |                            ^~~~
+/usr/include/c++/11/bits/stl_pair.h:361:28: note:   template argument deduction/substitution failed:
+/usr/include/c++/11/bits/stl_pair.h:360:38: error: no type named ‘type’ in ‘struct std::enable_if<false, bool>’
+  360 |                          bool>::type=false>
+      |                                      ^~~~~
+/usr/include/c++/11/bits/stl_pair.h:352:19: note: candidate: ‘template<class _U1, class _U2, typename std::enable_if<(_MoveConstructiblePair<_U1, _U2>() && _ImplicitlyMoveConvertiblePair<_U1, _U2>()), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(_U1&&, _U2&&) [with _U1 = _U1; _U2 = _U2; typename std::enable_if<(std::_PCC<true, _T1, _T2>::_MoveConstructiblePair<_U1, _U2>() && std::_PCC<true, _T1, _T2>::_ImplicitlyMoveConvertiblePair<_U1, _U2>()), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  352 |         constexpr pair(_U1&& __x, _U2&& __y)
+      |                   ^~~~
+/usr/include/c++/11/bits/stl_pair.h:352:19: note:   template argument deduction/substitution failed:
+/usr/include/c++/11/bits/stl_pair.h:351:38: error: no type named ‘type’ in ‘struct std::enable_if<false, bool>’
+  351 |                          bool>::type=true>
+      |                                      ^~~~
+/usr/include/c++/11/bits/stl_pair.h:343:17: note: candidate: ‘template<class _U2, typename std::enable_if<_CopyMovePair<false, int, _U2>(), bool>::type <anonymous> > std::pair<_T1, _T2>::pair(const _T1&, _U2&&) [with _U2 = _U2; typename std::enable_if<std::_PCC<true, _T1, _T2>::_CopyMovePair<false, _T1, _U2>(), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  343 |        explicit pair(const _T1& __x, _U2&& __y)
+      |                 ^~~~
+/usr/include/c++/11/bits/stl_pair.h:343:17: note:   template argument deduction/substitution failed:
+/usr/include/c++/11/bits/stl_pair.h:342:38: error: no type named ‘type’ in ‘struct std::enable_if<false, bool>’
+  342 |                          bool>::type=false>
+      |                                      ^~~~~
+/usr/include/c++/11/bits/stl_pair.h:336:18: note: candidate: ‘template<class _U2, typename std::enable_if<_CopyMovePair<true, int, _U2>(), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(const _T1&, _U2&&) [with _U2 = _U2; typename std::enable_if<std::_PCC<true, _T1, _T2>::_CopyMovePair<true, _T1, _U2>(), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  336 |        constexpr pair(const _T1& __x, _U2&& __y)
+      |                  ^~~~
+/usr/include/c++/11/bits/stl_pair.h:336:18: note:   template argument deduction/substitution failed:
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:17:
+/home/jeff/github/kumose/fermat/fermat/container/vector_multimap.h:572:34: note:   cannot convert ‘fermat::pair_first_construct’ (type ‘const fermat::pair_first_construct_t’) to type ‘const int&’
+  572 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                          ~~~~~~~~^~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:329:27: note: candidate: ‘template<class _U1, typename std::enable_if<_MoveCopyPair<false, _U1, fermat::TestObject>(), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(_U1&&, const _T2&) [with _U1 = _U1; typename std::enable_if<std::_PCC<true, _T1, _T2>::_MoveCopyPair<false, _U1, _T2>(), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  329 |        explicit constexpr pair(_U1&& __x, const _T2& __y)
+      |                           ^~~~
+/usr/include/c++/11/bits/stl_pair.h:329:27: note:   template argument deduction/substitution failed:
+/usr/include/c++/11/bits/stl_pair.h:328:38: error: no type named ‘type’ in ‘struct std::enable_if<false, bool>’
+  328 |                          bool>::type=false>
+      |                                      ^~~~~
+/usr/include/c++/11/bits/stl_pair.h:322:18: note: candidate: ‘template<class _U1, typename std::enable_if<_MoveCopyPair<true, _U1, fermat::TestObject>(), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(_U1&&, const _T2&) [with _U1 = _U1; typename std::enable_if<std::_PCC<true, _T1, _T2>::_MoveCopyPair<true, _U1, _T2>(), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  322 |        constexpr pair(_U1&& __x, const _T2& __y)
+      |                  ^~~~
+/usr/include/c++/11/bits/stl_pair.h:322:18: note:   template argument deduction/substitution failed:
+/usr/include/c++/11/bits/stl_pair.h:321:38: error: no type named ‘type’ in ‘struct std::enable_if<false, bool>’
+  321 |                          bool>::type=true>
+      |                                      ^~~~
+/usr/include/c++/11/bits/stl_pair.h:309:28: note: candidate: ‘template<class _U1, class _U2, typename std::enable_if<(std::_PCC<((! std::is_same<int, Int>::value) || (! std::is_same<fermat::TestObject, _U2>::value)), int, fermat::TestObject>::_ConstructiblePair<_U1, _U2>() && (! std::_PCC<((! std::is_same<int, Int>::value) || (! std::is_same<fermat::TestObject, _U2>::value)), int, fermat::TestObject>::_ImplicitlyConvertiblePair<_U1, _U2>())), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(const std::pair<_U1, _U2>&) [with _U1 = _U1; _U2 = _U2; typename std::enable_if<(std::_PCC<((! std::is_same<_T1, _U1>::value) || (! std::is_same<_T2, _U2>::value)), _T1, _T2>::_ConstructiblePair<_U1, _U2>() && (! std::_PCC<((! std::is_same<_T1, _U1>::value) || (! std::is_same<_T2, _U2>::value)), _T1, _T2>::_ImplicitlyConvertiblePair<_U1, _U2>())), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  309 |         explicit constexpr pair(const pair<_U1, _U2>& __p)
+      |                            ^~~~
+/usr/include/c++/11/bits/stl_pair.h:309:28: note:   template argument deduction/substitution failed:
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:17:
+/home/jeff/github/kumose/fermat/fermat/container/vector_multimap.h:572:20: note:   ‘const fermat::pair_first_construct_t’ is not derived from ‘const std::pair<_T1, _T2>’
+  572 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                    ^~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:300:19: note: candidate: ‘template<class _U1, class _U2, typename std::enable_if<(std::_PCC<((! std::is_same<int, Int>::value) || (! std::is_same<fermat::TestObject, _U2>::value)), int, fermat::TestObject>::_ConstructiblePair<_U1, _U2>() && std::_PCC<((! std::is_same<int, Int>::value) || (! std::is_same<fermat::TestObject, _U2>::value)), int, fermat::TestObject>::_ImplicitlyConvertiblePair<_U1, _U2>()), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(const std::pair<_U1, _U2>&) [with _U1 = _U1; _U2 = _U2; typename std::enable_if<(std::_PCC<((! std::is_same<_T1, _U1>::value) || (! std::is_same<_T2, _U2>::value)), _T1, _T2>::_ConstructiblePair<_U1, _U2>() && std::_PCC<((! std::is_same<_T1, _U1>::value) || (! std::is_same<_T2, _U2>::value)), _T1, _T2>::_ImplicitlyConvertiblePair<_U1, _U2>()), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  300 |         constexpr pair(const pair<_U1, _U2>& __p)
+      |                   ^~~~
+/usr/include/c++/11/bits/stl_pair.h:300:19: note:   template argument deduction/substitution failed:
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:17:
+/home/jeff/github/kumose/fermat/fermat/container/vector_multimap.h:572:20: note:   ‘const fermat::pair_first_construct_t’ is not derived from ‘const std::pair<_T1, _T2>’
+  572 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                    ^~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:276:26: note: candidate: ‘template<class _U1, class _U2, typename std::enable_if<(_ConstructiblePair<_U1, _U2>() && (! _ImplicitlyConvertiblePair<_U1, _U2>())), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(const _T1&, const _T2&) [with _U1 = _U1; _U2 = _U2; typename std::enable_if<(std::_PCC<true, _T1, _T2>::_ConstructiblePair<_U1, _U2>() && (! std::_PCC<true, _T1, _T2>::_ImplicitlyConvertiblePair<_U1, _U2>())), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  276 |       explicit constexpr pair(const _T1& __a, const _T2& __b)
+      |                          ^~~~
+/usr/include/c++/11/bits/stl_pair.h:276:26: note:   template argument deduction/substitution failed:
+/usr/include/c++/11/bits/stl_pair.h:275:38: error: no type named ‘type’ in ‘struct std::enable_if<false, bool>’
+  275 |                          bool>::type=false>
+      |                                      ^~~~~
+/usr/include/c++/11/bits/stl_pair.h:266:17: note: candidate: ‘template<class _U1, class _U2, typename std::enable_if<(_ConstructiblePair<_U1, _U2>() && _ImplicitlyConvertiblePair<_U1, _U2>()), bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair(const _T1&, const _T2&) [with _U1 = _U1; _U2 = _U2; typename std::enable_if<(std::_PCC<true, _T1, _T2>::_ConstructiblePair<_U1, _U2>() && std::_PCC<true, _T1, _T2>::_ImplicitlyConvertiblePair<_U1, _U2>()), bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  266 |       constexpr pair(const _T1& __a, const _T2& __b)
+      |                 ^~~~
+/usr/include/c++/11/bits/stl_pair.h:266:17: note:   template argument deduction/substitution failed:
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:17:
+/home/jeff/github/kumose/fermat/fermat/container/vector_multimap.h:572:34: note:   cannot convert ‘fermat::pair_first_construct’ (type ‘const fermat::pair_first_construct_t’) to type ‘const int&’
+  572 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                          ~~~~~~~~^~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:245:26: note: candidate: ‘template<class _U1, class _U2, typename std::enable_if<std::__and_<std::is_default_constructible<_U1>, std::is_default_constructible<_Dp>, std::__not_<std::__and_<std::__is_implicitly_default_constructible<_U1>, std::__is_implicitly_default_constructible<_U2> > > >::value, bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair() [with _U1 = _U1; _U2 = _U2; typename std::enable_if<std::__and_<std::is_default_constructible<_U1>, std::is_default_constructible<_U2>, std::__not_<std::__and_<std::__is_implicitly_default_constructible<_U1>, std::__is_implicitly_default_constructible<_U2> > > >::value, bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  245 |       explicit constexpr pair()
+      |                          ^~~~
+/usr/include/c++/11/bits/stl_pair.h:245:26: note:   template argument deduction/substitution failed:
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:17:
+/home/jeff/github/kumose/fermat/fermat/container/vector_multimap.h:572:20: note:   candidate expects 0 arguments, 2 provided
+  572 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                    ^~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:232:26: note: candidate: ‘template<class _U1, class _U2, typename std::enable_if<std::__and_<std::__is_implicitly_default_constructible<_U1>, std::__is_implicitly_default_constructible<_U2> >::value, bool>::type <anonymous> > constexpr std::pair<_T1, _T2>::pair() [with _U1 = _U1; _U2 = _U2; typename std::enable_if<std::__and_<std::__is_implicitly_default_constructible<_U1>, std::__is_implicitly_default_constructible<_U2> >::value, bool>::type <anonymous> = <anonymous>; _T1 = int; _T2 = fermat::TestObject]’
+  232 |       _GLIBCXX_CONSTEXPR pair()
+      |                          ^~~~
+/usr/include/c++/11/bits/stl_pair.h:232:26: note:   template argument deduction/substitution failed:
+In file included from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:17:
+/home/jeff/github/kumose/fermat/fermat/container/vector_multimap.h:572:20: note:   candidate expects 0 arguments, 2 provided
+  572 |         value_type value(fermat::pair_first_construct, std::move(otherValue));
+      |                    ^~~~~
+In file included from /usr/include/c++/11/bits/stl_algobase.h:64,
+                 from /usr/include/c++/11/memory:63,
+                 from /home/jeff/github/kumose/fermat/build/kmpkg_installed/x64-linux/include/gtest/gtest.h:55,
+                 from /home/jeff/github/kumose/fermat/tests/container/vector_map_test.cc:15:
+/usr/include/c++/11/bits/stl_pair.h:315:17: note: candidate: ‘std::pair<_T1, _T2>::pair(std::pair<_T1, _T2>&&) [with _T1 = int; _T2 = fermat::TestObject]’
+  315 |       constexpr pair(pair&&) = default;         ///< Move constructor
+      |                 ^~~~
+/usr/include/c++/11/bits/stl_pair.h:315:17: note:   candidate expects 1 argument, 2 provided
+/usr/include/c++/11/bits/stl_pair.h:314:17: note: candidate: ‘std::pair<_T1, _T2>::pair(const std::pair<_T1, _T2>&) [with _T1 = int; _T2 = fermat::TestObject]’
+  314 |       constexpr pair(const pair&) = default;    ///< Copy constructor
+      |                 ^~~~
+/usr/include/c++/11/bits/stl_pair.h:314:17: note:   candidate expects 1 argument, 2 provided
+make[2]: *** [tests/container/CMakeFiles/con_vector_map_test.dir/build.make:79: tests/container/CMakeFiles/con_vector_map_test.dir/vector_map_test.cc.o] Error 1
+make[1]: *** [CMakeFiles/Makefile2:929: tests/container/CMakeFiles/con_vector_map_test.dir/all] Error 2
+make: *** [Makefile:146: all] Error 2

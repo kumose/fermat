@@ -219,7 +219,8 @@ namespace fermat {
         // Pre-allocate or check capacity; for fixed-size, only check.
         static turbo::Status reserve(T &c, size_t n) {
             if (c.max_size() < n) {
-                return turbo::out_of_range_error("ContainerTraits::reserve: capacity insufficient [ ", c.max_size(), " vs ",
+                return turbo::out_of_range_error("ContainerTraits::reserve: capacity insufficient [ ", c.max_size(),
+                                                 " vs ",
                                                  n, " ]");
             }
             return turbo::Status();
@@ -237,12 +238,82 @@ namespace fermat {
         }
     };
 
-    template <typename T, typename = void>
-    struct has_equality_operator : std::false_type {};
+    template<typename T, typename = void>
+    struct has_equality_operator : std::false_type {
+    };
 
-    template <typename T>
-    struct has_equality_operator<T, std::void_t<decltype(std::declval<T>() == std::declval<T>())>>
-        : std::true_type {};
+    template<typename T>
+    struct has_equality_operator<T, std::void_t<decltype(std::declval<T>() == std::declval<T>())> >
+            : std::true_type {
+    };
 
     static_assert(has_equality_operator<int>::value);
+
+
+    /// @brief Trait to // data() and size
+    template<typename T>
+    struct is_contiguous_string_visitor : std::false_type {
+        static constexpr size_t kAlignment = 0;
+    };
+
+    template<>
+    struct is_contiguous_string_visitor<std::string_view> : std::true_type {
+        static constexpr size_t kAlignment = 0;
+    };
+
+    template<>
+    struct is_contiguous_string_visitor<std::string> : std::true_type {
+        static constexpr size_t kAlignment = 0;
+    };
+
+
+    template<>
+    struct is_contiguous_string_visitor<std::vector<char> > : std::true_type {
+        static constexpr size_t kAlignment = 0;
+    };
+
+    /// resize/append/assign
+    template<typename T>
+    struct is_contiguous_string_receiver : std::false_type {
+        static constexpr size_t kAlignment = 0;
+    };
+
+    template<>
+    struct is_contiguous_string_receiver<std::string> : std::true_type {
+        static constexpr size_t kAlignment = 0;
+    };
+
+    /// resize/data
+    template<typename T>
+    struct is_contiguous_vector_receiver : std::false_type {
+        static constexpr size_t kAlignment = 0;
+    };
+
+    template<>
+    struct is_contiguous_vector_receiver<std::vector<char> > : std::true_type {
+        static constexpr size_t kAlignment = 0;
+    };
+
+    template<>
+    struct is_contiguous_vector_receiver<std::vector<int8_t> > : std::true_type {
+        static constexpr size_t kAlignment = 0;
+    };
+
+    template<>
+    struct is_contiguous_vector_receiver<std::vector<uint8_t> > : std::true_type {
+        static constexpr size_t kAlignment = 0;
+    };
+
+    namespace detail {
+        template<typename, typename = void>
+        struct is_transparent_comparison : std::false_type {
+        };
+
+        template<typename T>
+        struct is_transparent_comparison<T, std::void_t<typename T::is_transparent> > : std::true_type {
+        };
+
+        template<typename T>
+        constexpr bool is_transparent_comparison_v = is_transparent_comparison<T>::value;
+    } // namespace detail
 } // namespace fermat

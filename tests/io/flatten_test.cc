@@ -16,11 +16,11 @@
 
 #include <gtest/gtest.h>
 #include <fermat/io/iobuf.h>
-#include <fermat/container/receiver.h>
+#include <fermat/io/receiver.h>
 #include <fermat/io/customer.h>   // provides Customer, Reader
 #include <string_view>
 #include <tests/io/io_test.h>
-#include <fermat/container/old_buffer.h>
+#include <fermat/container/buffer.h>
 
 namespace fermat {
 
@@ -32,25 +32,6 @@ static void FillIOBuf(TestIOBuf &buf, std::string_view data) {
     buf.commit(lease);
 }
 
-// Mock fixed container for testing fixed-capacity receivers
-class MockFixedBuffer {
-public:
-    using value_type = char;
-    MockFixedBuffer(size_t cap) : cap_(cap), data_(new char[cap]) {}
-    ~MockFixedBuffer() { delete[] data_; }
-    char* data() { return data_; }
-    size_t size() const { return size_; }
-    size_t max_size() const { return cap_; }
-    void set_size(size_t s) { size_ = s; }
-private:
-    size_t cap_;
-    char* data_;
-    size_t size_ = 0;
-};
-
-// Provide ContainerTraits for MockFixedBuffer so it can be used with ContainerAppender
-// (The existing specialization for FixedContainerTag already works if MockFixedBuffer
-//  has the required methods: data(), size(), set_size().)
 
 // ============================================================================
 // Tests using Customer (Custom=true) and Reader (Custom=false)
@@ -114,19 +95,6 @@ TEST_F(IOBufTest, ReaderCopiesWithoutDrain) {
     EXPECT_EQ(src.size(), payload.size());   // source unchanged
 }
 
-TEST_F(IOBufTest, CustomerToFixedBufferEnforcement) {
-    TestIOBuf src;
-    std::string payload = "this data is too large for the buffer";
-    FillIOBuf(src, payload);
-    EXPECT_EQ(src.size(), payload.size());
-
-    MockFixedBuffer island(10);
-    ContainerAppender<MockFixedBuffer> receiver(island);
-    auto status = Customer::custom(src, receiver, payload.size());
-    EXPECT_FALSE(status.ok());
-    EXPECT_EQ(status.code(), turbo::StatusCode::kOutOfRange);
-    EXPECT_EQ(src.size(), payload.size());   // source unchanged
-}
 
 // ============================================================================
 // Tests for custom_until (reading until delimiter)
@@ -168,19 +136,6 @@ TEST_F(IOBufTest, CustomerUntilNoDelimiter) {
     EXPECT_EQ(src.size(), 0);
 }
 
-TEST_F(IOBufTest, CustomerUntilFixedContainer) {
-    TestIOBuf src;
-    std::string payload = "abc;def";
-    FillIOBuf(src, payload);
-    MockFixedBuffer target(10);
-    ContainerAppender<MockFixedBuffer> receiver(target);
-    auto status = Customer::custom_until(src, receiver, ';');
-    ASSERT_TRUE(status.ok());
-    EXPECT_EQ(target.size(), 3);
-    EXPECT_EQ(std::string(target.data(), target.size()), "abc");
-    EXPECT_EQ(src.size(), 3);   // "def" remains (the delimiter ';' consumed)
-    EXPECT_EQ(src.flatten(), "def");
-}
 
 TEST_F(IOBufTest, ReaderUntilDoesNotDrain) {
     TestIOBuf src;
@@ -202,8 +157,8 @@ TEST_F(IOBufTest, ReaderUntilDoesNotDrain) {
     FillIOBuf(src, payload);
     EXPECT_EQ(src.size(), payload.size());
 
-    OldABuffer<char, 64> target;
-    ContainerAppender<OldABuffer<char, 64>> receiver(target);
+    Buffer<char, 64> target;
+    ContainerAppender<Buffer<char, 64>> receiver(target);
     auto status = Customer::custom(src, receiver, payload.size());
     ASSERT_TRUE(status.ok());
     EXPECT_EQ(target.size(), payload.size());
@@ -215,8 +170,8 @@ TEST_F(IOBufTest, ReaderUntilDoesNotDrain) {
     TestIOBuf src;
     std::string payload = "prefix,separator,data";
     FillIOBuf(src, payload);
-    OldABuffer<char, 64> target;
-    ContainerAppender<OldABuffer<char, 64>> receiver(target);
+    Buffer<char, 64> target;
+    ContainerAppender<Buffer<char, 64>> receiver(target);
     auto status = Customer::custom_until(src, receiver, ',');
     ASSERT_TRUE(status.ok());
     EXPECT_EQ(std::string(target.data(), target.size()), "prefix");

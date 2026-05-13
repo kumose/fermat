@@ -140,6 +140,55 @@ kmcmake_cc_bm(
         benchmark::benchmark
         ${KMCMAKE_DEPS_LINK}
 )
+kmcmake_cc_bm(
+        NAME string64_bench
+        MODULE mem
+        SOURCES
+        string64_bench.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        benchmark::benchmark_main
+        benchmark::benchmark
+        ${KMCMAKE_DEPS_LINK}
+)
+
+kmcmake_cc_bm(
+        NAME vector_map_set_bench
+        MODULE mem
+        SOURCES
+        vector_map_set_bench.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        benchmark::benchmark_main
+        benchmark::benchmark
+        ${KMCMAKE_DEPS_LINK}
+)
+
+
+kmcmake_cc_bm(
+        NAME iobuf_benchmark
+        MODULE mem
+        SOURCES
+        iobuf_benchmark.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        benchmark::benchmark_main
+        benchmark::benchmark
+        ${KMCMAKE_DEPS_LINK}
+)
+
 
 
 #[[

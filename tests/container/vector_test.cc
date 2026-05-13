@@ -538,7 +538,7 @@ TEST(VectorCapacityTest, ShrinkToFit) {
     size_t old_cap = v.capacity();
     EXPECT_GT(old_cap, v.size());
 
-    size_t expected_cap = fermat::BytesPoolAllocator<int, 0>::pooled_alloc_size(v.size());
+    size_t expected_cap = fermat::TieredAllocator<int, 0>::pooled_alloc_size(v.size());
 
     v.shrink_to_fit();
     EXPECT_EQ(v.capacity(), expected_cap); // Should match the tier
@@ -631,12 +631,12 @@ TEST(VectorCapacityTest, SetCapacityShrinkNoFit) {
     size_t old_cap = v.capacity();
     EXPECT_GT(old_cap, 10u);
     v.set_capacity(20); // Request capacity 20, but allocator tiers round up
-    size_t expected_cap_20 = fermat::BytesPoolAllocator<int, 0>::pooled_alloc_size(20);
+    size_t expected_cap_20 = fermat::TieredAllocator<int, 0>::pooled_alloc_size(20);
     EXPECT_GE(v.capacity(), expected_cap_20); // Actually should be exactly expected_cap_20
     EXPECT_EQ(v.size(), 10u);
     // Now shrink exactly to size
     v.set_capacity(10);
-    size_t expected_cap_10 = fermat::BytesPoolAllocator<int, 0>::pooled_alloc_size(10);
+    size_t expected_cap_10 = fermat::TieredAllocator<int, 0>::pooled_alloc_size(10);
     EXPECT_EQ(v.capacity(), expected_cap_10);
     // Verify elements intact
     for (size_t i = 0; i < v.size(); ++i)
@@ -676,7 +676,7 @@ TEST(VectorCapacityTest, SetCapacityNpos) {
     v.push_back(3);
     EXPECT_GT(v.capacity(), v.size());
     v.set_capacity(fermat::Vector<int>::npos); // shrink to fit
-    size_t expected_cap = fermat::BytesPoolAllocator<int, 0>::pooled_alloc_size(v.size());
+    size_t expected_cap = fermat::TieredAllocator<int, 0>::pooled_alloc_size(v.size());
     EXPECT_EQ(v.capacity(), expected_cap);
 }
 

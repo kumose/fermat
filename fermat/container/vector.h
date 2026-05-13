@@ -46,7 +46,6 @@
 #include <fermat/container/traits.h>
 
 namespace fermat {
-    
     /// VectorBase
     ///
     /// The reason we have a VectorBase class is that it makes exception handling
@@ -76,7 +75,7 @@ namespace fermat {
     ///
     template<typename T, size_t Alignment>
     struct VectorBase {
-        using allocator_type = BytesPoolAllocator<T, Alignment>;
+        using allocator_type = TieredAllocator<T, Alignment>;
         typedef size_t size_type;
         typedef ptrdiff_t difference_type;
 
@@ -444,10 +443,11 @@ namespace fermat {
             return nullptr;
         }
     }
+
     template<typename T, size_t Alignment>
-    inline typename  VectorBase<T, Alignment>::size_type VectorBase<T, Alignment>::do_allocate_size(size_type n) {
+    inline typename VectorBase<T, Alignment>::size_type VectorBase<T, Alignment>::do_allocate_size(size_type n) {
         if (TURBO_LIKELY(n)) {
-            return  allocator_type::pooled_alloc_size(n);
+            return allocator_type::pooled_alloc_size(n);
         } else {
             return 0;
         }
@@ -860,7 +860,6 @@ namespace fermat {
             // handling non matching allocators as it imposes additional restrictions on the type of T to be copyable
             DoSwap(temp);
         }
-
     }
 
     template<typename T, size_t Alignment>
@@ -1282,7 +1281,7 @@ namespace fermat {
     inline void Vector<T, Alignment>::DoInit(Integer n, Integer value, std::true_type) {
         container_internal::AssertValueFitsInType<size_type>(
             n, "Attempting to initialize a Vector larger than can fit in a size_type!");
-        size_type nn  =n;
+        size_type nn = n;
         _begin = do_allocate(&nn);
         _capacity_end = _begin + nn;
         _end = _begin + n;
@@ -1332,7 +1331,8 @@ namespace fermat {
     template<typename T, size_t Alignment>
     template<typename Integer, bool bMove>
     inline void Vector<T, Alignment>::DoAssign(Integer n, Integer value, std::true_type) {
-        container_internal::AssertValueFitsInType<size_type>(n, "Attempting to assign more values than can fit in a size_type!");
+        container_internal::AssertValueFitsInType<size_type>(
+            n, "Attempting to assign more values than can fit in a size_type!");
         DoAssignValues(static_cast<size_type>(n), static_cast<value_type>(value));
     }
 
@@ -1386,7 +1386,8 @@ namespace fermat {
     void Vector<T, Alignment>::DoAssignFromIterator(RandomAccessIterator first, RandomAccessIterator last,
                                                     std::random_access_iterator_tag) {
         const auto d = std::distance(first, last);
-        container_internal::AssertValueFitsInType<size_type>(d, "Attempting to assign more values than can fit in a size_type!");
+        container_internal::AssertValueFitsInType<size_type>(
+            d, "Attempting to assign more values than can fit in a size_type!");
 
         const size_type n = static_cast<size_type>(d);
         // If n > capacity ...
@@ -1899,4 +1900,24 @@ namespace fermat {
 
         return static_cast<typename Vector<T, Alignment>::size_type>(numRemoved);
     }
+
+    template<size_t Alignment>
+    struct is_contiguous_string_visitor<Vector<char, Alignment> > : std::true_type {
+        static constexpr size_t kAlignment = Alignment;
+    };
+
+    template<size_t Alignment>
+    struct is_contiguous_vector_receiver<Vector<char, Alignment> > : std::true_type {
+        static constexpr size_t kAlignment = 0;
+    };
+
+    template<size_t Alignment>
+    struct is_contiguous_vector_receiver<Vector<int8_t, Alignment> > : std::true_type {
+        static constexpr size_t kAlignment = 0;
+    };
+
+    template<size_t Alignment>
+    struct is_contiguous_vector_receiver<Vector<uint8_t, Alignment> > : std::true_type {
+        static constexpr size_t kAlignment = 0;
+    };
 } // namespace fermat
