@@ -1121,7 +1121,7 @@ void clause11_21_4_8_9_a(String &test) {
     }
 }
 
-TEST(FBString, testAllClauses) {
+TEST(KString, testAllClauses) {
     EXPECT_TRUE(1) << "Starting with seed: " << seed;
     std::string r;
     fermat::KString c;
@@ -1269,7 +1269,7 @@ TEST(FBString, testAllClauses) {
     TEST_CLAUSE(21_4_8_9_a);
 }
 
-TEST(FBString, testGetline) {
+TEST(KString, testGetline) {
     string s1 =
             "\
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Cras accumsan \n\
@@ -1301,7 +1301,7 @@ sed nisl. In diam lacus, lobortis ut posuere nec, ornare id quam.";
     }
 }
 
-TEST(FBString, testMoveCtor) {
+TEST(KString, testMoveCtor) {
     // Move constructor. Make sure we allocate a large string, so the
     // small string optimization doesn't kick in.
     auto size = random(100, 2000);
@@ -1313,7 +1313,7 @@ TEST(FBString, testMoveCtor) {
 }
 
 
-TEST(FBString, testMoveAssign) {
+TEST(KString, testMoveAssign) {
     // Move constructor. Make sure we allocate a large string, so the
     // small string optimization doesn't kick in.
     auto size = random(100, 2000);
@@ -1324,7 +1324,7 @@ TEST(FBString, testMoveAssign) {
     EXPECT_EQ(size, test.size());
 }
 
-TEST(FBString, testMoveOperatorPlusLhs) {
+TEST(KString, testMoveOperatorPlusLhs) {
     // Make sure we allocate a large string, so the
     // small string optimization doesn't kick in.
     auto size1 = random(100, 2000);
@@ -1337,7 +1337,7 @@ TEST(FBString, testMoveOperatorPlusLhs) {
     EXPECT_EQ(size1 + size2, test.size());
 }
 
-TEST(FBString, testMoveOperatorPlusRhs) {
+TEST(KString, testMoveOperatorPlusRhs) {
     // Make sure we allocate a large string, so the
     // small string optimization doesn't kick in.
     auto size1 = random(100, 2000);
@@ -1355,11 +1355,11 @@ TEST(FBString, testMoveOperatorPlusRhs) {
 // N.B. We behave this way even if the C++ library being used is something
 //      other than libstdc++. Someday if we deem it important to present
 //      identical undefined behavior for other platforms, we can re-visit this.
-TEST(FBString, testConstructionFromLiteralZero) {
+TEST(KString, testConstructionFromLiteralZero) {
     EXPECT_NO_THROW(KString s(static_cast<const char*>(nullptr)));
 }
 
-TEST(FBString, testFixedBugsD479397) {
+TEST(KString, testFixedBugsD479397) {
     KString str(1337, 'f');
     KString cp = str;
     cp.clear();
@@ -1367,7 +1367,7 @@ TEST(FBString, testFixedBugsD479397) {
     EXPECT_EQ(str.front(), 'f');
 }
 
-TEST(FBString, assin) {
+TEST(KString, assin) {
     KString str(1337, 'f');
     KString cp;
     cp.clear();
@@ -1375,7 +1375,7 @@ TEST(FBString, assin) {
     EXPECT_EQ(str, cp);
 }
 
-TEST(FBString, testFixedBugsD481173) {
+TEST(KString, testFixedBugsD481173) {
     KString str(1337, 'f');
     for (int i = 0; i < 2; ++i) {
         KString cp = str;
@@ -1386,30 +1386,30 @@ TEST(FBString, testFixedBugsD481173) {
     }
 }
 
-TEST(FBString, testFixedBugsD580267PushBack) {
+TEST(KString, testFixedBugsD580267PushBack) {
     KString str(1337, 'f');
     KString cp = str;
     cp.push_back('f');
 }
 
-TEST(FBString, testFixedBugsD580267OperatorAddAssign) {
+TEST(KString, testFixedBugsD580267OperatorAddAssign) {
     KString str(1337, 'f');
     KString cp = str;
     cp += "bb";
 }
 
-TEST(FBString, testFixedBugsD661622) {
+TEST(KString, testFixedBugsD661622) {
     fermat::BasicString<wchar_t, 0> s;
     EXPECT_EQ(0, s.size());
 }
 
-TEST(FBString, testFixedBugsD785057) {
+TEST(KString, testFixedBugsD785057) {
     KString str(1337, 'f');
     std::swap(str, str);
     EXPECT_EQ(1337, str.size());
 }
 
-TEST(FBString, testFixedBugsD1012196AllocatorMalloc) {
+TEST(KString, testFixedBugsD1012196AllocatorMalloc) {
     KString str(128, 'f');
     str.clear(); // Empty medium string.
     KString copy(str); // Medium string of 0 capacity.
@@ -1417,7 +1417,7 @@ TEST(FBString, testFixedBugsD1012196AllocatorMalloc) {
     EXPECT_GE(copy.capacity(), 1);
 }
 
-TEST(FBString, testFixedBugsD2813713) {
+TEST(KString, testFixedBugsD2813713) {
     KString s1("a");
     s1.reserve(8); // Trigger the optimized code path.
     KLOG(INFO) << "rrr:" << s1.size();
@@ -1430,11 +1430,11 @@ TEST(FBString, testFixedBugsD2813713) {
     EXPECT_EQ(2, test2.size());
 }
 
-TEST(FBString, testFixedBugsD3698862) {
+TEST(KString, testFixedBugsD3698862) {
     EXPECT_EQ(KString().find(KString(), 4), KString::npos);
 }
 
-TEST(FBString, testFixedBugsD4355440) {
+TEST(KString, testFixedBugsD4355440) {
     KString str(1337, 'f');
     str.reserve(3840);
     EXPECT_NE(str.capacity(), 3840);
@@ -1444,13 +1444,13 @@ TEST(FBString, testFixedBugsD4355440) {
         Malloc::good_alloc_size(3840) - sizeof(char));
 }
 
-TEST(FBString, findWithNpos) {
+TEST(KString, findWithNpos) {
     KString kstr("localhost:80");
     EXPECT_EQ(KString::npos, kstr.find(":", KString::npos));
 }
 
 #if FOLLY_HAVE_WCHAR_SUPPORT
-TEST(FBString, testHashChar16) {
+TEST(KString, testHashChar16) {
     using u16fbstring = fermat::BasicString<char16_t>;
     u16fbstring a;
     u16fbstring b;
@@ -1463,7 +1463,7 @@ TEST(FBString, testHashChar16) {
 }
 #endif
 
-TEST(FBString, testFrontBack) {
+TEST(KString, testFrontBack) {
     KString str("hello");
     EXPECT_EQ(str.front(), 'h');
     EXPECT_EQ(str.back(), 'o');
@@ -1474,7 +1474,7 @@ TEST(FBString, testFrontBack) {
     EXPECT_EQ(str, "HellO");
 }
 
-TEST(FBString, noexcept) {
+TEST(KString, noexcept) {
     EXPECT_TRUE(noexcept(KString()));
     KString x;
     EXPECT_FALSE(noexcept(KString(x)));
@@ -1484,7 +1484,7 @@ TEST(FBString, noexcept) {
     EXPECT_TRUE(noexcept(y = std::move(x)));
 }
 
-TEST(FBString, iomanip) {
+TEST(KString, iomanip) {
     stringstream ss;
     KString kstr("Hello");
 
@@ -1509,7 +1509,7 @@ TEST(FBString, iomanip) {
     ss.str("");
 }
 
-TEST(FBString, rvalueIterators) {
+TEST(KString, rvalueIterators) {
     // you cannot take &* of a move-iterator, so use that for testing
     KString s = "base";
     KString r = "hello";
@@ -1529,7 +1529,7 @@ TEST(FBString, rvalueIterators) {
     EXPECT_EQ("123123abc", b); // if things go wrong, you'd get "123123123"
 }
 
-TEST(FBString, moveTerminator) {
+TEST(KString, moveTerminator) {
     // The source of a move must remain in a valid state
     KString s(100, 'x'); // too big to be in-situ
     KString k;
@@ -1567,7 +1567,7 @@ TEST(FBStringCtorTest, NullZeroConstruction) {
 // because what's under test is the operator rather than the relation between
 // the objects.
 
-TEST(FBString, compareToStdString) {
+TEST(KString, compareToStdString) {
     using fermat::KString;
     using namespace std::string_literals;
     auto stdA = "a"s;
@@ -1672,7 +1672,7 @@ TEST(WFBString, compareToStdWString) {
 // Same again, but with a more challenging input - a common prefix and different
 // lengths.
 
-TEST(FBString, compareToStdStringLong) {
+TEST(KString, compareToStdStringLong) {
     using fermat::KString;
     using namespace std::string_literals;
     auto stdA = "1234567890a"s;
@@ -1777,7 +1777,7 @@ TEST(WFBString, compareToStdWStringLong) {
 struct custom_traits : public std::char_traits<char> {
 };
 
-TEST(FBString, convertFromStringView) {
+TEST(KString, convertFromStringView) {
     {
         fermat::KString test{std::string_view("foo")};
         std::string control{std::string_view("foo")};
@@ -1806,7 +1806,7 @@ TEST(FBString, convertFromStringView) {
     }
 }
 
-TEST(FBString, convertToStringView) {
+TEST(KString, convertToStringView) {
     fermat::KString s("foo");
     std::string_view sv = s;
     EXPECT_EQ(sv, "foo");
@@ -1815,21 +1815,7 @@ TEST(FBString, convertToStringView) {
     EXPECT_EQ(sv2, "bar");
 }
 
-
-TEST(FBString, OverLarge) {
-    EXPECT_THROW(
-        KString().reserve((size_t)0xFFFF'FFFF'FFFF'FFFF), std::length_error);
-    EXPECT_THROW(
-        (kstring_core<char32_t, 0, TieredAllocator<char32_t, 0>>().reserve((size_t)0x4000'0000'4000'0000)),
-        std::length_error);
-}
-
-/*
-TEST(FBString, Format) {
-    EXPECT_EQ("  foo", fmt::format("{:>5}", fermat::KString("foo")));
-}
-*/
-TEST(FBString, testHash) {
+TEST(KString, testHash) {
     KString a;
     KString b;
     a.push_back(0);
@@ -1841,7 +1827,7 @@ TEST(FBString, testHash) {
     EXPECT_NE(turbo::Hash<KString>()(a), turbo::Hash<KString>()(b));
 }
 
-TEST(FBString, fmt) {
+TEST(KString, fmt) {
     EXPECT_EQ("  foo", turbo::str_cat("  ", fermat::KString("foo")));
     EXPECT_EQ("  foo", turbo::str_format("  %v", fermat::KString("foo")));
 }

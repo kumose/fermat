@@ -18,7 +18,7 @@
 #include <fermat/container/vector.h>
 #include <random>
 #include <algorithm>
-
+#include <turbo/container/inlined_vector.h>
 
 
 // Helper: generate deterministic data of given size
@@ -42,6 +42,7 @@ static void BM_ConstructSize(benchmark::State& state) {
 }
 BENCHMARK_TEMPLATE(BM_ConstructSize, std::vector<int>)->RangeMultiplier(2)->Range(4, 1024);
 BENCHMARK_TEMPLATE(BM_ConstructSize, fermat::Vector<int>)->RangeMultiplier(2)->Range(4, 1024);
+BENCHMARK_TEMPLATE(BM_ConstructSize, turbo::InlinedVector<int,128>)->RangeMultiplier(2)->Range(4, 1024);
 
 // 2. Push back (sequential) – small capacity growth
 template<typename Vec>

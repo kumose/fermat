@@ -34,7 +34,7 @@ namespace fermat {
         };
 
         template<typename T>
-        struct HasReserve<T, void_t<decltype(std::declval<T>().reserve(std::declval<size_t>()))> >
+        struct HasReserve<T, std::void_t<decltype(std::declval<T>().reserve(std::declval<size_t>()))> >
                 : std::true_type {
         };
 
@@ -45,7 +45,7 @@ namespace fermat {
         };
 
         template<typename T>
-        struct HasResize<T, void_t<decltype(std::declval<T>().resize(std::declval<size_t>()))> >
+        struct HasResize<T, std::void_t<decltype(std::declval<T>().resize(std::declval<size_t>()))> >
                 : std::true_type {
         };
 
@@ -57,7 +57,7 @@ namespace fermat {
         };
 
         template<typename T>
-        struct HasAppend<T, void_t<decltype(std::declval<T>().append(std::declval<const char *>(),
+        struct HasAppend<T, std::void_t<decltype(std::declval<T>().append(std::declval<const char *>(),
                                                                      std::declval<size_t>()))> >
                 : std::true_type {
         };
@@ -67,7 +67,7 @@ namespace fermat {
         };
 
         template<typename T>
-        struct HasPushBack<T, void_t<decltype(std::declval<T>().push_back(std::declval<char>()))> >
+        struct HasPushBack<T, std::void_t<decltype(std::declval<T>().push_back(std::declval<char>()))> >
                 : std::true_type {
         };
 
@@ -77,7 +77,7 @@ namespace fermat {
         };
 
         template<typename T>
-        struct HasData<T, void_t<decltype(std::declval<T>().data())> >
+        struct HasData<T, std::void_t<decltype(std::declval<T>().data())> >
                 : std::true_type {
         };
 
@@ -88,7 +88,7 @@ namespace fermat {
         };
 
         template<typename T>
-        struct HasSize<T, void_t<decltype(std::declval<T>().size())> >
+        struct HasSize<T, std::void_t<decltype(std::declval<T>().size())> >
                 : std::true_type {
         };
 
@@ -102,7 +102,7 @@ namespace fermat {
         };
 
         template<typename T>
-        struct HasValueTypeChar<T, void_t<typename T::value_type> >
+        struct HasValueTypeChar<T, std::void_t<typename T::value_type> >
                 : std::bool_constant<
                     sizeof(std::remove_cv_t<typename T::value_type>) == 1 &&
                     std::is_integral_v<std::remove_cv_t<typename T::value_type> >
@@ -115,7 +115,7 @@ namespace fermat {
         };
 
         template<typename T>
-        struct HasSetSize<T, void_t<decltype(std::declval<T>().set_size(std::declval<size_t>()))> >
+        struct HasSetSize<T, std::void_t<decltype(std::declval<T>().set_size(std::declval<size_t>()))> >
                 : std::true_type {
         };
 
@@ -125,7 +125,7 @@ namespace fermat {
         };
 
         template<typename T>
-        struct HasMaxSize<T, void_t<decltype(std::declval<T>().max_size())> >
+        struct HasMaxSize<T, std::void_t<decltype(std::declval<T>().max_size())> >
                 : std::true_type {
         };
     }

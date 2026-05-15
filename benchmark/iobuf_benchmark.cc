@@ -117,7 +117,7 @@ namespace {
 #define BENCH_ARGS_100K ->Args({100 << 10, 0})
 #define BENCH_ARGS_1M ->Args({1 << 20, 0})
 #define BENCH_ARGS_10M ->Args({10 << 20, 0})
-#define BENCH_ARGS_10M ->Args({20 << 20, 0})
+#define BENCH_ARGS_20M ->Args({20 << 20, 0})
 #define BENCH_ARGS_50M ->Args({50 << 20, 0})
 
     BENCHMARK(BM_IOBuf_Append) BENCH_ARGS;

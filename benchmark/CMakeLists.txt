@@ -191,6 +191,59 @@ kmcmake_cc_bm(
 
 
 
+kmcmake_cc_bm(
+        NAME pri_queue_bench
+        MODULE mem
+        SOURCES
+        pri_queue_bench.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        benchmark::benchmark_main
+        benchmark::benchmark
+        ${KMCMAKE_DEPS_LINK}
+)
+
+
+
+kmcmake_cc_bm(
+        NAME stack_bench
+        MODULE mem
+        SOURCES
+        stack_bench.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        benchmark::benchmark_main
+        benchmark::benchmark
+        ${KMCMAKE_DEPS_LINK}
+)
+
+
+kmcmake_cc_bm(
+        NAME LruCache
+        MODULE mem
+        SOURCES
+        lru_cache.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        benchmark::benchmark_main
+        benchmark::benchmark
+        ${KMCMAKE_DEPS_LINK}
+)
+
+
+
 #[[
 kmcmake_cc_bm(
         NAME find_char_bench

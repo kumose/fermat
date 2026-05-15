@@ -15,8 +15,9 @@
 
 #pragma once
 
-#include <fermat/memory/allocator.h>
+#include <fermat/memory/malloc.h>
 #include <fermat/memory/checked_math.h>
+#include <turbo/log/logging.h>
 
 namespace fermat {
     /// @brief A high‑performance object pool with thread‑local caching.
@@ -65,23 +66,74 @@ namespace fermat {
     /// @tparam T       Type of objects stored in the pool.
     /// @tparam MaxFree Maximum number of free objects kept per thread (default 1024).
     struct PoolStats {
-        size_t           tls_alloc{0};
-        size_t           tls_freed{0};
-        size_t           glb_alloc{0};
-        size_t           glb_freed{0};
-        size_t           cached{0};
+        size_t tls_alloc{0};
+        size_t tls_freed{0};
+        size_t glb_alloc{0};
+        size_t glb_freed{0};
+        size_t cached{0};
     };
+
+    template<size_t Alignment>
+    struct ObjectGuard {
+        ObjectGuard() = default;
+
+        ObjectGuard(const ObjectGuard &) = delete;
+
+        ObjectGuard &operator=(const ObjectGuard &) = delete;
+
+        ObjectGuard(ObjectGuard &&other) noexcept
+            : ptrs(std::move(other.ptrs)), n(other.n) {
+            other.n = 0;
+        }
+
+        ObjectGuard &operator=(ObjectGuard &&other) noexcept {
+            if (this != &other) {
+                ptrs = std::move(other.ptrs);
+                n = other.n;
+                other.n = 0;
+            }
+            return *this;
+        }
+
+        ~ObjectGuard() {
+            for (void *ptr: ptrs) {
+                KLOG(INFO) << n;
+                if constexpr (Alignment == 0) {
+                    Malloc::good_free(ptr, n);
+                } else {
+                    AlignedMalloc<Alignment>::good_free(ptr, n);
+                }
+            }
+            ptrs.clear();
+        }
+
+        void release_to(std::vector<void *> &rhs) {
+            if (rhs.empty()) {
+                ptrs.swap(rhs);
+                return;
+            }
+            rhs.reserve(rhs.size() + ptrs.size());
+            for (void *ptr: ptrs) {
+                rhs.push_back(ptr);
+            }
+            ptrs.clear();
+        }
+
+        std::vector<void *> ptrs;
+        size_t n{0};
+    };
+
     template<class T, size_t Alignment = 0, size_t MaxFree = 1024>
     class ObjectPool {
     private:
         /// @brief Internal manager to handle thread-local storage and cleanup.
         struct ThreadLocalCache {
-            std::vector<T *> cache;
-            size_t           limited;
-            size_t           tls_alloc{0};
-            size_t           tls_freed{0};
-            size_t           glb_alloc{0};
-            size_t           glb_freed{0};
+            std::vector<void *> cache;
+            size_t limited;
+            size_t tls_alloc{0};
+            size_t tls_freed{0};
+            size_t glb_alloc{0};
+            size_t glb_freed{0};
 
             ThreadLocalCache() {
                 /// Pre-allocate capacity to avoid reallocations during push_back.
@@ -98,7 +150,7 @@ namespace fermat {
                 } else {
                     rn = AlignedMalloc<Alignment>::good_alloc_size(sizeof(T));
                 }
-                for (T *ptr: cache) {
+                for (void *ptr: cache) {
                     if constexpr (Alignment == 0) {
                         Malloc::good_free(ptr, rn);
                     } else {
@@ -116,7 +168,9 @@ namespace fermat {
         }
 
     public:
-        static inline  const size_t kGoodSize = Alignment > 0 ? AlignedMalloc<Alignment>::good_alloc_size(sizeof(T)) : Malloc::good_alloc_size(sizeof(T));
+        static inline const size_t kGoodSize = Alignment > 0
+                                                   ? AlignedMalloc<Alignment>::good_alloc_size(sizeof(T))
+                                                   : Malloc::good_alloc_size(sizeof(T));
         /// @brief Acquire an uninitialized memory block for type T.
         /// @return Pointer to the memory block.
         static T *get_uninitialize() {
@@ -132,7 +186,7 @@ namespace fermat {
                 }
             }
             /// LIFO: Best for CPU cache locality.
-            T *ptr = tls.cache.back();
+            T *ptr = reinterpret_cast<T *>(tls.cache.back());
             tls.cache.pop_back();
             ++tls.tls_alloc;
             return ptr;
@@ -185,7 +239,6 @@ namespace fermat {
                 } else {
                     AlignedMalloc<Alignment>::good_free(ptr, kGoodSize);
                 }
-
             }
         }
 
@@ -207,6 +260,19 @@ namespace fermat {
                 }
             }
             return old_size - n;
+        }
+
+        static ObjectGuard<Alignment> collect_tsl() {
+            auto &tls = get_tls();
+            ObjectGuard<Alignment> ret;
+            ret.ptrs.swap(tls.cache);
+            ret.n = kGoodSize;
+            return std::move(ret);
+        }
+
+        static void apply_tls(ObjectGuard<Alignment> &objs) {
+            auto &tls = get_tls();
+            objs.release_to(tls.cache);
         }
 
         static PoolStats tls_stats() {
@@ -253,6 +319,7 @@ namespace fermat {
             ObjectPool<AlignBytes<N * sizeof(T), Alignment> >::put_raw(
                 reinterpret_cast<AlignBytes<N * sizeof(T), Alignment> *>(ptr));
         }
+
         static void set_tsl_limit(size_t n) {
             ObjectPool<AlignBytes<N * sizeof(T), Alignment> >::set_tsl_limit(n);
         }
@@ -264,19 +331,34 @@ namespace fermat {
         static PoolStats tls_stats() {
             return ObjectPool<AlignBytes<N * sizeof(T), Alignment> >::tls_stats();
         }
+
+        static ObjectGuard<Alignment> collect_tsl() {
+            return ObjectPool<AlignBytes<N * sizeof(T), Alignment> >::collect_tsl();
+        }
+
+        static void apply_tsl(ObjectGuard<Alignment> &objs) {
+            return ObjectPool<AlignBytes<N * sizeof(T), Alignment> >::apply_tls(objs);
+        }
+
+        static size_t good_size() {
+            return ObjectPool<AlignBytes<N * sizeof(T), Alignment> >::kGoodSize;
+        }
     };
+
+    static constexpr size_t kTinySize = 64;
+    static constexpr size_t kSmallSize = 256;
+    static constexpr size_t kMediumSize = 512;
+    static constexpr size_t kBigSize = 1024;
+    static constexpr size_t kPageSize = 4096;
 
     template<typename T, size_t Alignment>
     struct TieredAllocator {
-        static constexpr size_t kTinySize = 64;
-        static constexpr size_t kSmallSize = 256;
-        static constexpr size_t kMediumSize = 512;
-        static constexpr size_t kBigSize = 1024;
-        static constexpr size_t kPageSize = 4096;
 
         static T *pooled_alloc(size_t *n) {
             T *ptr = nullptr;
-            if (*n <= 64) {
+            if (n == nullptr || *n == 1) {
+                ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, 1, Alignment>::allocate());
+            } else if (*n <= 64) {
                 ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, kTinySize, Alignment>::allocate());
                 *n = kTinySize;
             } else if (*n <= kSmallSize) {
@@ -311,16 +393,19 @@ namespace fermat {
         }
 
         static size_t pooled_alloc_size(size_t n) {
+            if (n == 1) {
+                return 1;
+            }
             if (n <= 64) {
-                return  kTinySize;
+                return kTinySize;
             } else if (n <= kSmallSize) {
-               return  kSmallSize;
+                return kSmallSize;
             } else if (n <= kMediumSize) {
                 return kMediumSize;
             } else if (n <= kBigSize) {
                 return kBigSize;
             } else if (n <= kPageSize) {
-               return kPageSize;
+                return kPageSize;
             } else {
                 size_t bytes;
                 if (!checked_muladd(&bytes, n, sizeof(sizeof(T)), 0UL)) {
@@ -340,6 +425,11 @@ namespace fermat {
             switch (n) {
                 case 0:
                     break;
+                case 1: {
+                    AlignedBytesAllocator<T, 1, Alignment>::deallocate(ptr);
+                    break;
+                }
+
                 case kTinySize: {
                     AlignedBytesAllocator<T, kTinySize, Alignment>::deallocate(ptr);
                     break;
@@ -373,7 +463,9 @@ namespace fermat {
         }
 
         static void set_tsl_limit(size_t slot, size_t n) {
-            if (slot <= 64) {
+            if (slot == 1) {
+                AlignedBytesAllocator<T, 1, Alignment>::set_tsl_limit(n);
+            } else if (slot <= 64) {
                 AlignedBytesAllocator<T, kTinySize, Alignment>::set_tsl_limit(n);
             } else if (slot <= kSmallSize) {
                 AlignedBytesAllocator<T, kSmallSize, Alignment>::set_tsl_limit(n);
@@ -387,6 +479,7 @@ namespace fermat {
         }
 
         static void set_tsl_limit(size_t n) {
+            set_tsl_limit(1, n);
             set_tsl_limit(kTinySize, n);
             set_tsl_limit(kSmallSize, n);
             set_tsl_limit(kMediumSize, n);
@@ -394,8 +487,10 @@ namespace fermat {
             set_tsl_limit(kPageSize, n);
         }
 
-        static void release_tsl(size_t slot,float precent_to_save) {
-            if (slot <= 64) {
+        static void release_tsl(size_t slot, float precent_to_save) {
+            if (slot == 1) {
+                AlignedBytesAllocator<T, 1, Alignment>::release_tsl(precent_to_save);
+            } else if (slot <= 64) {
                 AlignedBytesAllocator<T, kTinySize, Alignment>::release_tsl(precent_to_save);
             } else if (slot <= kSmallSize) {
                 AlignedBytesAllocator<T, kSmallSize, Alignment>::release_tsl(precent_to_save);
@@ -409,6 +504,7 @@ namespace fermat {
         }
 
         static void release_tsl(float precent_to_save) {
+            release_tsl(1, precent_to_save);
             release_tsl(kTinySize, precent_to_save);
             release_tsl(kSmallSize, precent_to_save);
             release_tsl(kMediumSize, precent_to_save);
@@ -417,7 +513,9 @@ namespace fermat {
         }
 
         static std::optional<PoolStats> tls_stats(size_t n) {
-            if (n <= 64) {
+            if (n == 1) {
+                return AlignedBytesAllocator<T, 1, Alignment>::tls_stats();
+            } else if (n <= 64) {
                 return AlignedBytesAllocator<T, kTinySize, Alignment>::tls_stats();
             } else if (n <= kSmallSize) {
                 return AlignedBytesAllocator<T, kSmallSize, Alignment>::tls_stats();
@@ -432,42 +530,71 @@ namespace fermat {
             }
         }
 
-        static std::vector<std::pair<size_t,PoolStats>> tls_stats() {
-            std::vector<std::pair<size_t,PoolStats>> result;
-            result.emplace_back(kTinySize,*tls_stats(kTinySize));
-            result.emplace_back(kSmallSize,*tls_stats(kSmallSize));
-            result.emplace_back(kMediumSize,*tls_stats(kMediumSize));
-            result.emplace_back(kBigSize,*tls_stats(kBigSize));
-            result.emplace_back(kPageSize,*tls_stats(kPageSize));
+        static std::vector<std::pair<size_t, PoolStats> > tls_stats() {
+            std::vector<std::pair<size_t, PoolStats> > result;
+            result.emplace_back(1, *tls_stats(1));
+            result.emplace_back(kTinySize, *tls_stats(kTinySize));
+            result.emplace_back(kSmallSize, *tls_stats(kSmallSize));
+            result.emplace_back(kMediumSize, *tls_stats(kMediumSize));
+            result.emplace_back(kBigSize, *tls_stats(kBigSize));
+            result.emplace_back(kPageSize, *tls_stats(kPageSize));
             return result;
         }
-    };
 
-
-    template<typename T>
-    struct PoolAllocator {
-
-        static T *pooled_alloc() {
-            T *ptr = nullptr;
-            ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, sizeof(T), 0>::allocate());
-            return ptr;
+        static ObjectGuard<Alignment> collect_tsl(size_t n) {
+            if (n == 1) {
+                return AlignedBytesAllocator<T, 1, Alignment>::collect_tsl();
+            } else if (n <= 64) {
+                return AlignedBytesAllocator<T, kTinySize, Alignment>::collect_tsl();
+            } else if (n <= kSmallSize) {
+                return AlignedBytesAllocator<T, kSmallSize, Alignment>::collect_tsl();
+            } else if (n <= kMediumSize) {
+                return AlignedBytesAllocator<T, kMediumSize, Alignment>::collect_tsl();
+            } else if (n <= kBigSize) {
+                return AlignedBytesAllocator<T, kBigSize, Alignment>::collect_tsl();
+            } else if (n <= kPageSize) {
+                return AlignedBytesAllocator<T, kPageSize, Alignment>::collect_tsl();
+            } else {
+                return ObjectGuard<Alignment>{};
+            }
         }
 
-        static void pooled_free(T *ptr) {
-            AlignedBytesAllocator<T, 1, 0>::deallocate(ptr);
+        static std::vector<ObjectGuard<Alignment> > collect_tsl() {
+            std::vector<ObjectGuard<Alignment> > result;
+            result.reserve(6);
+            result.emplace_back(collect_tsl(1));
+            result.emplace_back(collect_tsl(kTinySize));
+            result.emplace_back(collect_tsl(kSmallSize));
+            result.emplace_back(collect_tsl(kMediumSize));
+            result.emplace_back(collect_tsl(kBigSize));
+            result.emplace_back(collect_tsl(kPageSize));
+            return std::move(result);
         }
 
-        static void set_tsl_limit(size_t n) {
-            AlignedBytesAllocator<T, 1, 0>::set_tsl_limit(n);
+        static void apply_tsl(ObjectGuard<Alignment> &objs) {
+            if (objs.n == 0) {
+                return;
+            } else if (objs.n == AlignedBytesAllocator<T, 1, Alignment>::good_size()) {
+                AlignedBytesAllocator<T, 1, Alignment>::apply_tsl(objs);
+            } else if (objs.n == AlignedBytesAllocator<T, kTinySize, Alignment>::good_size()) {
+                AlignedBytesAllocator<T, kTinySize, Alignment>::apply_tsl(objs);
+            } else if (objs.n == AlignedBytesAllocator<T, kSmallSize, Alignment>::good_size()) {
+                AlignedBytesAllocator<T, kSmallSize, Alignment>::apply_tsl(objs);
+            } else if (objs.n == AlignedBytesAllocator<T, kMediumSize, Alignment>::good_size()) {
+                AlignedBytesAllocator<T, kMediumSize, Alignment>::apply_tsl(objs);
+            } else if (objs.n == AlignedBytesAllocator<T, kBigSize, Alignment>::good_size()) {
+                AlignedBytesAllocator<T, kBigSize, Alignment>::apply_tsl(objs);
+            } else if (objs.n == AlignedBytesAllocator<T, kPageSize, Alignment>::good_size()) {
+                AlignedBytesAllocator<T, kPageSize, Alignment>::apply_tsl(objs);
+            } else {
+                KCHECK(false) << "unknown size:" << objs.n;
+            }
         }
 
-        static void release_tsl(float precent_to_save) {
-            AlignedBytesAllocator<T, 1, 0>::release_tsl(precent_to_save);
-        }
-
-        static std::optional<PoolStats> tls_stats() {
-            return AlignedBytesAllocator<T, 1, 0>::tls_stats();
-
+        static void apply_tsl(std::vector<ObjectGuard<Alignment> > &objs) {
+            for (auto &it: objs) {
+                apply_tsl(it);
+            }
         }
     };
 
@@ -481,8 +608,9 @@ namespace fermat {
     template<typename T, size_t Alignment>
     struct AranaPool {
         AranaPool() = default;
-        T * allocate() {
-            T * ptr = nullptr;
+
+        T *allocate() {
+            T *ptr = nullptr;
             if (!_queue.empty()) {
                 ptr = _queue.back();
                 _queue.pop_back();
@@ -493,34 +621,37 @@ namespace fermat {
         }
 
         ~AranaPool() {
-            for (auto & it : _queue) {
+            for (auto &it: _queue) {
                 AlignedBytesAllocator<T, 1, Alignment>::free(it);
             }
         }
-        void deallocate(T * ptr) {
+
+        void deallocate(T *ptr) {
             if (ptr == nullptr) {
                 return;
             }
             _queue.push(ptr);
         }
+
     private:
-        std::vector<T*> _queue;
+        std::vector<T *> _queue;
     };
 
     template<typename T, size_t Alignment>
     struct ObjectPoolGuard {
-        ObjectPoolGuard(AranaPool<T, Alignment> *arena) : _arena(arena) {}
+        ObjectPoolGuard(AranaPool<T, Alignment> *arena) : _arena(arena) {
+        }
 
-        ~ObjectPoolGuard()  = default;
+        ~ObjectPoolGuard() = default;
 
-        T * allocate() {
+        T *allocate() {
             if (_arena) {
                 return _arena->allocate();
             }
             return reinterpret_cast<T *>(AlignedBytesAllocator<T, 1, Alignment>::allocate());
         }
 
-        void deallocate(T * ptr) {
+        void deallocate(T *ptr) {
             if (ptr == nullptr) {
                 return;
             }
@@ -530,6 +661,7 @@ namespace fermat {
             }
             AlignedBytesAllocator<T, 1, Alignment>::deallocate(ptr);
         }
+
     private:
         AranaPool<T, Alignment> *_arena;
     };

@@ -419,7 +419,7 @@ namespace fermat {
     template<size_t Alignment, size_t BlockSize>
     typename IOBuf<Alignment, BlockSize>::block_type *IOBuf<Alignment,
         BlockSize>::create_block(size_t nblock) {
-        auto *b = PoolAllocator<block_type>::pooled_alloc();
+        auto *b = TieredAllocator<block_type, 0>::pooled_alloc(nullptr);
         ::new(static_cast<void *>(b)) block_type();
         b->buffer.resize(nblock * BlockSize);
         return b;
@@ -432,7 +432,7 @@ namespace fermat {
         if (block->ref_count.fetch_sub(1, std::memory_order_acq_rel) == 1) {
             // 1. First, call the destructor to free 'data'
             std::destroy_at(block);
-            PoolAllocator<block_type>::pooled_free(block);
+            TieredAllocator<block_type, 0>::pooled_free(block  , 1);
         }
     }
 

@@ -109,19 +109,5 @@ static void BM_Mixed(benchmark::State& state) {
     state.SetItemsProcessed(state.iterations() * (3 * data.count));
 }
 
-// Define map types
-using StdStringMap = turbo::flat_hash_map<std::string, std::string>;
-using StdStringWithFermatAllocMap = turbo::flat_hash_map<
-    std::string, std::string,
-    std::hash<std::string>, std::equal_to<std::string>,
-    fermat::Allocator<std::pair<const std::string, std::string>>
->;
-
-// Register benchmarks
-BENCHMARK_TEMPLATE(BM_Insert, StdStringMap)->UseRealTime();
-BENCHMARK_TEMPLATE(BM_Insert, StdStringWithFermatAllocMap)->UseRealTime();
-
-BENCHMARK_TEMPLATE(BM_Mixed, StdStringMap)->UseRealTime();
-BENCHMARK_TEMPLATE(BM_Mixed, StdStringWithFermatAllocMap)->UseRealTime();
 
 BENCHMARK_MAIN();

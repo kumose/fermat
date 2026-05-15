@@ -29,11 +29,13 @@
 #include <fermat/memory/object_pool.h>
 #include <fermat/container/utility.h>
 #include <fermat/container/traits.h>
+#include <fermat/memory/allocator.h>
+#include <fermat/container/compressed_pair.h>
 
 namespace fermat {
-    template<typename T, size_t Alignment>
+    template<typename T, size_t Alignment, typename Allocator>
     struct BufferBase {
-        using allocator_type = TieredAllocator<T, Alignment>;
+        using allocator_type = Allocator;
         typedef size_t size_type;
         typedef ptrdiff_t difference_type;
 
@@ -46,21 +48,27 @@ namespace fermat {
     protected:
         T *_begin{nullptr};
         T *_end{nullptr};
-        T *_capacity_end{nullptr};
+        compressed_pair<T *, allocator_type> _capacity_end{nullptr, allocator_type{}};
 
     public:
-        BufferBase() = default;
+        BufferBase(const allocator_type &allocator);
 
-        BufferBase(size_type n);
+        BufferBase(size_type n, const allocator_type &allocator = allocator_type{});
 
         virtual ~BufferBase();
 
+        allocator_type &get_allocator() noexcept;
+
+        const allocator_type &get_allocator() const noexcept;
+
+        void set_allocator(const allocator_type &allocator) noexcept;
+
     protected:
-        virtual T *do_allocate(size_type *n);
+        T *do_allocate(size_type *n);
 
-        virtual size_type do_allocate_size(size_type n);
+        size_type do_allocate_size(size_type n);
 
-        virtual void do_free(T *p, size_type n);
+        void do_free(T *p, size_type n);
 
         void uninitialized_n(size_t n);
     }; // BufferBase
@@ -70,8 +78,8 @@ namespace fermat {
     ///
     /// Implements a dynamic array.
     ///
-    template<typename T, size_t Alignment = 0>
-    class Buffer : public BufferBase<T, Alignment> {
+    template<typename T, size_t Alignment = 0, typename Allocator= BasicAllocator<T, Alignment> >
+    class Buffer : public BufferBase<T, Alignment, Allocator> {
         // --- The Safety Lock ---
         // Since we've optimized all paths (append, resize, assign) to use bitwise
         // operations (memcpy/memset) and skipped destructor calls, we MUST
@@ -81,8 +89,8 @@ namespace fermat {
         static_assert(std::is_trivially_destructible_v<T>,
                       "fermat::Buffer only supports types with trivial destructors.");
 
-        typedef BufferBase<T, Alignment> base_type;
-        typedef Buffer<T, Alignment> this_type;
+        typedef BufferBase<T, Alignment, Allocator> base_type;
+        typedef Buffer<T, Alignment, Allocator> this_type;
 
         template<class T2, class Allocator2, class U>
         friend typename Buffer<T2, Alignment>::size_type erase_unsorted(Buffer<T2, Alignment> &c, const U &value);
@@ -123,22 +131,26 @@ namespace fermat {
         static_assert(!std::is_volatile<value_type>::value, "Buffer<T> value_type must be non-volatile.");
 
     public:
-        Buffer() noexcept;
+        using base_type::get_allocator;
+        using base_type::set_allocator;
 
-        explicit Buffer(size_type n);
+    public:
+        Buffer(const allocator_type &allocator = allocator_type{}) noexcept;
 
-        Buffer(size_type n, const value_type &value);
+        explicit Buffer(size_type n, const allocator_type &allocator = allocator_type{});
 
-        Buffer(const this_type &x);
+        Buffer(size_type n, const value_type &value, const allocator_type &allocator = allocator_type{});
+
+        Buffer(const this_type &x, const allocator_type &allocator = allocator_type{});
 
         Buffer(this_type &&x) noexcept;
 
-        Buffer(std::initializer_list<value_type> ilist);
+        Buffer(std::initializer_list<value_type> ilist, const allocator_type &allocator = allocator_type{});
 
         // note: this has pre-C++11 semantics:
         // this constructor is equivalent to the constructor Buffer(static_cast<size_type>(first), static_cast<value_type>(last), allocator) if InputIterator is an integral type.
         template<typename InputIterator>
-        Buffer(InputIterator first, InputIterator last);
+        Buffer(InputIterator first, InputIterator last, const allocator_type &allocator = allocator_type{});
 
         ~Buffer();
 
@@ -366,61 +378,86 @@ namespace fermat {
     ///////////////////////////////////////////////////////////////////////
     // BufferBase
     ///////////////////////////////////////////////////////////////////////
+    template<typename T, size_t Alignment, typename Allocator>
+    inline BufferBase<T, Alignment, Allocator>::BufferBase(const allocator_type &allocator) : _capacity_end(allocator) {
+    }
 
-    template<typename T, size_t Alignment>
-    inline BufferBase<T, Alignment>::BufferBase(size_type n) {
+
+    template<typename T, size_t Alignment, typename Allocator>
+    inline BufferBase<T, Alignment,
+        Allocator>::BufferBase(size_type n, const allocator_type &allocator) : _capacity_end(allocator) {
         uninitialized_n(n);
     }
 
 
-    template<typename T, size_t Alignment>
-    inline BufferBase<T, Alignment>::~BufferBase() {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline BufferBase<T, Alignment, Allocator>::~BufferBase() {
         if (_begin) {
-            do_free(_begin, _capacity_end - _begin);
+            do_free(_begin, _capacity_end.first() - _begin);
         }
     }
 
 
-    template<typename T, size_t Alignment>
-    inline T *BufferBase<T, Alignment>::do_allocate(size_type *n) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline T *BufferBase<T, Alignment, Allocator>::do_allocate(size_type *n) {
         // If n is zero, then we allocate no memory and just return nullptr.
         // This is fine, as our default ctor initializes with NULL pointers.
         if (TURBO_LIKELY(n)) {
-            auto ptr = allocator_type::pooled_alloc(n);
+            auto ptr = _capacity_end.second().allocate(n);
             return ptr;
         } else {
             return nullptr;
         }
     }
 
-    template<typename T, size_t Alignment>
-    inline typename BufferBase<T, Alignment>::size_type BufferBase<T, Alignment>::do_allocate_size(size_type n) {
+
+    template<typename T, size_t Alignment, typename Allocator>
+    typename BufferBase<T, Alignment, Allocator>::allocator_type &BufferBase<T, Alignment,
+        Allocator>::get_allocator() noexcept {
+        return _capacity_end.second();
+    }
+
+    template<typename T, size_t Alignment, typename Allocator>
+    const typename BufferBase<T, Alignment, Allocator>::allocator_type &BufferBase<T, Alignment,
+        Allocator>::get_allocator() const noexcept {
+        return _capacity_end.second();
+    }
+
+    template<typename T, size_t Alignment, typename Allocator>
+    void BufferBase<T, Alignment, Allocator>::set_allocator(const allocator_type &allocator) noexcept {
+        _capacity_end.second() = allocator;
+    }
+
+
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename BufferBase<T, Alignment, Allocator>::size_type BufferBase<T, Alignment,
+        Allocator>::do_allocate_size(size_type n) {
         if (TURBO_LIKELY(n)) {
-            return allocator_type::pooled_alloc_size(n);
+            return _capacity_end.second().good_size(n);
         } else {
             return 0;
         }
     }
 
-    template<typename T, size_t Alignment>
-    void BufferBase<T, Alignment>::uninitialized_n(size_t n) {
-        _begin = allocator_type::pooled_alloc(&n);
+    template<typename T, size_t Alignment, typename Allocator>
+    void BufferBase<T, Alignment, Allocator>::uninitialized_n(size_t n) {
+        _begin = _capacity_end.second().allocate(&n);
         _end = _begin;
-        _capacity_end = _begin + n;
+        _capacity_end.first() = _begin + n;
     }
 
 
-    template<typename T, size_t Alignment>
-    inline void BufferBase<T, Alignment>::do_free(T *p, size_type n) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline void BufferBase<T, Alignment, Allocator>::do_free(T *p, size_type n) {
         if (p) {
-            allocator_type::pooled_free(p, n);
+            _capacity_end.second().deallocate(p, n);
         }
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename BufferBase<T, Alignment>::size_type
-    BufferBase<T, Alignment>::GetNewCapacity(size_type currentSize) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename BufferBase<T, Alignment, Allocator>::size_type
+    BufferBase<T, Alignment, Allocator>::GetNewCapacity(size_type currentSize) {
         // This function must return a value larger than currentSize.
         if (currentSize > 0) {
             if (currentSize < (std::numeric_limits<size_type>::max() / 2)) {
@@ -440,16 +477,16 @@ namespace fermat {
     // Buffer
     ///////////////////////////////////////////////////////////////////////
 
-    template<typename T, size_t Alignment>
-    inline Buffer<T, Alignment>::Buffer() noexcept
-        : base_type() {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline Buffer<T, Alignment, Allocator>::Buffer(const allocator_type &allocator) noexcept
+        : base_type(allocator) {
         // Empty
     }
 
 
-    template<typename T, size_t Alignment>
-    inline Buffer<T, Alignment>::Buffer(size_type n)
-        : base_type(n) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline Buffer<T, Alignment, Allocator>::Buffer(size_type n, const allocator_type &allocator)
+        : base_type(n, allocator) {
         if (n > 0) {
             // For trivial types, value-initialization is equivalent to zero-initialization.
             // memset is highly optimized by libc and often uses SIMD/vector instructions.
@@ -458,9 +495,10 @@ namespace fermat {
         _end = _begin + n;
     }
 
-    template<typename T, size_t Alignment>
-    inline Buffer<T, Alignment>::Buffer(size_type n, const value_type &value)
-        : base_type(n) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline Buffer<T, Alignment, Allocator>::Buffer(size_type n, const value_type &value,
+                                                   const allocator_type &allocator)
+        : base_type(n, allocator) {
         if (n > 0) {
             // For trivial types, simple assignment is sufficient and highly optimizable.
             // Modern compilers will vectorize this loop into SIMD instructions.
@@ -472,9 +510,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    inline Buffer<T, Alignment>::Buffer(const this_type &x)
-        : base_type(x.size()) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline Buffer<T, Alignment, Allocator>::Buffer(const this_type &x, const allocator_type &allocator)
+        : base_type(x.size(), allocator) {
         const size_type n = x.size();
         if (n > 0) {
             std::memcpy(static_cast<void *>(_begin),
@@ -484,35 +522,37 @@ namespace fermat {
         }
     }
 
-    template<typename T, size_t Alignment>
-    inline Buffer<T, Alignment>::Buffer(this_type &&x) noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline Buffer<T, Alignment, Allocator>::Buffer(this_type &&x) noexcept :base_type(allocator_type{}){
         DoSwap(x);
     }
 
 
-    template<typename T, size_t Alignment>
-    inline Buffer<T, Alignment>::Buffer(std::initializer_list<value_type> ilist)
-        : base_type() {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline Buffer<T, Alignment, Allocator>::Buffer(std::initializer_list<value_type> ilist,
+                                                   const allocator_type &allocator)
+        : base_type(allocator) {
         DoInit(ilist.begin(), ilist.end(), std::false_type());
     }
 
 
-    template<typename T, size_t Alignment>
+    template<typename T, size_t Alignment, typename Allocator>
     template<typename InputIterator>
-    inline Buffer<T, Alignment>::Buffer(InputIterator first, InputIterator last)
-        : base_type() {
+    inline Buffer<T, Alignment, Allocator>::Buffer(InputIterator first, InputIterator last,
+                                                   const allocator_type &allocator)
+        : base_type(allocator) {
         DoInit(first, last, std::is_integral<InputIterator>());
     }
 
-    template<typename T, size_t Alignment>
-    inline Buffer<T, Alignment>::~Buffer() {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline Buffer<T, Alignment, Allocator>::~Buffer() {
         // The destructor becomes an empty operation, allowing the compiler
         // to optimize away the loop entirely.
     }
 
-    template<typename T, size_t Alignment>
-    typename Buffer<T, Alignment>::this_type &
-    Buffer<T, Alignment>::operator=(const this_type &x) {
+    template<typename T, size_t Alignment, typename Allocator>
+    typename Buffer<T, Alignment, Allocator>::this_type &
+    Buffer<T, Alignment, Allocator>::operator=(const this_type &x) {
         if (this != &x) // If not assigning to self...
         {
             DoAssign<const_iterator, false>(x.begin(), x.end(), std::false_type());
@@ -522,9 +562,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    typename Buffer<T, Alignment>::this_type &
-    Buffer<T, Alignment>::operator=(std::initializer_list<value_type> ilist) {
+    template<typename T, size_t Alignment, typename Allocator>
+    typename Buffer<T, Alignment, Allocator>::this_type &
+    Buffer<T, Alignment, Allocator>::operator=(std::initializer_list<value_type> ilist) {
         typedef typename std::initializer_list<value_type>::iterator InputIterator;
         typedef typename std::iterator_traits<InputIterator>::iterator_category IC;
         DoAssignFromIterator<InputIterator, false>(ilist.begin(), ilist.end(), IC());
@@ -533,9 +573,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    typename Buffer<T, Alignment>::this_type &
-    Buffer<T, Alignment>::operator=(this_type &&x) {
+    template<typename T, size_t Alignment, typename Allocator>
+    typename Buffer<T, Alignment, Allocator>::this_type &
+    Buffer<T, Alignment, Allocator>::operator=(this_type &&x) {
         if (this != &x) {
             DoClearCapacity();
             // To consider: Are we really required to clear here? x is going away soon and will clear itself in its dtor.
@@ -546,15 +586,15 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    inline void Buffer<T, Alignment>::assign(size_type n, const value_type &value) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline void Buffer<T, Alignment, Allocator>::assign(size_type n, const value_type &value) {
         DoAssignValues(n, value);
     }
 
 
-    template<typename T, size_t Alignment>
+    template<typename T, size_t Alignment, typename Allocator>
     template<typename InputIterator>
-    inline void Buffer<T, Alignment>::assign(InputIterator first, InputIterator last) {
+    inline void Buffer<T, Alignment, Allocator>::assign(InputIterator first, InputIterator last) {
         // It turns out that the C++ std::Buffer<int, int> specifies a two argument
         // version of assign that takes (int size, int value). These are not iterators,
         // so we need to do a template compiler trick to do the right thing.
@@ -562,17 +602,17 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    inline void Buffer<T, Alignment>::assign(std::initializer_list<value_type> ilist) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline void Buffer<T, Alignment, Allocator>::assign(std::initializer_list<value_type> ilist) {
         typedef typename std::initializer_list<value_type>::iterator InputIterator;
         typedef typename std::iterator_traits<InputIterator>::iterator_category IC;
         DoAssignFromIterator<InputIterator, false>(ilist.begin(), ilist.end(), IC());
         // initializer_list has const elements and so we can't move from them.
     }
 
-    template<typename T, size_t Alignment>
-    inline void Buffer<T, Alignment>::assign(const T *data, size_type n) {
-        if (n > static_cast<size_type>(_capacity_end - _begin)) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline void Buffer<T, Alignment, Allocator>::assign(const T *data, size_type n) {
+        if (n > static_cast<size_type>(_capacity_end.first() - _begin)) {
             // Optimization: For assign, we don't need to preserve old data,
             // so we can just reallocate or use a specialized path.
             set_capacity(n);
@@ -585,112 +625,112 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::iterator
-    Buffer<T, Alignment>::begin() noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::iterator
+    Buffer<T, Alignment, Allocator>::begin() noexcept {
         return _begin;
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::const_iterator
-    Buffer<T, Alignment>::begin() const noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::const_iterator
+    Buffer<T, Alignment, Allocator>::begin() const noexcept {
         return _begin;
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::const_iterator
-    Buffer<T, Alignment>::cbegin() const noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::const_iterator
+    Buffer<T, Alignment, Allocator>::cbegin() const noexcept {
         return _begin;
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::iterator
-    Buffer<T, Alignment>::end() noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::iterator
+    Buffer<T, Alignment, Allocator>::end() noexcept {
         return _end;
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::const_iterator
-    Buffer<T, Alignment>::end() const noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::const_iterator
+    Buffer<T, Alignment, Allocator>::end() const noexcept {
         return _end;
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::const_iterator
-    Buffer<T, Alignment>::cend() const noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::const_iterator
+    Buffer<T, Alignment, Allocator>::cend() const noexcept {
         return _end;
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::reverse_iterator
-    Buffer<T, Alignment>::rbegin() noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::reverse_iterator
+    Buffer<T, Alignment, Allocator>::rbegin() noexcept {
         return reverse_iterator(_end);
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::const_reverse_iterator
-    Buffer<T, Alignment>::rbegin() const noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::const_reverse_iterator
+    Buffer<T, Alignment, Allocator>::rbegin() const noexcept {
         return const_reverse_iterator(_end);
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::const_reverse_iterator
-    Buffer<T, Alignment>::crbegin() const noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::const_reverse_iterator
+    Buffer<T, Alignment, Allocator>::crbegin() const noexcept {
         return const_reverse_iterator(_end);
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::reverse_iterator
-    Buffer<T, Alignment>::rend() noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::reverse_iterator
+    Buffer<T, Alignment, Allocator>::rend() noexcept {
         return reverse_iterator(_begin);
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::const_reverse_iterator
-    Buffer<T, Alignment>::rend() const noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::const_reverse_iterator
+    Buffer<T, Alignment, Allocator>::rend() const noexcept {
         return const_reverse_iterator(_begin);
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::const_reverse_iterator
-    Buffer<T, Alignment>::crend() const noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::const_reverse_iterator
+    Buffer<T, Alignment, Allocator>::crend() const noexcept {
         return const_reverse_iterator(_begin);
     }
 
 
-    template<typename T, size_t Alignment>
-    bool Buffer<T, Alignment>::empty() const noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    bool Buffer<T, Alignment, Allocator>::empty() const noexcept {
         return (_begin == _end);
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::size_type
-    Buffer<T, Alignment>::size() const noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::size_type
+    Buffer<T, Alignment, Allocator>::size() const noexcept {
         return (size_type) (_end - _begin);
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::size_type
-    Buffer<T, Alignment>::capacity() const noexcept {
-        return (size_type) (_capacity_end - _begin);
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::size_type
+    Buffer<T, Alignment, Allocator>::capacity() const noexcept {
+        return (size_type) (_capacity_end.first() - _begin);
     }
 
 
-    template<typename T, size_t Alignment>
-    inline void Buffer<T, Alignment>::resize(size_type n, const value_type &value) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline void Buffer<T, Alignment, Allocator>::resize(size_type n, const value_type &value) {
         const size_type nPrevSize = static_cast<size_type>(_end - _begin);
 
         if (n > nPrevSize) {
@@ -704,8 +744,8 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    inline void Buffer<T, Alignment>::resize(size_type n) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline void Buffer<T, Alignment, Allocator>::resize(size_type n) {
         const size_type nPrevSize = static_cast<size_type>(_end - _begin);
 
         if (n > nPrevSize) {
@@ -719,16 +759,16 @@ namespace fermat {
         }
     }
 
-    template<typename T, size_t Alignment>
-    void Buffer<T, Alignment>::reserve(size_type n) {
+    template<typename T, size_t Alignment, typename Allocator>
+    void Buffer<T, Alignment, Allocator>::reserve(size_type n) {
         // If the user wants to reduce the reserved memory, there is the set_capacity function.
-        if (n > size_type(_capacity_end - _begin)) // If n > capacity ...
+        if (n > size_type(_capacity_end.first() - _begin)) // If n > capacity ...
             DoGrow(n);
     }
 
 
-    template<typename T, size_t Alignment>
-    void Buffer<T, Alignment>::set_capacity(size_type n) {
+    template<typename T, size_t Alignment, typename Allocator>
+    void Buffer<T, Alignment, Allocator>::set_capacity(size_type n) {
         const size_type nPrevSize = static_cast<size_type>(_end - _begin);
 
         if (n == npos || n <= nPrevSize) {
@@ -747,16 +787,16 @@ namespace fermat {
             pointer const pNewData = do_realloc(&nNewCapacity, _begin, _end);
 
 
-            do_free(_begin, static_cast<size_type>(_capacity_end - _begin));
+            do_free(_begin, static_cast<size_type>(_capacity_end.first() - _begin));
 
             _begin = pNewData;
             _end = pNewData + nPrevSize;
-            _capacity_end = _begin + nNewCapacity;
+            _capacity_end.first() = _begin + nNewCapacity;
         }
     }
 
-    template<typename T, size_t Alignment>
-    inline void Buffer<T, Alignment>::shrink_to_fit() {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline void Buffer<T, Alignment, Allocator>::shrink_to_fit() {
         // This is the simplest way to accomplish this, and it is as efficient as any other.
         auto n = do_allocate_size(size());
         if (n < capacity()) {
@@ -768,23 +808,23 @@ namespace fermat {
         }
     }
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::pointer
-    Buffer<T, Alignment>::data() noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::pointer
+    Buffer<T, Alignment, Allocator>::data() noexcept {
         return _begin;
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::const_pointer
-    Buffer<T, Alignment>::data() const noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::const_pointer
+    Buffer<T, Alignment, Allocator>::data() const noexcept {
         return _begin;
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::reference
-    Buffer<T, Alignment>::operator[](size_type n) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::reference
+    Buffer<T, Alignment, Allocator>::operator[](size_type n) {
         // We allow the user to use a reference to v[0] of an empty container. But this was merely grandfathered in and ideally we shouldn't allow such access to [0].
         //if (TURBO_UNLIKELY((n != 0) && (n >= (static_cast<size_type>(_end - _begin)))))
         //    KCHECK(false) << "Buffer::operator[] -- out of range";
@@ -793,9 +833,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::const_reference
-    Buffer<T, Alignment>::operator[](size_type n) const {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::const_reference
+    Buffer<T, Alignment, Allocator>::operator[](size_type n) const {
         //if (TURBO_UNLIKELY(n >= (static_cast<size_type>(_end - _begin))))
         //   KCHECK(false) << "Buffer::operator[] -- out of range";
 
@@ -803,9 +843,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::reference
-    Buffer<T, Alignment>::at(size_type n) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::reference
+    Buffer<T, Alignment, Allocator>::at(size_type n) {
         // The difference between at() and operator[] is it signals
         // the requested position is out of range by throwing an
         // out_of_range exception.
@@ -816,9 +856,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::const_reference
-    Buffer<T, Alignment>::at(size_type n) const {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::const_reference
+    Buffer<T, Alignment, Allocator>::at(size_type n) const {
         if (TURBO_UNLIKELY(n >= (static_cast<size_type>(_end - _begin))))
             KCHECK(false) << "Buffer::at -- out of range";
 
@@ -826,9 +866,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::reference
-    Buffer<T, Alignment>::front() {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::reference
+    Buffer<T, Alignment, Allocator>::front() {
         if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
             // We don't allow the user to reference an empty container.
             KCHECK(false) << "Buffer::front -- empty Buffer";
@@ -837,9 +877,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::const_reference
-    Buffer<T, Alignment>::front() const {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::const_reference
+    Buffer<T, Alignment, Allocator>::front() const {
         if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
             // We don't allow the user to reference an empty container.
             KCHECK(false) << "Buffer::front -- empty Buffer";
@@ -848,9 +888,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::reference
-    Buffer<T, Alignment>::back() {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::reference
+    Buffer<T, Alignment, Allocator>::back() {
         // if _end is nullptr the expression (_end - 1) is undefined behaviour.
         // any use of back() with an empty Buffer is thus conceptually wrong.
         if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
@@ -860,9 +900,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::const_reference
-    Buffer<T, Alignment>::back() const {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::const_reference
+    Buffer<T, Alignment, Allocator>::back() const {
         // if _end is nullptr the expression (_end - 1) is undefined behaviour.
         // any use of back() with an empty Buffer is thus conceptually wrong.
         if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
@@ -872,26 +912,26 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    inline void Buffer<T, Alignment>::append(value_type value) {
-        if (TURBO_LIKELY(_end < _capacity_end)) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline void Buffer<T, Alignment, Allocator>::append(value_type value) {
+        if (TURBO_LIKELY(_end < _capacity_end.first())) {
             *_end++ = value;
         } else {
             do_insert_value_end(value);
         }
     }
 
-    template<typename T, size_t Alignment>
-    void Buffer<T, Alignment>::append_confident(value_type value) {
+    template<typename T, size_t Alignment, typename Allocator>
+    void Buffer<T, Alignment, Allocator>::append_confident(value_type value) {
         *_end++ = value;
     }
 
-    template<typename T, size_t Alignment>
-    void Buffer<T, Alignment>::append(const value_type *value, size_type size) {
+    template<typename T, size_t Alignment, typename Allocator>
+    void Buffer<T, Alignment, Allocator>::append(const value_type *value, size_type size) {
         if (TURBO_UNLIKELY(size == 0)) return;
 
         // Check if we need to expand the buffer
-        if (TURBO_UNLIKELY(size > static_cast<size_type>(_capacity_end - _end))) {
+        if (TURBO_UNLIKELY(size > static_cast<size_type>(_capacity_end.first() - _end))) {
             reserve(this->size() + size);
         }
 
@@ -900,8 +940,8 @@ namespace fermat {
         _end += size;
     }
 
-    template<typename T, size_t Alignment>
-    void Buffer<T, Alignment>::append_confident(const value_type *value, size_type size) {
+    template<typename T, size_t Alignment, typename Allocator>
+    void Buffer<T, Alignment, Allocator>::append_confident(const value_type *value, size_type size) {
         if (TURBO_UNLIKELY(size == 0)) return;
 
         // Direct memcpy without any bounds or capacity logic.
@@ -911,10 +951,10 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::reference
-    Buffer<T, Alignment>::append() {
-        if (_end < _capacity_end)
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::reference
+    Buffer<T, Alignment, Allocator>::append() {
+        if (_end < _capacity_end.first())
             *_end++ = T{};
         else
             do_insert_value_end();
@@ -923,9 +963,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    inline void *Buffer<T, Alignment>::append_uninitialized() {
-        if (_end == _capacity_end) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline void *Buffer<T, Alignment, Allocator>::append_uninitialized() {
+        if (_end == _capacity_end.first()) {
             const size_type nPrevSize = size_type(_end - _begin);
             const size_type nNewCapacity = GetNewCapacity(nPrevSize);
             DoGrow(nNewCapacity);
@@ -934,18 +974,18 @@ namespace fermat {
         return _end++;
     }
 
-    template<typename T, size_t Alignment>
-    [[nodiscard]] inline bool Buffer<T, Alignment>::is_stringify() const noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    [[nodiscard]] inline bool Buffer<T, Alignment, Allocator>::is_stringify() const noexcept {
         // Condition 1: Type size check. Supports char, char16_t, char32_t, etc.
         // Condition 2: Capacity check. Ensures there's a slot for '\0' beyond _end.
         if constexpr (sizeof(T) <= 4) {
-            return (_capacity_end > _end);
+            return (_capacity_end.first() > _end);
         }
         return false;
     }
 
-    template<typename T, size_t Alignment>
-    inline void Buffer<T, Alignment>::pop_back() {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline void Buffer<T, Alignment, Allocator>::pop_back() {
         if (TURBO_UNLIKELY(_end <= _begin))
             KCHECK(false) << "Buffer::pop_back -- empty Buffer";
 
@@ -955,16 +995,16 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::iterator
-    Buffer<T, Alignment>::insert(const_iterator position, const value_type &value) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::iterator
+    Buffer<T, Alignment, Allocator>::insert(const_iterator position, const value_type &value) {
         if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
             KCHECK(false) << "Buffer::insert -- invalid position";
 
         // We implment a quick pathway for the case that the insertion position is at the end and we have free capacity for it.
         const ptrdiff_t n = position - _begin; // Save this because we might reallocate.
 
-        if ((_end == _capacity_end) || (position != _end))
+        if ((_end == _capacity_end.first()) || (position != _end))
             do_insert_value(position, value);
         else {
             *_end = value;
@@ -975,44 +1015,44 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::iterator
-    Buffer<T, Alignment>::insert(const_iterator position, value_type &&value) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::iterator
+    Buffer<T, Alignment, Allocator>::insert(const_iterator position, value_type &&value) {
         return emplace(position, std::move(value));
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::iterator
-    Buffer<T, Alignment>::insert(const_iterator position, size_type n, const value_type &value) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::iterator
+    Buffer<T, Alignment, Allocator>::insert(const_iterator position, size_type n, const value_type &value) {
         const ptrdiff_t p = position - _begin; // Save this because we might reallocate.
         DoInsertValues(position, n, value);
         return _begin + p;
     }
 
 
-    template<typename T, size_t Alignment>
+    template<typename T, size_t Alignment, typename Allocator>
     template<typename InputIterator>
-    inline typename Buffer<T, Alignment>::iterator
-    Buffer<T, Alignment>::insert(const_iterator position, InputIterator first, InputIterator last) {
+    inline typename Buffer<T, Alignment, Allocator>::iterator
+    Buffer<T, Alignment, Allocator>::insert(const_iterator position, InputIterator first, InputIterator last) {
         const ptrdiff_t n = position - _begin; // Save this because we might reallocate.
         DoInsert(position, first, last, std::is_integral<InputIterator>());
         return _begin + n;
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::iterator
-    Buffer<T, Alignment>::insert(const_iterator position, std::initializer_list<value_type> ilist) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::iterator
+    Buffer<T, Alignment, Allocator>::insert(const_iterator position, std::initializer_list<value_type> ilist) {
         const ptrdiff_t n = position - _begin; // Save this because we might reallocate.
         DoInsert(position, ilist.begin(), ilist.end(), std::false_type());
         return _begin + n;
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::iterator
-    Buffer<T, Alignment>::erase(const_iterator position) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::iterator
+    Buffer<T, Alignment, Allocator>::erase(const_iterator position) {
         if (TURBO_UNLIKELY((position < _begin) || (position >= _end)))
             KCHECK(false) << "Buffer::erase -- invalid position";
 
@@ -1027,9 +1067,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::iterator
-    Buffer<T, Alignment>::erase(const_iterator first, const_iterator last) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::iterator
+    Buffer<T, Alignment, Allocator>::erase(const_iterator first, const_iterator last) {
         if (TURBO_UNLIKELY((first < _begin) || (first > _end) || (last < _begin) || (last > _end) || (last < first)))
             KCHECK(false) << "Buffer::erase -- invalid position";
 
@@ -1052,9 +1092,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::iterator
-    Buffer<T, Alignment>::erase_unsorted(const_iterator position) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::iterator
+    Buffer<T, Alignment, Allocator>::erase_unsorted(const_iterator position) {
         if (TURBO_UNLIKELY((position < _begin) || (position >= _end)))
             KCHECK(false) << "Buffer::erase -- invalid position";
 
@@ -1069,8 +1109,9 @@ namespace fermat {
         return destPosition;
     }
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::iterator Buffer<T, Alignment>::erase_first(const T &value) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::iterator Buffer<T, Alignment, Allocator>::erase_first(
+        const T &value) {
         static_assert(has_equality_operator<T>::value, "T must be comparable");
 
         iterator it = std::find(begin(), end(), value);
@@ -1081,9 +1122,9 @@ namespace fermat {
             return it;
     }
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::iterator
-    Buffer<T, Alignment>::erase_first_unsorted(const T &value) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::iterator
+    Buffer<T, Alignment, Allocator>::erase_first_unsorted(const T &value) {
         static_assert(has_equality_operator<T>::value, "T must be comparable");
 
         iterator it = std::find(begin(), end(), value);
@@ -1094,9 +1135,9 @@ namespace fermat {
             return it;
     }
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::reverse_iterator
-    Buffer<T, Alignment>::erase_last(const T &value) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::reverse_iterator
+    Buffer<T, Alignment, Allocator>::erase_last(const T &value) {
         static_assert(has_equality_operator<T>::value, "T must be comparable");
 
         reverse_iterator it = std::find(rbegin(), rend(), value);
@@ -1107,9 +1148,9 @@ namespace fermat {
             return it;
     }
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::reverse_iterator
-    Buffer<T, Alignment>::erase_last_unsorted(const T &value) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::reverse_iterator
+    Buffer<T, Alignment, Allocator>::erase_last_unsorted(const T &value) {
         static_assert(has_equality_operator<T>::value, "T must be comparable");
 
         reverse_iterator it = std::find(rbegin(), rend(), value);
@@ -1120,16 +1161,16 @@ namespace fermat {
             return it;
     }
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::reverse_iterator
-    Buffer<T, Alignment>::erase(const_reverse_iterator position) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::reverse_iterator
+    Buffer<T, Alignment, Allocator>::erase(const_reverse_iterator position) {
         return reverse_iterator(erase((++position).base()));
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::reverse_iterator
-    Buffer<T, Alignment>::erase(const_reverse_iterator first, const_reverse_iterator last) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::reverse_iterator
+    Buffer<T, Alignment, Allocator>::erase(const_reverse_iterator first, const_reverse_iterator last) {
         // Version which erases in order from first to last.
         // difference_type i(first.base() - last.base());
         // while(i--)
@@ -1141,38 +1182,38 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::reverse_iterator
-    Buffer<T, Alignment>::erase_unsorted(const_reverse_iterator position) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::reverse_iterator
+    Buffer<T, Alignment, Allocator>::erase_unsorted(const_reverse_iterator position) {
         return reverse_iterator(erase_unsorted((++position).base()));
     }
 
 
-    template<typename T, size_t Alignment>
-    inline void Buffer<T, Alignment>::clear() noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline void Buffer<T, Alignment, Allocator>::clear() noexcept {
         _end = _begin;
     }
 
 
-    template<typename T, size_t Alignment>
-    inline void Buffer<T, Alignment>::reset_lose_memory() noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline void Buffer<T, Alignment, Allocator>::reset_lose_memory() noexcept {
         // The reset function is a special extension function which unilaterally
         // resets the container to an empty state without freeing the memory of
         // the contained objects. This is useful for very quickly tearing down a
         // container built into scratch memory.
-        _begin = _end = _capacity_end = nullptr;
+        _begin = _end = _capacity_end.first() = nullptr;
     }
 
 
-    template<typename T, size_t Alignment>
-    inline void Buffer<T, Alignment>::swap(this_type &x) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline void Buffer<T, Alignment, Allocator>::swap(this_type &x) {
         DoSwap(x);
     }
 
 
-    template<typename T, size_t Alignment>
-    inline typename Buffer<T, Alignment>::pointer
-    Buffer<T, Alignment>::do_realloc(size_type *newCapacity, const T *first, const T *last) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline typename Buffer<T, Alignment, Allocator>::pointer
+    Buffer<T, Alignment, Allocator>::do_realloc(size_type *newCapacity, const T *first, const T *last) {
         // Allocate the new memory block. The actual capacity assigned is returned in newCapacity.
         T *const p = do_allocate(newCapacity);
 
@@ -1184,9 +1225,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
+    template<typename T, size_t Alignment, typename Allocator>
     template<typename Integer>
-    inline void Buffer<T, Alignment>::DoInit(Integer n, Integer value, std::true_type) {
+    inline void Buffer<T, Alignment, Allocator>::DoInit(Integer n, Integer value, std::true_type) {
         container_internal::AssertValueFitsInType<size_type>(
             n, "Attempting to initialize a Buffer larger than can fit in a size_type!");
 
@@ -1195,7 +1236,7 @@ namespace fermat {
 
         // Allocate raw memory. do_allocate updates nAllocatedCapacity with actual size.
         _begin = do_allocate(&nAllocatedCapacity);
-        _capacity_end = _begin + nAllocatedCapacity;
+        _capacity_end.first() = _begin + nAllocatedCapacity;
         _end = _begin + count;
 
         if (count > 0) {
@@ -1208,18 +1249,18 @@ namespace fermat {
         }
     }
 
-    template<typename T, size_t Alignment>
+    template<typename T, size_t Alignment, typename Allocator>
     template<typename InputIterator>
-    inline void Buffer<T, Alignment>::DoInit(InputIterator first, InputIterator last, std::false_type) {
+    inline void Buffer<T, Alignment, Allocator>::DoInit(InputIterator first, InputIterator last, std::false_type) {
         typedef typename std::iterator_traits<InputIterator>::iterator_category IC;
         DoInitFromIterator(first, last, IC());
     }
 
 
-    template<typename T, size_t Alignment>
+    template<typename T, size_t Alignment, typename Allocator>
     template<typename InputIterator>
-    inline void Buffer<T, Alignment>::DoInitFromIterator(InputIterator first, InputIterator last,
-                                                         std::input_iterator_tag) {
+    inline void Buffer<T, Alignment, Allocator>::DoInitFromIterator(InputIterator first, InputIterator last,
+                                                                    std::input_iterator_tag) {
         // To do: Use emplace_back instead of append(). Our emplace_back will work below without any ifdefs.
         for (; first != last; ++first)
             // InputIterators by definition actually only allow you to iterate through them once.
@@ -1227,10 +1268,10 @@ namespace fermat {
     } // Luckily, InputIterators are in practice almost never used, so this code will likely never get executed.
 
 
-    template<typename T, size_t Alignment>
+    template<typename T, size_t Alignment, typename Allocator>
     template<typename ForwardIterator>
-    inline void Buffer<T, Alignment>::DoInitFromIterator(ForwardIterator first, ForwardIterator last,
-                                                         std::forward_iterator_tag) {
+    inline void Buffer<T, Alignment, Allocator>::DoInitFromIterator(ForwardIterator first, ForwardIterator last,
+                                                                    std::forward_iterator_tag) {
         const auto d = std::distance(first, last);
 
         container_internal::AssertValueFitsInType<size_type>(
@@ -1239,33 +1280,33 @@ namespace fermat {
         const size_type n = static_cast<size_type>(d);
         auto nn = n;
         _begin = do_allocate(&nn);
-        _capacity_end = _begin + nn;
+        _capacity_end.first() = _begin + nn;
         _end = _begin + n;
 
         std::copy(first, last, _begin);
     }
 
 
-    template<typename T, size_t Alignment>
+    template<typename T, size_t Alignment, typename Allocator>
     template<typename Integer, bool bMove>
-    inline void Buffer<T, Alignment>::DoAssign(Integer n, Integer value, std::true_type) {
+    inline void Buffer<T, Alignment, Allocator>::DoAssign(Integer n, Integer value, std::true_type) {
         container_internal::AssertValueFitsInType<size_type>(
             n, "Attempting to assign more values than can fit in a size_type!");
         DoAssignValues(static_cast<size_type>(n), static_cast<value_type>(value));
     }
 
 
-    template<typename T, size_t Alignment>
+    template<typename T, size_t Alignment, typename Allocator>
     template<typename InputIterator, bool bMove>
-    inline void Buffer<T, Alignment>::DoAssign(InputIterator first, InputIterator last, std::false_type) {
+    inline void Buffer<T, Alignment, Allocator>::DoAssign(InputIterator first, InputIterator last, std::false_type) {
         typedef typename std::iterator_traits<InputIterator>::iterator_category IC;
         DoAssignFromIterator<InputIterator, bMove>(first, last, IC());
     }
 
 
-    template<typename T, size_t Alignment>
-    void Buffer<T, Alignment>::DoAssignValues(size_type n, const value_type &value) {
-        const size_type nCapacity = static_cast<size_type>(_capacity_end - _begin);
+    template<typename T, size_t Alignment, typename Allocator>
+    void Buffer<T, Alignment, Allocator>::DoAssignValues(size_type n, const value_type &value) {
+        const size_type nCapacity = static_cast<size_type>(_capacity_end.first() - _begin);
 
         if (n > nCapacity) {
             // --- Path 1: Insufficient capacity ---
@@ -1279,7 +1320,7 @@ namespace fermat {
 
             _begin = pNewData;
             _end = _begin + n;
-            _capacity_end = _begin + nNewCapacity;
+            _capacity_end.first() = _begin + nNewCapacity;
 
             // Perform bulk fill on the new memory
             for (size_type i = 0; i < n; ++i) {
@@ -1299,9 +1340,10 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
+    template<typename T, size_t Alignment, typename Allocator>
     template<typename InputIterator, bool bMove>
-    void Buffer<T, Alignment>::DoAssignFromIterator(InputIterator first, InputIterator last, std::input_iterator_tag) {
+    void Buffer<T, Alignment, Allocator>::DoAssignFromIterator(InputIterator first, InputIterator last,
+                                                               std::input_iterator_tag) {
         iterator position(_begin);
 
         while ((position != _end) && (first != last)) {
@@ -1316,15 +1358,15 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
+    template<typename T, size_t Alignment, typename Allocator>
     template<typename RandomAccessIterator, bool bMove>
-    void Buffer<T, Alignment>::DoAssignFromIterator(RandomAccessIterator first, RandomAccessIterator last,
-                                                    std::random_access_iterator_tag) {
+    void Buffer<T, Alignment, Allocator>::DoAssignFromIterator(RandomAccessIterator first, RandomAccessIterator last,
+                                                               std::random_access_iterator_tag) {
         const auto d = std::distance(first, last);
         container_internal::AssertValueFitsInType<size_type>(d, "Size overflow");
         const size_type n = static_cast<size_type>(d);
 
-        const size_type nCapacity = static_cast<size_type>(_capacity_end - _begin);
+        const size_type nCapacity = static_cast<size_type>(_capacity_end.first() - _begin);
 
         if (n > nCapacity) {
             // --- Path 1: Expansion needed ---
@@ -1342,7 +1384,7 @@ namespace fermat {
 
             _begin = pNewData;
             _end = _begin + n;
-            _capacity_end = _begin + nNewCapacity;
+            _capacity_end.first() = _begin + nNewCapacity;
         } else {
             // --- Path 2: Fits in current capacity ---
             // For trivial types, "uninitialized" memory is just raw memory.
@@ -1355,9 +1397,10 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
+    template<typename T, size_t Alignment, typename Allocator>
     template<typename Integer>
-    inline void Buffer<T, Alignment>::DoInsert(const_iterator position, Integer n, Integer value, std::true_type) {
+    inline void Buffer<T, Alignment, Allocator>::DoInsert(const_iterator position, Integer n, Integer value,
+                                                          std::true_type) {
         container_internal::AssertValueFitsInType<size_type>(
             n, "Attempting to insert more elements than can can fit in size_type!");
 
@@ -1365,28 +1408,30 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
+    template<typename T, size_t Alignment, typename Allocator>
     template<typename InputIterator>
-    inline void Buffer<T, Alignment>::DoInsert(const_iterator position, InputIterator first, InputIterator last,
-                                               std::false_type) {
+    inline void Buffer<T, Alignment, Allocator>::DoInsert(const_iterator position, InputIterator first,
+                                                          InputIterator last,
+                                                          std::false_type) {
         typedef typename std::iterator_traits<InputIterator>::iterator_category IC;
         DoInsertFromIterator(position, first, last, IC());
     }
 
 
-    template<typename T, size_t Alignment>
+    template<typename T, size_t Alignment, typename Allocator>
     template<typename InputIterator>
-    inline void Buffer<T, Alignment>::DoInsertFromIterator(const_iterator position, InputIterator first,
-                                                           InputIterator last, std::input_iterator_tag) {
+    inline void Buffer<T, Alignment, Allocator>::DoInsertFromIterator(const_iterator position, InputIterator first,
+                                                                      InputIterator last, std::input_iterator_tag) {
         for (; first != last; ++first, ++position)
             position = insert(position, *first);
     }
 
 
-    template<typename T, size_t Alignment>
+    template<typename T, size_t Alignment, typename Allocator>
     template<typename BidirectionalIterator>
-    void Buffer<T, Alignment>::DoInsertFromIterator(const_iterator position, BidirectionalIterator first,
-                                                    BidirectionalIterator last, std::bidirectional_iterator_tag) {
+    void Buffer<T, Alignment, Allocator>::DoInsertFromIterator(const_iterator position, BidirectionalIterator first,
+                                                               BidirectionalIterator last,
+                                                               std::bidirectional_iterator_tag) {
         if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
             KCHECK(false) << "Buffer::insert -- invalid position";
 
@@ -1398,7 +1443,7 @@ namespace fermat {
         const size_type n = static_cast<size_type>(d);
 
         const size_type nPosIndex = static_cast<size_type>(destPosition - _begin);
-        const size_type nFreeSpace = static_cast<size_type>(_capacity_end - _end);
+        const size_type nFreeSpace = static_cast<size_type>(_capacity_end.first() - _end);
 
         if (n <= nFreeSpace) {
             // --- In-place Path ---
@@ -1443,17 +1488,18 @@ namespace fermat {
             }
 
             // 4. Cleanup old memory without calling destructors.
-            do_free(_begin, static_cast<size_type>(_capacity_end - _begin));
+            do_free(_begin, static_cast<size_type>(_capacity_end.first() - _begin));
 
             _begin = pNewData;
             _end = pNewData + nPrevSize + n;
-            _capacity_end = pNewData + nNewCapacity;
+            _capacity_end.first() = pNewData + nNewCapacity;
         }
     }
 
 
-    template<typename T, size_t Alignment>
-    void Buffer<T, Alignment>::DoInsertValues(const_iterator position, size_type n, const value_type &value) {
+    template<typename T, size_t Alignment, typename Allocator>
+    void Buffer<T, Alignment,
+        Allocator>::DoInsertValues(const_iterator position, size_type n, const value_type &value) {
         if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
             KCHECK(false) << "Buffer::insert -- invalid position";
 
@@ -1461,7 +1507,7 @@ namespace fermat {
 
         iterator destPosition = const_cast<value_type *>(position);
         const size_type nPosIndex = static_cast<size_type>(destPosition - _begin);
-        const size_type nFreeSpace = static_cast<size_type>(_capacity_end - _end);
+        const size_type nFreeSpace = static_cast<size_type>(_capacity_end.first() - _end);
 
         if (n <= nFreeSpace) {
             // --- In-place Path ---
@@ -1512,16 +1558,16 @@ namespace fermat {
             }
 
             // 4. Free old storage. No destruction required for trivial types.
-            do_free(_begin, static_cast<size_type>(_capacity_end - _begin));
+            do_free(_begin, static_cast<size_type>(_capacity_end.first() - _begin));
 
             _begin = pNewData;
             _end = pNewData + nPrevSize + n;
-            _capacity_end = pNewData + nNewCapacity;
+            _capacity_end.first() = pNewData + nNewCapacity;
         }
     }
 
-    template<typename T, size_t Alignment>
-    void Buffer<T, Alignment>::DoClearCapacity()
+    template<typename T, size_t Alignment, typename Allocator>
+    void Buffer<T, Alignment, Allocator>::DoClearCapacity()
     // This function exists because set_capacity() currently indirectly requires value_type to be default-constructible,
     {
         // and some functions that need to clear our capacity (e.g. operator=) aren't supposed to require default-constructibility.
@@ -1531,8 +1577,8 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment>
-    void Buffer<T, Alignment>::DoGrow(size_type newCapacity) {
+    template<typename T, size_t Alignment, typename Allocator>
+    void Buffer<T, Alignment, Allocator>::DoGrow(size_type newCapacity) {
         // Allocate new memory block
         pointer const pNewData = do_allocate(&newCapacity);
         const size_type nPrevSize = static_cast<size_type>(_end - _begin);
@@ -1545,28 +1591,28 @@ namespace fermat {
         }
 
         // Free the old memory block.
-        do_free(_begin, static_cast<size_type>(_capacity_end - _begin));
+        do_free(_begin, static_cast<size_type>(_capacity_end.first() - _begin));
 
         // Update container_internal state pointers
         _begin = pNewData;
         _end = pNewData + nPrevSize;
-        _capacity_end = pNewData + newCapacity;
+        _capacity_end.first() = pNewData + newCapacity;
     }
 
 
-    template<typename T, size_t Alignment>
-    inline void Buffer<T, Alignment>::DoSwap(this_type &x) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline void Buffer<T, Alignment, Allocator>::DoSwap(this_type &x) {
         std::swap(_begin, x._begin);
         std::swap(_end, x._end);
-        std::swap(_capacity_end, x._capacity_end);
+        std::swap(_capacity_end.first(), x._capacity_end.first());
     }
 
     // The code duplication between this and the version that takes no value argument and default constructs the values
     // is unfortunate but not easily resolved without relying on C++11 perfect forwarding.
-    template<typename T, size_t Alignment>
-    void Buffer<T, Alignment>::do_insert_values_end(size_type n, const value_type &value) {
+    template<typename T, size_t Alignment, typename Allocator>
+    void Buffer<T, Alignment, Allocator>::do_insert_values_end(size_type n, const value_type &value) {
         const size_type nPrevSize = static_cast<size_type>(_end - _begin);
-        const size_type nFreeSpace = static_cast<size_type>(_capacity_end - _end);
+        const size_type nFreeSpace = static_cast<size_type>(_capacity_end.first() - _end);
 
         if (n > nFreeSpace) {
             // --- Reallocation Path ---
@@ -1588,12 +1634,12 @@ namespace fermat {
             }
 
             // 3. Free old memory
-            do_free(_begin, static_cast<size_type>(_capacity_end - _begin));
+            do_free(_begin, static_cast<size_type>(_capacity_end.first() - _begin));
 
             // 4. Update pointers
             _begin = pNewData;
             _end = pNewData + nPrevSize + n;
-            _capacity_end = pNewData + nNewCapacity;
+            _capacity_end.first() = pNewData + nNewCapacity;
         } else {
             // --- In-place Path ---
             // Just fill the existing free space
@@ -1604,10 +1650,10 @@ namespace fermat {
         }
     }
 
-    template<typename T, size_t Alignment>
-    void Buffer<T, Alignment>::do_insert_values_end(size_type n) {
+    template<typename T, size_t Alignment, typename Allocator>
+    void Buffer<T, Alignment, Allocator>::do_insert_values_end(size_type n) {
         const size_type nPrevSize = static_cast<size_type>(_end - _begin);
-        const size_type nFreeSpace = static_cast<size_type>(_capacity_end - _end);
+        const size_type nFreeSpace = static_cast<size_type>(_capacity_end.first() - _end);
 
         if (n > nFreeSpace) {
             // --- Reallocation Path ---
@@ -1626,12 +1672,12 @@ namespace fermat {
             std::memset(static_cast<void *>(pNewData + nPrevSize), 0, n * sizeof(T));
 
             // 3. Free old memory without calling destructors (T is trivial)
-            do_free(_begin, static_cast<size_type>(_capacity_end - _begin));
+            do_free(_begin, static_cast<size_type>(_capacity_end.first() - _begin));
 
             // 4. Update buffer state
             _begin = pNewData;
             _end = pNewData + nPrevSize + n;
-            _capacity_end = pNewData + nNewCapacity;
+            _capacity_end.first() = pNewData + nNewCapacity;
         } else {
             // --- In-place Path ---
             // Efficiently zero-initialize trailing memory
@@ -1640,16 +1686,16 @@ namespace fermat {
         }
     }
 
-    template<typename T, size_t Alignment>
+    template<typename T, size_t Alignment, typename Allocator>
     template<typename... Args>
-    void Buffer<T, Alignment>::do_insert_value(const_iterator position, Args &&... args) {
+    void Buffer<T, Alignment, Allocator>::do_insert_value(const_iterator position, Args &&... args) {
         if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
             KCHECK(false) << "Buffer::insert/emplace -- invalid position";
 
         iterator destPosition = const_cast<value_type *>(position);
         const size_type nPosIndex = static_cast<size_type>(destPosition - _begin);
 
-        if (_end != _capacity_end) {
+        if (_end != _capacity_end.first()) {
             // --- In-place Path ---
             // 1. Capture the value first in case it's a reference to an element inside this buffer.
             // For trivial types, this is just a stack copy.
@@ -1692,18 +1738,18 @@ namespace fermat {
             }
 
             // 4. Free old memory. No destruction needed for trivial types.
-            do_free(_begin, static_cast<size_type>(_capacity_end - _begin));
+            do_free(_begin, static_cast<size_type>(_capacity_end.first() - _begin));
 
             _begin = pNewData;
             _end = pNewData + nPrevSize + 1;
-            _capacity_end = pNewData + nNewCapacity;
+            _capacity_end.first() = pNewData + nNewCapacity;
         }
     }
 
-    // assumes _end == _capacity_end, ie. create a new array and move existing elements into it while inserting the new element at the end.
-    template<typename T, size_t Alignment>
+    // assumes _end == _capacity_end.first(), ie. create a new array and move existing elements into it while inserting the new element at the end.
+    template<typename T, size_t Alignment, typename Allocator>
     template<typename... Args>
-    void Buffer<T, Alignment>::do_insert_value_end(Args &&... args) {
+    void Buffer<T, Alignment, Allocator>::do_insert_value_end(Args &&... args) {
         const size_type nPrevSize = static_cast<size_type>(_end - _begin);
         size_type nNewCapacity = GetNewCapacity(nPrevSize);
         pointer const pNewData = do_allocate(&nNewCapacity);
@@ -1720,26 +1766,26 @@ namespace fermat {
         }
 
         // 3. Free old storage. Destructors are skipped for trivial types.
-        do_free(_begin, static_cast<size_type>(_capacity_end - _begin));
+        do_free(_begin, static_cast<size_type>(_capacity_end.first() - _begin));
 
         // 4. Update container_internal pointers.
         _begin = pNewData;
         _end = pNewData + nPrevSize + 1;
-        _capacity_end = pNewData + nNewCapacity;
+        _capacity_end.first() = pNewData + nNewCapacity;
     }
 
 
-    template<typename T, size_t Alignment>
-    inline bool Buffer<T, Alignment>::validate() const noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline bool Buffer<T, Alignment, Allocator>::validate() const noexcept {
         if (_end < _begin)
             return false;
-        if (_capacity_end < _end)
+        if (_capacity_end.first() < _end)
             return false;
         return true;
     }
 
-    template<typename T, size_t Alignment>
-    void Buffer<T, Alignment>::bestow(T *data, size_type size, size_type capacity) noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    void Buffer<T, Alignment, Allocator>::bestow(T *data, size_type size, size_type capacity) noexcept {
         // 1. Pre-condition: Buffer must be empty to avoid accidental data loss.
         if (TURBO_UNLIKELY(_begin != nullptr || data == nullptr)) {
             KCHECK(_begin == nullptr) << "Buffer::bestow -- buffer is not empty";
@@ -1753,23 +1799,23 @@ namespace fermat {
         // 3. Ownership transfer: Assign external pointers to internal state.
         _begin = data;
         _end = data + size;
-        _capacity_end = data + capacity;
+        _capacity_end.first() = data + capacity;
     }
 
-    template<typename T, size_t Alignment>
-    T *Buffer<T, Alignment>::seize(size_type *out_size, size_type *out_capacity) noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    T *Buffer<T, Alignment, Allocator>::seize(size_type *out_size, size_type *out_capacity) noexcept {
         if (_begin == nullptr) {
             return nullptr;
         }
         T *raw_ptr = _begin;
 
         if (out_size) *out_size = static_cast<size_type>(_end - _begin);
-        if (out_capacity) *out_capacity = static_cast<size_type>(_capacity_end - _begin);
+        if (out_capacity) *out_capacity = static_cast<size_type>(_capacity_end.first() - _begin);
 
         // Reset buffer to a safe, empty state without freeing memory
         _begin = nullptr;
         _end = nullptr;
-        _capacity_end = nullptr;
+        _capacity_end.first() = nullptr;
 
         return raw_ptr;
     }
@@ -1779,42 +1825,42 @@ namespace fermat {
     // global operators
     ///////////////////////////////////////////////////////////////////////
 
-    template<typename T, size_t Alignment>
-    inline bool operator==(const Buffer<T, Alignment> &a, const Buffer<T, Alignment> &b) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline bool operator==(const Buffer<T, Alignment, Allocator> &a, const Buffer<T, Alignment, Allocator> &b) {
         return ((a.size() == b.size()) && std::equal(a.begin(), a.end(), b.begin()));
     }
 
-    template<typename T, size_t Alignment>
-    inline bool operator!=(const Buffer<T, Alignment> &a, const Buffer<T, Alignment> &b) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline bool operator!=(const Buffer<T, Alignment, Allocator> &a, const Buffer<T, Alignment, Allocator> &b) {
         return ((a.size() != b.size()) || !std::equal(a.begin(), a.end(), b.begin()));
     }
 
 
-    template<typename T, size_t Alignment>
-    inline bool operator<(const Buffer<T, Alignment> &a, const Buffer<T, Alignment> &b) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline bool operator<(const Buffer<T, Alignment, Allocator> &a, const Buffer<T, Alignment, Allocator> &b) {
         return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
     }
 
 
-    template<typename T, size_t Alignment>
-    inline bool operator>(const Buffer<T, Alignment> &a, const Buffer<T, Alignment> &b) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline bool operator>(const Buffer<T, Alignment, Allocator> &a, const Buffer<T, Alignment, Allocator> &b) {
         return b < a;
     }
 
 
-    template<typename T, size_t Alignment>
-    inline bool operator<=(const Buffer<T, Alignment> &a, const Buffer<T, Alignment> &b) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline bool operator<=(const Buffer<T, Alignment, Allocator> &a, const Buffer<T, Alignment, Allocator> &b) {
         return !(b < a);
     }
 
 
-    template<typename T, size_t Alignment>
-    inline bool operator>=(const Buffer<T, Alignment> &a, const Buffer<T, Alignment> &b) {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline bool operator>=(const Buffer<T, Alignment, Allocator> &a, const Buffer<T, Alignment, Allocator> &b) {
         return !(a < b);
     }
 
-    template<typename T, size_t Alignment>
-    inline void swap(Buffer<T, Alignment> &a, Buffer<T, Alignment> &b) noexcept {
+    template<typename T, size_t Alignment, typename Allocator>
+    inline void swap(Buffer<T, Alignment, Allocator> &a, Buffer<T, Alignment, Allocator> &b) noexcept {
         a.swap(b);
     }
 
@@ -1825,18 +1871,19 @@ namespace fermat {
     // https://en.cppreference.com/w/cpp/container/Buffer/erase2
     ///////////////////////////////////////////////////////////////////////
     template<class T, size_t Alignment, class Allocator, class U>
-    typename Buffer<T, Alignment>::size_type erase(Buffer<T, Alignment> &c, const U &value) {
+    typename Buffer<T, Alignment, Allocator>::size_type erase(Buffer<T, Alignment, Allocator> &c, const U &value) {
         // Erases all elements that compare equal to value from the container.
         auto origEnd = c.end();
         auto newEnd = std::remove(c.begin(), origEnd, value);
         auto numRemoved = std::distance(newEnd, origEnd);
         c.erase(newEnd, origEnd);
 
-        return static_cast<typename Buffer<T, Alignment>::size_type>(numRemoved);
+        return static_cast<typename Buffer<T, Alignment, Allocator>::size_type>(numRemoved);
     }
 
     template<class T, size_t Alignment, class Allocator, class Predicate>
-    typename Buffer<T, Alignment>::size_type erase_if(Buffer<T, Alignment> &c, Predicate predicate) {
+    typename Buffer<T, Alignment, Allocator>::size_type erase_if(Buffer<T, Alignment, Allocator> &c,
+                                                                 Predicate predicate) {
         // Erases all elements that satisfy the predicate pred from the container.
         auto origEnd = c.end();
         auto newEnd = std::remove_if(c.begin(), origEnd, predicate);
@@ -1844,7 +1891,7 @@ namespace fermat {
         c.erase(newEnd, origEnd);
 
 
-        return static_cast<typename Buffer<T, Alignment>::size_type>(numRemoved);
+        return static_cast<typename Buffer<T, Alignment, Allocator>::size_type>(numRemoved);
     }
 
 
@@ -1863,7 +1910,8 @@ namespace fermat {
     //
     ///////////////////////////////////////////////////////////////////////
     template<class T, size_t Alignment, class Allocator, class U>
-    typename Buffer<T, Alignment>::size_type erase_unsorted(Buffer<T, Alignment> &c, const U &value) {
+    typename Buffer<T, Alignment, Allocator>::size_type erase_unsorted(Buffer<T, Alignment, Allocator> &c,
+                                                                       const U &value) {
         auto itRemove = c.begin();
         auto ritMove = c.rbegin();
 
@@ -1894,7 +1942,7 @@ namespace fermat {
         // Destructors are no-ops for trivial types, so we simply adjust the tail pointer.
         c._end = itRemove;
 
-        return static_cast<typename Buffer<T, Alignment>::size_type>(numRemoved);
+        return static_cast<typename Buffer<T, Alignment, Allocator>::size_type>(numRemoved);
     }
 
     ///////////////////////////////////////////////////////////////////////
@@ -1912,7 +1960,8 @@ namespace fermat {
     //
     ///////////////////////////////////////////////////////////////////////
     template<class T, size_t Alignment, class Allocator, class Predicate>
-    typename Buffer<T, Alignment>::size_type erase_unsorted_if(Buffer<T, Alignment> &c, Predicate predicate) {
+    typename Buffer<T, Alignment, Allocator>::size_type erase_unsorted_if(
+        Buffer<T, Alignment, Allocator> &c, Predicate predicate) {
         auto itRemove = c.begin();
         auto ritMove = c.rbegin();
 
@@ -1942,7 +1991,7 @@ namespace fermat {
         // Update the end of the buffer. No destruction is necessary for trivial types.
         c._end = itRemove;
 
-        return static_cast<typename Buffer<T, Alignment>::size_type>(numRemoved);
+        return static_cast<typename Buffer<T, Alignment, Allocator>::size_type>(numRemoved);
     }
 
     template<size_t Alignment>

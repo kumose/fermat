@@ -45,7 +45,7 @@
 #include <utility>
 #include <algorithm>
 #include <initializer_list>
-#include <stddef.h>
+#include <cstddef>
 
 
 namespace fermat {
@@ -460,7 +460,7 @@ namespace fermat {
     inline typename VectorMultimap<K, T, C, RAC>::this_type &
     VectorMultimap<K, T, C, RAC>::operator=(this_type &&x) {
         base_type::operator=(std::move(x));
-        using fermat::swap;
+        using std::swap;
         swap(static_cast<value_compare &>(*this), static_cast<value_compare &>(x));
         return *this;
     }
@@ -478,7 +478,7 @@ namespace fermat {
     template<typename K, typename T, typename C, typename RAC>
     inline void VectorMultimap<K, T, C, RAC>::swap(this_type &x) {
         base_type::swap(x);
-        using fermat::swap;
+        using std::swap;
         swap(static_cast<value_compare &>(*this), static_cast<value_compare &>(x));
     }
 

@@ -45,7 +45,7 @@
 #include <utility>
 #include <algorithm>
 #include <initializer_list>
-#include <stddef.h>
+#include <cstddef>
 
 
 namespace fermat {
@@ -466,7 +466,7 @@ namespace fermat {
     inline VectorMap<K, T, C, RAC> &
     VectorMap<K, T, C, RAC>::operator=(this_type &&x) {
         base_type::operator=(std::move(static_cast<base_type &&>(x)));
-        using fermat::swap;
+        using std::swap;
         swap(static_cast<value_compare &>(*this), static_cast<value_compare &>(x));
         return *this;
     }
@@ -484,7 +484,7 @@ namespace fermat {
     template<typename K, typename T, typename C, typename RAC>
     inline void VectorMap<K, T, C, RAC>::swap(this_type &x) {
         base_type::swap(x);
-        using fermat::swap;
+        using std::swap;
         swap(static_cast<value_compare &>(*this), static_cast<value_compare &>(x));
     }
 

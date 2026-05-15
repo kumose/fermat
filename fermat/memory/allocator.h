@@ -15,89 +15,63 @@
 
 #pragma once
 
-#include <fermat/memory/malloc.h>
+#include <fermat/memory/object_pool.h>
 #include <memory>
 #include <turbo/log/logging.h>
 
+
 namespace fermat {
-    /// @brief STL compatible allocator using mimalloc with default alignment.
-    /// @tparam T Element type.
-    template<typename T>
-    class Allocator {
+    template<typename T, size_t Alignment, typename Operator = TieredAllocator<T, Alignment> >
+    struct BasicAllocator {
     public:
-        using value_type = T;
-        using pointer = T *;
-        using const_pointer = const T *;
-        using reference = T &;
-        using const_reference = const T &;
-        using size_type = size_t;
-        using difference_type = ptrdiff_t;
+        using operator_type = Operator;
 
-        /// @brief Tell STL containers that all instances of this allocator are interchangeable.
-        using is_always_equal = std::true_type;
+    public:
+        constexpr BasicAllocator() noexcept = default;
 
-        /// @brief Rebind convenience for STL containers.
-        template<typename U>
-        struct rebind {
-            using other = Allocator<U>;
-        };
+        ~BasicAllocator() noexcept = default;
 
-        Allocator() noexcept = default;
+        constexpr BasicAllocator(const BasicAllocator &) noexcept = default;
 
-        template<typename U>
-        constexpr Allocator(const Allocator<U> &) noexcept {
+        constexpr BasicAllocator &operator=(const BasicAllocator &) noexcept = default;
+
+        constexpr BasicAllocator(BasicAllocator &&) noexcept = default;
+
+        constexpr BasicAllocator &operator=(BasicAllocator &&) noexcept = default;
+
+
+        T *allocate(size_t *n) {
+            return operator_type::pooled_alloc(n);
         }
 
-        /// @brief Returns the actual address of x.
-        pointer address(reference x) const noexcept { return std::addressof(x); }
-        const_pointer address(const_reference x) const noexcept { return std::addressof(x); }
-
-        /// @brief Allocate memory for n elements of type T.
-        [[nodiscard]] T *allocate(size_t n, const void *hint = nullptr) {
-            (void) hint;
-            if (n == 0) return nullptr;
-            if (n > max_size()) {
-                throw std::bad_array_new_length();
-            }
-
-            size_t total_bytes = n * sizeof(T);
-            /// Request a 'good size' from mimalloc to optimize bucket usage.
-            /// This will update total_bytes to the actual allocated physical size.
-            void *ptr = Malloc::good_alloc(&total_bytes);
-
-            if (!ptr) throw std::bad_alloc();
-            return static_cast<T *>(ptr);
+        void deallocate(T *ptr, size_t n) {
+            operator_type::pooled_free(ptr, n);
         }
 
-        /// @brief Deallocate memory previously allocated with allocate.
-        void deallocate(T *p, size_t n) noexcept {
-            if (p == nullptr) return;
 
-            /// We must pass the exact same size used in mi_malloc to mi_free_size.
-            size_t total_bytes = n * sizeof(T);
-            size_t rn = Malloc::good_alloc_size(total_bytes);
-            Malloc::good_free(p, rn);
+        [[nodiscard]] size_t good_size(size_t n) const {
+            return operator_type::pooled_alloc_size(n);
         }
 
-        /// @brief Maximum number of elements that can be allocated.
-        size_type max_size() const noexcept {
-            return std::numeric_limits<size_type>::max() / sizeof(T);
+
+        static std::vector<ObjectGuard<Alignment> > collect_arena() {
+            return operator_type::collect_tsl();
         }
 
-        /// @brief Construct an object in allocated storage.
-        template<typename U, typename... Args>
-        static void construct(U *p, Args &&... args) {
-            ::new(static_cast<void *>(p)) U(std::forward<Args>(args)...);
+        static void apply_arena(std::vector<ObjectGuard<Alignment> > &rhs) {
+            operator_type::apply_tsl(rhs);
         }
 
-        /// @brief Destroy an object.
-        template<typename U>
-        void destroy(U *p) {
-            p->~U();
+        [[nodiscard]] const char *name() const noexcept {
+            return "default";
         }
 
-        bool operator==(const Allocator &) const noexcept { return true; }
-        bool operator!=(const Allocator &) const noexcept { return false; }
+        bool operator==(const BasicAllocator &) const noexcept { return true; }
+        bool operator!=(const BasicAllocator &) const noexcept { return false; }
+
+        static BasicAllocator get_default_allocator() {
+            return BasicAllocator{};
+        }
     };
 
     /// @brief STL compatible allocator using mimalloc with explicit alignment.
