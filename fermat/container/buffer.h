@@ -152,15 +152,15 @@ namespace fermat {
         template<typename InputIterator>
         Buffer(InputIterator first, InputIterator last, const allocator_type &allocator = allocator_type{});
 
-        ~Buffer();
+        ~Buffer() override = default;
 
         this_type &operator=(const this_type &x);
 
         this_type &operator=(std::initializer_list<value_type> ilist);
 
-        this_type &operator=(this_type &&x);
+        this_type &operator=(this_type &&x) noexcept;
 
-        void swap(this_type &x);
+        void swap(this_type &x) noexcept;
 
         void assign(size_type n, const value_type &value);
 
@@ -195,7 +195,7 @@ namespace fermat {
 
         const_reverse_iterator crend() const noexcept;
 
-        bool empty() const noexcept;
+        [[nodiscard]] bool empty() const noexcept;
 
         size_type size() const noexcept;
 
@@ -279,7 +279,7 @@ namespace fermat {
 
         // This is a unilateral reset to an initially empty state. No destructors are called, no deallocation occurs.
 
-        bool validate() const noexcept;
+        [[nodiscard]] bool validate() const noexcept;
 
         void bestow(T *data, size_type size, size_type capacity) noexcept;
 
@@ -299,7 +299,7 @@ namespace fermat {
 
         void *append_uninitialized();
 
-        bool is_stringify() const noexcept;
+        [[nodiscard]] bool is_stringify() const noexcept;
 
     protected:
         // These functions do the real work of maintaining the Buffer. You will notice
@@ -371,7 +371,7 @@ namespace fermat {
 
         void DoGrow(size_type newCapacity);
 
-        void DoSwap(this_type &x);
+        void DoSwap(this_type &x) noexcept;
     }; // class Buffer
 
 
@@ -379,13 +379,13 @@ namespace fermat {
     // BufferBase
     ///////////////////////////////////////////////////////////////////////
     template<typename T, size_t Alignment, typename Allocator>
-    inline BufferBase<T, Alignment, Allocator>::BufferBase(const allocator_type &allocator) : _capacity_end(allocator) {
+    inline BufferBase<T, Alignment, Allocator>::BufferBase(const allocator_type &allocator) : _capacity_end(nullptr,allocator) {
     }
 
 
     template<typename T, size_t Alignment, typename Allocator>
     inline BufferBase<T, Alignment,
-        Allocator>::BufferBase(size_type n, const allocator_type &allocator) : _capacity_end(allocator) {
+        Allocator>::BufferBase(size_type n, const allocator_type &allocator) : _capacity_end(nullptr,allocator) {
         uninitialized_n(n);
     }
 
@@ -523,7 +523,7 @@ namespace fermat {
     }
 
     template<typename T, size_t Alignment, typename Allocator>
-    inline Buffer<T, Alignment, Allocator>::Buffer(this_type &&x) noexcept :base_type(allocator_type{}){
+    inline Buffer<T, Alignment, Allocator>::Buffer(this_type &&x) noexcept : base_type(allocator_type{}) {
         DoSwap(x);
     }
 
@@ -544,11 +544,6 @@ namespace fermat {
         DoInit(first, last, std::is_integral<InputIterator>());
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline Buffer<T, Alignment, Allocator>::~Buffer() {
-        // The destructor becomes an empty operation, allowing the compiler
-        // to optimize away the loop entirely.
-    }
 
     template<typename T, size_t Alignment, typename Allocator>
     typename Buffer<T, Alignment, Allocator>::this_type &
@@ -575,7 +570,7 @@ namespace fermat {
 
     template<typename T, size_t Alignment, typename Allocator>
     typename Buffer<T, Alignment, Allocator>::this_type &
-    Buffer<T, Alignment, Allocator>::operator=(this_type &&x) {
+    Buffer<T, Alignment, Allocator>::operator=(this_type &&x) noexcept {
         if (this != &x) {
             DoClearCapacity();
             // To consider: Are we really required to clear here? x is going away soon and will clear itself in its dtor.
@@ -731,7 +726,7 @@ namespace fermat {
 
     template<typename T, size_t Alignment, typename Allocator>
     inline void Buffer<T, Alignment, Allocator>::resize(size_type n, const value_type &value) {
-        const size_type nPrevSize = static_cast<size_type>(_end - _begin);
+        const auto nPrevSize = static_cast<size_type>(_end - _begin);
 
         if (n > nPrevSize) {
             // Upsize: Use the optimized trivial fill path.
@@ -746,8 +741,7 @@ namespace fermat {
 
     template<typename T, size_t Alignment, typename Allocator>
     inline void Buffer<T, Alignment, Allocator>::resize(size_type n) {
-        const size_type nPrevSize = static_cast<size_type>(_end - _begin);
-
+        const auto nPrevSize = static_cast<size_type>(_end - _begin);
         if (n > nPrevSize) {
             // Upsize: Insert (n - nPrevSize) default-initialized elements.
             // For trivial types, this is optimized to std::memset(..., 0, ...).
@@ -762,14 +756,17 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     void Buffer<T, Alignment, Allocator>::reserve(size_type n) {
         // If the user wants to reduce the reserved memory, there is the set_capacity function.
-        if (n > size_type(_capacity_end.first() - _begin)) // If n > capacity ...
+        if (n > size_type(_capacity_end.first() - _begin)) {
+            // If n > capacity ...
             DoGrow(n);
+        }
+
     }
 
 
     template<typename T, size_t Alignment, typename Allocator>
     void Buffer<T, Alignment, Allocator>::set_capacity(size_type n) {
-        const size_type nPrevSize = static_cast<size_type>(_end - _begin);
+        const auto nPrevSize = static_cast<size_type>(_end - _begin);
 
         if (n == npos || n <= nPrevSize) {
             // --- Case 1: Shrink or same size ---
@@ -784,7 +781,7 @@ namespace fermat {
             // --- Case 2: Expand capacity ---
             auto nNewCapacity = n;
             // Note: For trivial types, should_move_tag() is equivalent to bitwise copy.
-            pointer const pNewData = do_realloc(&nNewCapacity, _begin, _end);
+            const auto pNewData = do_realloc(&nNewCapacity, _begin, _end);
 
 
             do_free(_begin, static_cast<size_type>(_capacity_end.first() - _begin));
@@ -932,7 +929,8 @@ namespace fermat {
 
         // Check if we need to expand the buffer
         if (TURBO_UNLIKELY(size > static_cast<size_type>(_capacity_end.first() - _end))) {
-            reserve(this->size() + size);
+            auto n = GetNewCapacity(this->size() + size);
+            reserve(n);
         }
 
         // Perform bitwise copy for trivial types
@@ -1057,7 +1055,7 @@ namespace fermat {
             KCHECK(false) << "Buffer::erase -- invalid position";
 
         // C++11 stipulates that position is const_iterator, but the return value is iterator.
-        iterator destPosition = const_cast<value_type *>(position);
+        auto destPosition = const_cast<value_type *>(position);
 
         if ((position + 1) < _end)
             std::move(destPosition + 1, _end, destPosition);
@@ -1074,9 +1072,9 @@ namespace fermat {
             KCHECK(false) << "Buffer::erase -- invalid position";
 
         if (first != last) {
-            iterator const dest = const_cast<value_type *>(first);
-            iterator const src = const_cast<value_type *>(last);
-            const size_type num_to_move = static_cast<size_type>(_end - src);
+            const auto dest = const_cast<value_type *>(first);
+            const auto src = const_cast<value_type *>(last);
+            const auto num_to_move = static_cast<size_type>(_end - src);
 
             if (num_to_move > 0) {
                 // Use memmove to safely handle potential (though unlikely here) overlap
@@ -1099,7 +1097,7 @@ namespace fermat {
             KCHECK(false) << "Buffer::erase -- invalid position";
 
         // C++11 stipulates that position is const_iterator, but the return value is iterator.
-        iterator destPosition = const_cast<value_type *>(position);
+        auto destPosition = const_cast<value_type *>(position);
         *destPosition = std::move(*(_end - 1));
 
         // pop_back();
@@ -1206,7 +1204,7 @@ namespace fermat {
 
 
     template<typename T, size_t Alignment, typename Allocator>
-    inline void Buffer<T, Alignment, Allocator>::swap(this_type &x) {
+    inline void Buffer<T, Alignment, Allocator>::swap(this_type &x) noexcept {
         DoSwap(x);
     }
 
@@ -1231,7 +1229,7 @@ namespace fermat {
         container_internal::AssertValueFitsInType<size_type>(
             n, "Attempting to initialize a Buffer larger than can fit in a size_type!");
 
-        size_type count = static_cast<size_type>(n);
+        auto count = static_cast<size_type>(n);
         size_type nAllocatedCapacity = count;
 
         // Allocate raw memory. do_allocate updates nAllocatedCapacity with actual size.
@@ -1277,7 +1275,7 @@ namespace fermat {
         container_internal::AssertValueFitsInType<size_type>(
             d, "Attempting to initialize a Buffer larger than can fit in a size_type!");
 
-        const size_type n = static_cast<size_type>(d);
+        const auto n = static_cast<size_type>(d);
         auto nn = n;
         _begin = do_allocate(&nn);
         _capacity_end.first() = _begin + nn;
@@ -1306,14 +1304,14 @@ namespace fermat {
 
     template<typename T, size_t Alignment, typename Allocator>
     void Buffer<T, Alignment, Allocator>::DoAssignValues(size_type n, const value_type &value) {
-        const size_type nCapacity = static_cast<size_type>(_capacity_end.first() - _begin);
+        const auto nCapacity = static_cast<size_type>(_capacity_end.first() - _begin);
 
         if (n > nCapacity) {
             // --- Path 1: Insufficient capacity ---
             // For trivial types, we don't need to preserve old data.
             // Just free and reallocate to the exact or grown size.
             size_type nNewCapacity = n;
-            pointer const pNewData = do_allocate(&nNewCapacity);
+            const auto pNewData = do_allocate(&nNewCapacity);
 
             // Skip std::destroy for old elements as they are trivial
             do_free(_begin, nCapacity);
@@ -1364,9 +1362,9 @@ namespace fermat {
                                                                std::random_access_iterator_tag) {
         const auto d = std::distance(first, last);
         container_internal::AssertValueFitsInType<size_type>(d, "Size overflow");
-        const size_type n = static_cast<size_type>(d);
+        const auto n = static_cast<size_type>(d);
 
-        const size_type nCapacity = static_cast<size_type>(_capacity_end.first() - _begin);
+        const auto nCapacity = static_cast<size_type>(_capacity_end.first() - _begin);
 
         if (n > nCapacity) {
             // --- Path 1: Expansion needed ---
@@ -1374,7 +1372,7 @@ namespace fermat {
             // For trivial types, we don't need to preserve old data during assign,
             // so we can just allocate new and free old.
             // Or use do_realloc if it's optimized for pure allocation + copy.
-            pointer const pNewData = do_allocate(&nNewCapacity);
+            const auto pNewData = do_allocate(&nNewCapacity);
 
             // Copy new data directly into the fresh buffer
             std::copy(first, last, pNewData);
@@ -1437,17 +1435,17 @@ namespace fermat {
 
         if (first == last) return;
 
-        iterator destPosition = const_cast<value_type *>(position);
+        auto destPosition = const_cast<value_type *>(position);
         const auto d = std::distance(first, last);
         container_internal::AssertValueFitsInType<size_type>(d, "Size overflow");
-        const size_type n = static_cast<size_type>(d);
+        const auto n = static_cast<size_type>(d);
 
-        const size_type nPosIndex = static_cast<size_type>(destPosition - _begin);
-        const size_type nFreeSpace = static_cast<size_type>(_capacity_end.first() - _end);
+        const auto nPosIndex = static_cast<size_type>(destPosition - _begin);
+        const auto nFreeSpace = static_cast<size_type>(_capacity_end.first() - _end);
 
         if (n <= nFreeSpace) {
             // --- In-place Path ---
-            const size_type nSuffixSize = static_cast<size_type>(_end - destPosition);
+            const auto nSuffixSize = static_cast<size_type>(_end - destPosition);
 
             if (nSuffixSize > 0) {
                 // Shift suffix to the right by n positions.
@@ -1462,12 +1460,12 @@ namespace fermat {
             _end += n;
         } else {
             // --- Reallocation Path ---
-            const size_type nPrevSize = static_cast<size_type>(_end - _begin);
-            const size_type nGrowCapacity = GetNewCapacity(nPrevSize);
+            const auto nPrevSize = static_cast<size_type>(_end - _begin);
+            const auto nGrowCapacity = GetNewCapacity(nPrevSize);
             KCHECK(nPrevSize <= std::numeric_limits<size_type>::max() - n) << "Size overflow";
 
             size_type nNewCapacity = std::max(nGrowCapacity, nPrevSize + n);
-            pointer const pNewData = do_allocate(&nNewCapacity);
+            const auto pNewData = do_allocate(&nNewCapacity);
 
             // 1. Relocate prefix: [begin, position)
             if (nPosIndex > 0) {
@@ -1505,14 +1503,14 @@ namespace fermat {
 
         if (n == 0) return;
 
-        iterator destPosition = const_cast<value_type *>(position);
-        const size_type nPosIndex = static_cast<size_type>(destPosition - _begin);
-        const size_type nFreeSpace = static_cast<size_type>(_capacity_end.first() - _end);
+        auto destPosition = const_cast<value_type *>(position);
+        const auto nPosIndex = static_cast<size_type>(destPosition - _begin);
+        const auto nFreeSpace = static_cast<size_type>(_capacity_end.first() - _end);
 
         if (n <= nFreeSpace) {
             // --- In-place Path ---
             const value_type temp = value; // Capture value in case it's from within the buffer
-            const size_type num_to_move = static_cast<size_type>(_end - destPosition);
+            const auto num_to_move = static_cast<size_type>(_end - destPosition);
 
             if (num_to_move > 0) {
                 // Shift existing elements to the right to make room for n new elements
@@ -1528,13 +1526,13 @@ namespace fermat {
             _end += n;
         } else {
             // --- Reallocation Path ---
-            const size_type nPrevSize = static_cast<size_type>(_end - _begin);
+            const auto nPrevSize = static_cast<size_type>(_end - _begin);
             const size_type nGrowCapacity = GetNewCapacity(nPrevSize);
 
             KCHECK(nPrevSize <= std::numeric_limits<size_type>::max() - n) << "Size overflow";
 
             size_type nNewCapacity = std::max(nGrowCapacity, nPrevSize + n);
-            pointer const pNewData = do_allocate(&nNewCapacity);
+            const auto pNewData = do_allocate(&nNewCapacity);
 
             // 1. Relocate the prefix [begin, position)
             if (nPosIndex > 0) {
@@ -1566,10 +1564,9 @@ namespace fermat {
         }
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
-    void Buffer<T, Alignment, Allocator>::DoClearCapacity()
     // This function exists because set_capacity() currently indirectly requires value_type to be default-constructible,
-    {
+    template<typename T, size_t Alignment, typename Allocator>
+    void Buffer<T, Alignment, Allocator>::DoClearCapacity() {
         // and some functions that need to clear our capacity (e.g. operator=) aren't supposed to require default-constructibility.
         clear();
         this_type temp(std::move(*this)); // This is the simplest way to accomplish this,
@@ -1580,8 +1577,8 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     void Buffer<T, Alignment, Allocator>::DoGrow(size_type newCapacity) {
         // Allocate new memory block
-        pointer const pNewData = do_allocate(&newCapacity);
-        const size_type nPrevSize = static_cast<size_type>(_end - _begin);
+        const auto pNewData = do_allocate(&newCapacity);
+        const auto nPrevSize = static_cast<size_type>(_end - _begin);
 
         if (nPrevSize > 0) {
             // For trivial types, relocation is a simple bitwise copy.
@@ -1601,7 +1598,7 @@ namespace fermat {
 
 
     template<typename T, size_t Alignment, typename Allocator>
-    inline void Buffer<T, Alignment, Allocator>::DoSwap(this_type &x) {
+    inline void Buffer<T, Alignment, Allocator>::DoSwap(this_type &x) noexcept {
         std::swap(_begin, x._begin);
         std::swap(_end, x._end);
         std::swap(_capacity_end.first(), x._capacity_end.first());
@@ -1611,8 +1608,8 @@ namespace fermat {
     // is unfortunate but not easily resolved without relying on C++11 perfect forwarding.
     template<typename T, size_t Alignment, typename Allocator>
     void Buffer<T, Alignment, Allocator>::do_insert_values_end(size_type n, const value_type &value) {
-        const size_type nPrevSize = static_cast<size_type>(_end - _begin);
-        const size_type nFreeSpace = static_cast<size_type>(_capacity_end.first() - _end);
+        const auto nPrevSize = static_cast<size_type>(_end - _begin);
+        const auto nFreeSpace = static_cast<size_type>(_capacity_end.first() - _end);
 
         if (n > nFreeSpace) {
             // --- Reallocation Path ---
@@ -1620,7 +1617,7 @@ namespace fermat {
             KCHECK(nPrevSize <= std::numeric_limits<size_type>::max() - n) << "Size overflow";
 
             size_type nNewCapacity = std::max(nGrowCapacity, nPrevSize + n);
-            pointer const pNewData = do_allocate(&nNewCapacity);
+            const auto pNewData = do_allocate(&nNewCapacity);
 
             // 1. Move existing data: Trivial move is just a memcpy
             if (nPrevSize > 0) {
@@ -1652,16 +1649,15 @@ namespace fermat {
 
     template<typename T, size_t Alignment, typename Allocator>
     void Buffer<T, Alignment, Allocator>::do_insert_values_end(size_type n) {
-        const size_type nPrevSize = static_cast<size_type>(_end - _begin);
-        const size_type nFreeSpace = static_cast<size_type>(_capacity_end.first() - _end);
-
+        const auto nPrevSize = static_cast<size_type>(_end - _begin);
+        const auto nFreeSpace = static_cast<size_type>(_capacity_end.first() - _end);
         if (n > nFreeSpace) {
             // --- Reallocation Path ---
             const size_type nGrowCapacity = GetNewCapacity(nPrevSize);
             KCHECK(nPrevSize <= std::numeric_limits<size_type>::max() - n) << "Size overflow";
 
             size_type nNewCapacity = std::max(nGrowCapacity, nPrevSize + n);
-            pointer const pNewData = do_allocate(&nNewCapacity);
+            const auto pNewData = do_allocate(&nNewCapacity);
 
             // 1. Relocate existing data using memcpy (Trivial move is a bitwise copy)
             if (nPrevSize > 0) {
@@ -1678,12 +1674,14 @@ namespace fermat {
             _begin = pNewData;
             _end = pNewData + nPrevSize + n;
             _capacity_end.first() = pNewData + nNewCapacity;
+
         } else {
             // --- In-place Path ---
             // Efficiently zero-initialize trailing memory
             std::memset(static_cast<void *>(_end), 0, n * sizeof(T));
             _end += n;
         }
+
     }
 
     template<typename T, size_t Alignment, typename Allocator>
@@ -1692,8 +1690,8 @@ namespace fermat {
         if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
             KCHECK(false) << "Buffer::insert/emplace -- invalid position";
 
-        iterator destPosition = const_cast<value_type *>(position);
-        const size_type nPosIndex = static_cast<size_type>(destPosition - _begin);
+        auto destPosition = const_cast<value_type *>(position);
+        const auto nPosIndex = static_cast<size_type>(destPosition - _begin);
 
         if (_end != _capacity_end.first()) {
             // --- In-place Path ---
@@ -1702,7 +1700,7 @@ namespace fermat {
             value_type value(std::forward<Args>(args)...);
 
             // 2. Shift elements to the right. Use memmove because ranges overlap.
-            const size_type num_to_move = static_cast<size_type>(_end - destPosition);
+            const auto num_to_move = static_cast<size_type>(_end - destPosition);
             if (num_to_move > 0) {
                 std::memmove(static_cast<void *>(destPosition + 1),
                              static_cast<const void *>(destPosition),
@@ -1714,9 +1712,9 @@ namespace fermat {
             ++_end;
         } else {
             // --- Reallocation Path ---
-            const size_type nPrevSize = static_cast<size_type>(_end - _begin);
+            const auto nPrevSize = static_cast<size_type>(_end - _begin);
             size_type nNewCapacity = GetNewCapacity(nPrevSize);
-            pointer const pNewData = do_allocate(&nNewCapacity);
+            const auto pNewData = do_allocate(&nNewCapacity);
 
             // 1. Construct the new value at the target index in the new buffer.
             // Using placement new here to handle the variadic args correctly.
@@ -1750,9 +1748,9 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     template<typename... Args>
     void Buffer<T, Alignment, Allocator>::do_insert_value_end(Args &&... args) {
-        const size_type nPrevSize = static_cast<size_type>(_end - _begin);
+        const auto nPrevSize = static_cast<size_type>(_end - _begin);
         size_type nNewCapacity = GetNewCapacity(nPrevSize);
-        pointer const pNewData = do_allocate(&nNewCapacity);
+        const auto pNewData = do_allocate(&nNewCapacity);
 
         // 1. Construct the new element first at the new tail.
         // This is safe even if 'args' references elements in the old [_begin, _end) range.
@@ -1791,10 +1789,11 @@ namespace fermat {
             KCHECK(_begin == nullptr) << "Buffer::bestow -- buffer is not empty";
             return;
         }
-
-        // 2. Alignment check: Ensure the external pointer meets hardware/SIMD requirements.
-        KCHECK(reinterpret_cast<uintptr_t>(data) % Alignment == 0)
-            << "Buffer::bestow -- pointer is not aligned to " << Alignment;
+        if constexpr (Alignment != 0) {
+            // 2. Alignment check: Ensure the external pointer meets hardware/SIMD requirements.
+            KCHECK(reinterpret_cast<uintptr_t>(data) % Alignment == 0)
+                << "Buffer::bestow -- pointer is not aligned to " << Alignment;
+        }
 
         // 3. Ownership transfer: Assign external pointers to internal state.
         _begin = data;

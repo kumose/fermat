@@ -321,7 +321,11 @@ namespace fermat {
 
         // This is a unilateral reset to an initially empty state. No destructors are called, no deallocation occurs.
 
-        bool validate() const noexcept;
+        [[nodiscard]] bool validate() const noexcept;
+
+        void bestow(T *data, size_type size, size_type capacity) noexcept;
+
+        T *seize(size_type *size, size_type *capacity) noexcept;
 
     protected:
         // These functions do the real work of maintaining the Vector. You will notice
@@ -1130,7 +1134,7 @@ namespace fermat {
         if (TURBO_UNLIKELY((first < _begin) || (first > _end) || (last < _begin) || (last > _end) || (last < first)))
             KCHECK(false) << "Vector::erase -- invalid position";
         if (first != last) {
-            iterator const position = const_cast<value_type *>(std::move(
+            const auto position = const_cast<value_type *>(std::move(
                 const_cast<value_type *>(last), const_cast<value_type *>(_end), const_cast<value_type *>(first)));
             std::destroy(position, _end);
             _end -= (last - first);
@@ -1749,6 +1753,42 @@ namespace fermat {
             return false;
         return true;
     }
+    template<typename T, size_t Alignment, typename Allocator>
+    void Vector<T, Alignment, Allocator>::bestow(T *data, size_type size, size_type capacity) noexcept {
+        // 1. Pre-condition: Buffer must be empty to avoid accidental data loss.
+        if (TURBO_UNLIKELY(_begin != nullptr || data == nullptr)) {
+            KCHECK(_begin == nullptr) << "Buffer::bestow -- buffer is not empty";
+            return;
+        }
+
+        if constexpr (Alignment != 0) {
+            // 2. Alignment check: Ensure the external pointer meets hardware/SIMD requirements.
+            KCHECK(reinterpret_cast<uintptr_t>(data) % Alignment == 0)
+                << "Vector::bestow -- pointer is not aligned to " << Alignment;
+        }
+        // 3. Ownership transfer: Assign external pointers to internal state.
+        _begin = data;
+        _end = data + size;
+        _capacity_end.first() = data + capacity;
+    }
+
+    template<typename T, size_t Alignment, typename Allocator>
+    T *Vector<T, Alignment, Allocator>::seize(size_type *out_size, size_type *out_capacity) noexcept {
+        if (_begin == nullptr) {
+            return nullptr;
+        }
+        T *raw_ptr = _begin;
+
+        if (out_size) *out_size = static_cast<size_type>(_end - _begin);
+        if (out_capacity) *out_capacity = static_cast<size_type>(_capacity_end.first() - _begin);
+
+        // Reset buffer to a safe, empty state without freeing memory
+        _begin = nullptr;
+        _end = nullptr;
+        _capacity_end.first() = nullptr;
+
+        return raw_ptr;
+    }
 
 
     ///////////////////////////////////////////////////////////////////////
@@ -1914,6 +1954,7 @@ namespace fermat {
 
         return static_cast<typename Vector<T, Alignment, Allocator>::size_type>(numRemoved);
     }
+
 
     template<size_t Alignment>
     struct is_contiguous_string_visitor<Vector<char, Alignment> > : std::true_type {

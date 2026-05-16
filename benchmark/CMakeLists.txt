@@ -242,6 +242,22 @@ kmcmake_cc_bm(
         ${KMCMAKE_DEPS_LINK}
 )
 
+kmcmake_cc_bm(
+        NAME sort_bench
+        MODULE mem
+        SOURCES
+        sort_bench.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        benchmark::benchmark_main
+        benchmark::benchmark
+        ${KMCMAKE_DEPS_LINK}
+)
+
 
 
 #[[

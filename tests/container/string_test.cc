@@ -23,7 +23,6 @@
 #include <list>
 #include <sstream>
 #include <stdexcept>
-#include <fermat/container/string.h>
 #include  <turbo/log/logging.h>
 #include <atomic>
 #include <cstdlib>
@@ -65,7 +64,9 @@ namespace {
     template<class String>
     void randomString(String *toFill, unsigned int maxSize = 1000) {
         assert(toFill);
-        toFill->resize(random(0, maxSize));
+        auto r = random(0, maxSize);
+        toFill->resize(r);
+
         for (auto &c: *toFill) {
             c = random('a', 'z');
         }
@@ -696,6 +697,7 @@ void clause11_21_4_6_8(String &test) {
     randomString(&s, maxString);
     s.swap(test);
 }
+
 /*
 template<class String>
 void clause11_21_4_7_1(String &test) {
@@ -767,9 +769,14 @@ void clause11_21_4_7_2_c(String &test) {
 
 template<class String>
 void clause11_21_4_7_2_c1(String &test) {
+    KLOG(INFO) << "before:" << test;
     String str =
             String(test).substr(random(0, test.size()), random(0, test.size()));
-    Num2String(test, test.find(str.c_str(), random(0, test.size())));
+    auto n = random(0, test.size());
+    auto f = test.find(str.c_str(), n);
+    KLOG(INFO) << "medium:" << str<<" medium size:"<<str.size()<<" c_str:"<<str.c_str() <<" n:"<<n<<" f:"<<f  ;
+    Num2String(test,  f);
+    KLOG(INFO) << "after:" << test;
 }
 
 template<class String>
@@ -1125,16 +1132,11 @@ TEST(KString, testAllClauses) {
     EXPECT_TRUE(1) << "Starting with seed: " << seed;
     std::string r;
     fermat::KString c;
-#if FOLLY_HAVE_WCHAR_SUPPORT
-    std::wstring wr;
-    fermat::BasicString<wchar_t, 0> wc;
-#endif
     int count = 0;
 
     auto l = [&](const char *const clause,
                  void (*f_string)(std::string &),
-                 void (*f_fbstring)(fermat::KString &),
-                 void (*f_wfbstring)(fermat::BasicString<wchar_t, 0> &)) {
+                 void (*f_fbstring)(fermat::KString &)) {
         do {
             if (true) {
             } else {
@@ -1142,11 +1144,8 @@ TEST(KString, testAllClauses) {
             }
             randomString(&r);
             c = r;
+            EXPECT_EQ(c.size(), r.size());
             EXPECT_EQ(c, r);
-#if FOLLY_HAVE_WCHAR_SUPPORT
-            wr = std::wstring(r.begin(), r.end());
-            wc = fermat::BasicString<wchar_t, 0>(wr.c_str());
-#endif
             auto localSeed = seed + count;
             rng = RandomT(localSeed);
             f_string(r);
@@ -1154,30 +1153,15 @@ TEST(KString, testAllClauses) {
             f_fbstring(c);
             EXPECT_EQ(r, c)
           << "Lengths: " << r.size() << " vs. " << c.size() << "\nReference: '"
-          << r << "'" << "\nActual:    '" << c.data()[0] << "'";
-#if FOLLY_HAVE_WCHAR_SUPPORT
-            rng = RandomT(localSeed);
-            f_wfbstring(wc);
-            int wret = wcslen(wc.c_str());
-            auto mbv = std::vector<char>(wret + 1);
-            auto mb = mbv.data();
-            int ret = wcstombs(mb, wc.c_str(), wret + 1);
-            if (ret == wret) {
-                mb[wret] = '\0';
-            }
-            const char *mc = c.c_str();
-            std::string one(mb);
-            std::string two(mc);
-            EXPECT_EQ(one, two);
-#endif
+          << r << "'" << "\nActual:    '" << c.data()[0] << "' loop:" << count;
         } while (++count % 100 != 0);
     };
 
 #define TEST_CLAUSE(x)             \
+  KLOG(INFO)<<#x;                  \
   l(#x,                            \
     clause11_##x<std::string>,     \
-    clause11_##x<fermat::KString>, \
-    clause11_##x<fermat::BasicString<wchar_t,0>>);
+    clause11_##x<fermat::KString>);
 
     TEST_CLAUSE(21_4_2_a);
     TEST_CLAUSE(21_4_2_b);
@@ -1792,8 +1776,8 @@ TEST(KString, convertFromStringView) {
     }
     {
         using sv_type = std::basic_string_view<char, custom_traits>;
-        fermat::BasicString<char,0, custom_traits> test{sv_type("foo")};
-        std::basic_string<char,  custom_traits> control{sv_type("foo")};
+        fermat::BasicString<char, 0, custom_traits> test{sv_type("foo")};
+        std::basic_string<char, custom_traits> control{sv_type("foo")};
         EXPECT_EQ(test, "foo");
         EXPECT_EQ(test, control);
     }
@@ -1810,7 +1794,7 @@ TEST(KString, convertToStringView) {
     fermat::KString s("foo");
     std::string_view sv = s;
     EXPECT_EQ(sv, "foo");
-    fermat::BasicString<char,0, custom_traits> s2("bar");
+    fermat::BasicString<char, 0, custom_traits> s2("bar");
     std::basic_string_view<char, custom_traits> sv2 = s2;
     EXPECT_EQ(sv2, "bar");
 }
@@ -1830,4 +1814,58 @@ TEST(KString, testHash) {
 TEST(KString, fmt) {
     EXPECT_EQ("  foo", turbo::str_cat("  ", fermat::KString("foo")));
     EXPECT_EQ("  foo", turbo::str_format("  %v", fermat::KString("foo")));
+}
+
+
+TEST(KString, FindEmptyString) {
+    // Case 1: pos within range, pos == size() (string "d", size=1, pos=1)
+    {
+        fermat::KString s1 = "d";
+        std::string s2 = "d";
+        size_t pos = 1;
+        size_t r1 = s1.find("", pos);
+        size_t r2 = s2.find("", pos);
+        KLOG(INFO) << "fermat::KString find(\"\", 1) on \"d\" -> " << r1;
+        KLOG(INFO) << "std::string   find(\"\", 1) on \"d\" -> " << r2;
+        EXPECT_EQ(r1, r2);
+    }
+
+    // Case 2: pos within range, pos < size() (string "abc", pos=1)
+    {
+        fermat::KString s1 = "abc";
+        std::string s2 = "abc";
+        size_t pos = 1;
+        size_t r1 = s1.find("", pos);
+        size_t r2 = s2.find("", pos);
+        KLOG(INFO) << "fermat::KString find(\"\", 1) on \"abc\" -> " << r1;
+        KLOG(INFO) << "std::string   find(\"\", 1) on \"abc\" -> " << r2;
+        EXPECT_EQ(r1, r2);
+    }
+
+    // Case 3: pos exactly equal to size() (string "abc", pos=3)
+    {
+        fermat::KString s1 = "abc";
+        std::string s2 = "abc";
+        size_t pos = 3;
+        size_t r1 = s1.find("", pos);
+        size_t r2 = s2.find("", pos);
+        KLOG(INFO) << "fermat::KString find(\"\", 3) on \"abc\" -> " << r1;
+        KLOG(INFO) << "std::string   find(\"\", 3) on \"abc\" -> " << r2;
+        EXPECT_EQ(r1, r2);
+    }
+
+    // Case 4: pos out of range (pos > size())
+    {
+        fermat::KString s1 = "abc";
+        std::string s2 = "abc";
+        size_t pos = 5;
+        size_t r1 = s1.find("", pos);
+        size_t r2 = s2.find("", pos);
+        KLOG(INFO) << "fermat::KString find(\"\", 5) on \"abc\" -> " << r1;
+        KLOG(INFO) << "std::string   find(\"\", 5) on \"abc\" -> " << r2;
+        EXPECT_EQ(r1, r2);
+    }
+
+    fermat::KString s1;
+    KLOG(INFO)<<strlen(s1.c_str());
 }

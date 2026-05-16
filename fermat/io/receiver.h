@@ -27,9 +27,9 @@ namespace fermat {
 
         virtual turbo::Status append(const char *data, size_t len) = 0;
 
-        virtual bool is_dynamic() const noexcept = 0;
+       [[nodiscard]] virtual bool is_dynamic() const noexcept = 0;
 
-        virtual size_t size() const noexcept = 0;
+       [[nodiscard]] virtual size_t size() const noexcept = 0;
     };
 
     template<typename Container, typename Enabler = void>
@@ -54,8 +54,8 @@ namespace fermat {
             return turbo::OkStatus();
         }
 
-        bool is_dynamic() const noexcept override { return true; }
-        size_t size() const noexcept override { return _c.size(); }
+       [[nodiscard]] bool is_dynamic() const noexcept override { return true; }
+      [[nodiscard]]  size_t size() const noexcept override { return _c.size(); }
 
     private:
         Container &_c;
@@ -81,8 +81,8 @@ namespace fermat {
             return turbo::OkStatus();
         }
 
-        bool is_dynamic() const noexcept override { return true; }
-        size_t size() const noexcept override { return _c.size(); }
+       [[nodiscard]] bool is_dynamic() const noexcept override { return true; }
+       [[nodiscard]] size_t size() const noexcept override { return _c.size(); }
 
     private:
         Container &_c;
@@ -114,8 +114,8 @@ namespace fermat {
             return turbo::OkStatus();
         }
 
-        bool is_dynamic() const noexcept override { return true; }
-        size_t size() const noexcept override { return _c.size(); }
+       [[nodiscard]] bool is_dynamic() const noexcept override { return true; }
+       [[nodiscard]] size_t size() const noexcept override { return _c.size(); }
         Container release() { return std::move(_c); }
         const Container &container() const noexcept { return _c; }
 
@@ -145,8 +145,8 @@ namespace fermat {
             return turbo::OkStatus();
         }
 
-        bool is_dynamic() const noexcept override { return true; }
-        size_t size() const noexcept override { return _c.size(); }
+       [[nodiscard]] bool is_dynamic() const noexcept override { return true; }
+      [[nodiscard]]  size_t size() const noexcept override { return _c.size(); }
         Container release() { return std::move(_c); }
         const Container &container() const noexcept { return _c; }
 

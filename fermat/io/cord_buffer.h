@@ -52,7 +52,7 @@ namespace fermat {
 
         /// @brief Get the total number of bytes successfully written (via write or advance).
         /// @return Total bytes written so far.
-        size_t size() const { return _total_size; }
+       [[nodiscard]] size_t size() const { return _total_size; }
 
         /// @brief Get the total capacity (maximum writable bytes) of this lease.
         /// @return Capacity in bytes.
@@ -176,9 +176,6 @@ namespace fermat {
     public:
         CordBuffer() = default;
 
-        /// total = block_reserve + prefix_reserve
-        CordBuffer(size_t block_reserve, size_t prefix_reserve = 0);
-
         CordBuffer(const CordBuffer &) = delete;
 
         CordBuffer &operator=(const CordBuffer &) = delete;
@@ -189,10 +186,7 @@ namespace fermat {
         // Actually we just move the lease; after move, source will have an empty lease.
         CordBuffer(CordBuffer &&rhs) noexcept
             : _views(std::move(rhs._views)),
-              _total_size(std::exchange(rhs._total_size, 0)),
-              _index(std::exchange(rhs._index, 0)),
-              _view_start(std::exchange(rhs._view_start, 0)),
-              _lease(std::move(rhs._lease)) {
+              _total_size(std::exchange(rhs._total_size, 0)) {
             // After moving _views, rhs._views is empty. Its _lease is now moved,
             // so rhs._lease will have _capacity = 0 (since BufferLease's move constructor
             // moves the spans and resets the source to empty). That is desirable.
@@ -207,37 +201,20 @@ namespace fermat {
                 // Transfer ownership
                 _views = std::move(rhs._views);
                 _total_size = std::exchange(rhs._total_size, 0);
-                _index = std::exchange(rhs._index, 0);
-                _view_start = std::exchange(rhs._view_start, 0);
-                _lease = std::move(rhs._lease);
             }
             return *this;
         }
 
-        ~CordBuffer() {
-
-        }
-
-        template<size_t OA, size_t OB>
-        [[nodiscard]] bool share_able_to(const CordBuffer<OA, OB> &rhs) const;
+        ~CordBuffer()  = default;
 
         [[nodiscard]] size_t block_size() const;
 
         [[nodiscard]] size_t alignment() const;
 
 
-        /// @brief Return the `idx`-th logical block as a string_view (read‑only).
-        std::string_view block_view(size_t idx) const;
-
-
         [[nodiscard]] size_t size() const;
 
         [[nodiscard]] size_t blocks() const;
-
-        size_t readable_blocks() const;
-
-        size_t prepend_blocks() const;
-
 
         turbo::Status append(std::string_view data);
 
@@ -245,11 +222,9 @@ namespace fermat {
 
 
     protected:
-        std::vector<Buffer<char, Alignment>> _views; ///< All block views (including Umount ones).
+        Buffer<char, Alignment> _current;
+        std::list<Buffer<char, Alignment>> _views; ///< All block views (including Umount ones).
         size_t _total_size{0}; ///< Total logical bytes stored.
-        size_t _index{0}; ///< Index of the view currently being written (next commit position).
-        size_t _view_start{0}; ///< First logical block index (skip Umount prefix).
-        BufferLease _lease; ///< Active lease, if any.
     };
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -258,26 +233,6 @@ namespace fermat {
     ///////////////////////////////////////////////////////////////////////////
     ///
 
-
-    /// @brief Access a specific block as a string_view for read-only inspection.
-    template<size_t Alignment, size_t BlockSize>
-    inline std::string_view CordBuffer<Alignment, BlockSize>::block_view(size_t idx) const {
-        auto ridx = idx + _view_start;
-        if (ridx >= _views.size() || _views[ridx].length == 0) {
-            return {};
-        }
-
-        const auto &v = _views[ridx];
-        return {v.block->data + v.offset, v.length};
-    }
-
-
-    template<size_t Alignment, size_t BlockSize>
-    template<size_t OA, size_t OB>
-    inline bool CordBuffer<Alignment, BlockSize>::share_able_to(const CordBuffer<OA, OB> &rhs) const {
-        TURBO_UNUSED(rhs);
-        return (Alignment == OA) && (BlockSize % OB == 0);
-    }
 
     template<size_t Alignment, size_t BlockSize>
     inline size_t CordBuffer<Alignment, BlockSize>::block_size() const {
@@ -293,21 +248,9 @@ namespace fermat {
 
     template<size_t Alignment, size_t BlockSize>
     inline size_t CordBuffer<Alignment, BlockSize>::blocks() const {
-        return _views.size() - _view_start;
+        return _views.size() + (_current.size() > 0 ? 1 : 0);
     }
 
-    template<size_t Alignment, size_t BlockSize>
-    inline size_t CordBuffer<Alignment, BlockSize>::readable_blocks() const {
-        if (_index == _views.size() || _views[_index].length == 0) {
-            return _index - _view_start;
-        }
-        return _index - _view_start + 1;
-    }
-
-    template<size_t Alignment, size_t BlockSize>
-    inline size_t CordBuffer<Alignment, BlockSize>::prepend_blocks() const {
-        return _view_start;
-    }
 
     template<size_t Alignment, size_t BlockSize>
     inline size_t CordBuffer<Alignment, BlockSize>::alignment() const {
@@ -323,33 +266,24 @@ namespace fermat {
     template<size_t Alignment, size_t BlockSize>
     turbo::Status CordBuffer<Alignment, BlockSize>::append(const void *data, size_t size) {
         if (size == 0 || data == nullptr) return turbo::OkStatus();
-
-        /// INVARIANT: No append allowed during an active borrowing session.
-        DKCHECK(!_lease.borrowed()) << "logic error: appending during borrowing";
-
+        if (_current.capacity() == 0) {
+            _current.reserve(BlockSize);
+        }
         const char *src = static_cast<const char *>(data);
         auto remnain = size;
         while (remnain > 0) {
-            if (_views.empty() || _views.back().size() == _views.back().size()) {
-                _views.push_back(Buffer<char, Alignment>());
-                _views.back().reserve(BlockSize);
+            if (_current.size()  == _current.capacity()) {
+                _views.push_back(std::move(_current));
+                _current.reserve(BlockSize);
             }
-            auto app_len = std::min(remnain, _views.back().capacity() - _views.back().size());
-            _views.back().append(src, app_len);
+            auto app_len = std::min(remnain, _current.capacity() - _current.size());
+            _current.append(src, app_len);
             remnain -= app_len;
             src += app_len;
         }
+        _total_size += size;
 
         return  turbo::OkStatus();
-    }
-
-
-    /// total = block_reserve + prefix_reserve
-    template<size_t Alignment, size_t BlockSize>
-    CordBuffer<Alignment, BlockSize>::CordBuffer(size_t block_reserve, size_t prefix_reserve) {
-        _views.reserve(prefix_reserve + block_reserve);
-        _view_start = prefix_reserve;
-        _index = prefix_reserve;
     }
 
 

@@ -18,6 +18,7 @@
 #include <utility>
 #include <iterator>
 #include <cstring>
+#include <numeric>
 
 namespace fermat::container_internal {
     template<class InIt, class OutIt>

@@ -97,7 +97,6 @@ namespace fermat {
 
         ~ObjectGuard() {
             for (void *ptr: ptrs) {
-                KLOG(INFO) << n;
                 if constexpr (Alignment == 0) {
                     Malloc::good_free(ptr, n);
                 } else {
@@ -356,7 +355,9 @@ namespace fermat {
 
         static T *pooled_alloc(size_t *n) {
             T *ptr = nullptr;
+            size_t nn = 1;
             if (n == nullptr || *n == 1) {
+                nn = 1;
                 ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, 1, Alignment>::allocate());
             } else if (*n <= 64) {
                 ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, kTinySize, Alignment>::allocate());
@@ -375,10 +376,9 @@ namespace fermat {
                 *n = kPageSize;
             } else {
                 size_t bytes;
-                if (!checked_muladd(&bytes, *n, sizeof(sizeof(T)), 0UL)) {
+                if (!checked_muladd(&bytes, *n, sizeof(T), 0UL)) {
                     throw std::length_error("");
                 }
-
                 if constexpr (Alignment > 0) {
                     ptr = static_cast<T *>(AlignedMalloc<Alignment>::good_alloc(&bytes));
                 } else {
@@ -389,6 +389,7 @@ namespace fermat {
             if (!ptr) {
                 throw std::length_error("");
             }
+
             return ptr;
         }
 

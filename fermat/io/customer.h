@@ -57,7 +57,6 @@ namespace fermat {
             // Use Peeker for zero‑copy, cross‑block reading
             Peeker<IOBuf<Alignment, BlockSize>> peeker(&source);
             size_t remaining = readable;
-            KLOG(INFO) << remaining;
             while (remaining > 0) {
                 auto chunk = peeker.readn(remaining);
                 TURBO_RETURN_NOT_OK(
@@ -97,7 +96,6 @@ namespace fermat {
             if (!status.ok()) return status;
 
             size_t remaining = readable;
-            KLOG(INFO) << remaining;
             while (remaining > 0) {
                 auto chunk = peeker.readn(remaining);
                 /// reach c

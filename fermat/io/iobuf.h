@@ -22,7 +22,6 @@
 #include <new>
 
 namespace fermat {
-
     template<size_t A>
     struct BlockBuffer {
         static constexpr size_t kAlignment = A;
@@ -30,7 +29,7 @@ namespace fermat {
         BlockBuffer() = default;
 
         /// @brief True if this block is shared by more than one IOBuf.
-        bool is_shared() const noexcept {
+        [[nodiscard]] bool is_shared() const noexcept {
             return ref_count.load(std::memory_order_acquire) > 1;
         }
 
@@ -69,7 +68,7 @@ namespace fermat {
         uint32_t length{0};
 
     public:
-        uint32_t end_offset() const { return offset + length; }
+        [[nodiscard]] uint32_t end_offset() const { return offset + length; }
 
         /// @brief Returns a writable span covering the currently unused tail of the block.
         turbo::span<char> write_able() {
@@ -78,32 +77,32 @@ namespace fermat {
         }
 
 
-        size_t capacity() const {
+        [[nodiscard]] size_t capacity() const {
             if (!block) {
                 return 0;
             }
             return block->buffer.capacity();
         }
 
-        size_t remaining() const {
+        [[nodiscard]] size_t remaining() const {
             if (!block) {
                 return 0;
             }
             return block->buffer.capacity() - offset - length;
         }
 
-        bool full_fill() const {
+        [[nodiscard]] bool full_fill() const {
             if (!block) {
                 return true;
             }
             return block->buffer.capacity() - offset - length == 0;
         }
 
-        size_t size() const {
+        [[nodiscard]] size_t size() const {
             return length;
         }
 
-        const char *data() const {
+        [[nodiscard]] const char *data() const {
             if (!block) {
                 return nullptr;
             }
@@ -111,7 +110,7 @@ namespace fermat {
         }
 
 
-        size_t write_able_size() const {
+        [[nodiscard]] size_t write_able_size() const {
             return block->buffer.capacity() - length - offset;
         }
 
@@ -216,7 +215,7 @@ namespace fermat {
         turbo::Result<size_t> shrink_immutable();
 
 
-        std::string flatten() const;
+        [[nodiscard]] std::string flatten() const;
 
         template<size_t SA = Alignment>
         AlignedString<SA> flatten_aligned() const;
@@ -224,21 +223,21 @@ namespace fermat {
         size_t pop_front(size_t n, std::string *result = nullptr);
 
         /// @brief Return the `idx`-th logical block as a string_view (read‑only).
-        std::string_view block_view(size_t idx) const;
+        [[nodiscard]] std::string_view block_view(size_t idx) const;
 
         const block_view_type *peek(size_t idx) const;
 
         const block_view_type *readable_peek(size_t idx) const;
 
-        bool is_borrowing() const;
+        [[nodiscard]] bool is_borrowing() const;
 
         [[nodiscard]] size_t size() const;
 
         [[nodiscard]] size_t blocks() const;
 
-        size_t readable_blocks() const;
+        [[nodiscard]] size_t readable_blocks() const;
 
-        size_t prepend_blocks() const;
+        [[nodiscard]] size_t prepend_blocks() const;
 
         turbo::Status custom(size_t n);
 
@@ -432,7 +431,7 @@ namespace fermat {
         if (block->ref_count.fetch_sub(1, std::memory_order_acq_rel) == 1) {
             // 1. First, call the destructor to free 'data'
             std::destroy_at(block);
-            TieredAllocator<block_type, 0>::pooled_free(block  , 1);
+            TieredAllocator<block_type, 0>::pooled_free(block, 1);
         }
     }
 

@@ -1,16 +1,16 @@
-// Copyright (C) 2026 Kumo inc. and its affiliates. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/// Copyright (C) 2026 Kumo inc. and its affiliates. All Rights Reserved.
+///
+/// Licensed under the Apache License, Version 2.0 (the "License");
+/// you may not use this file except in compliance with the License.
+/// You may obtain a copy of the License at
+///
+///     http://www.apache.org/licenses/LICENSE-2.0
+///
+/// Unless required by applicable law or agreed to in writing, software
+/// distributed under the License is distributed on an "AS IS" BASIS,
+/// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+/// See the License for the specific language governing permissions and
+/// limitations under the License.
 
 #include <benchmark/benchmark.h>
 #include <fermat/io/iobuf.h>
@@ -22,146 +22,104 @@
 #include <vector>
 
 namespace {
-    // Generate random data of given size (bytes)
-    std::vector<char> GenerateRandomData(size_t size) {
-        std::vector<char> data(size);
-        std::mt19937 rng(std::random_device{}());
-        std::uniform_int_distribution<int> dist(0, 255);
-        for (size_t i = 0; i < size; ++i) {
+
+constexpr size_t kMaxChunkSize = 4096;
+
+static const std::vector<char>& GetRandomData() {
+    static std::vector<char> data(kMaxChunkSize);
+    static std::mt19937 rng(12345);
+    static std::uniform_int_distribution<int> dist(0, 255);
+    static bool init = [] {
+        for (size_t i = 0; i < kMaxChunkSize; ++i)
             data[i] = static_cast<char>(dist(rng));
-        }
-        return data;
+        return true;
+    }();
+    (void)init;
+    return data;
+}
+
+inline size_t RandomChunkSize() {
+    thread_local std::mt19937 rng(std::random_device{}());
+    std::uniform_int_distribution<size_t> dist(1, kMaxChunkSize);
+    return dist(rng);
+}
+
+template <typename Container>
+void AppendRandomChunked(Container& c, size_t total) {
+    const auto& data = GetRandomData();
+    size_t remain = total;
+    while (remain) {
+        size_t n = std::min(RandomChunkSize(), remain);
+        c.append(data.data(), n);
+        remain -= n;
     }
+}
 
-    // Benchmark: IOBuf append (default alignment=64, blockSize=4096)
-    static void BM_IOBuf_Append(benchmark::State &state) {
-        const size_t total_bytes = state.range(0);
-        const auto data = GenerateRandomData(total_bytes);
-        for (auto _: state) {
-            fermat::IOBuf<64, 131072> buf;
-            buf.append(data.data(), data.size());
-            benchmark::DoNotOptimize(buf);
-        }
-        state.SetBytesProcessed(state.iterations() * total_bytes);
+static void BM_IOBuf_RandomChunked(benchmark::State& st) {
+    const size_t total = st.range(0);
+    for (auto _ : st) {
+        fermat::IOBuf<64, 16 * 1024> buf;
+        AppendRandomChunked(buf, total);
+        benchmark::DoNotOptimize(buf);
     }
+    st.SetBytesProcessed(st.iterations() * total);
+}
 
-    // Benchmark: IOBuf append (default alignment=64, blockSize=4096)
-    static void BM_CordBuffer_Append(benchmark::State &state) {
-        const size_t total_bytes = state.range(0);
-        const auto data = GenerateRandomData(total_bytes);
-        for (auto _: state) {
-            fermat::CordBuffer<64, 65536> buf;
-            buf.append(data.data(), data.size());
-            benchmark::DoNotOptimize(buf);
-        }
-        state.SetBytesProcessed(state.iterations() * total_bytes);
+static void BM_CordBuffer_RandomChunked(benchmark::State& st) {
+    const size_t total = st.range(0);
+    for (auto _ : st) {
+        fermat::CordBuffer<64, 128 * 1024> buf;
+        AppendRandomChunked(buf, total);
+        benchmark::DoNotOptimize(buf);
     }
+    st.SetBytesProcessed(st.iterations() * total);
+}
 
-    // Benchmark: std::string append
-    static void BM_String_Append(benchmark::State &state) {
-        const size_t total_bytes = state.range(0);
-        const auto data = GenerateRandomData(total_bytes);
-        for (auto _: state) {
-            std::string str;
-            str.append(data.data(), data.size());
-            benchmark::DoNotOptimize(str);
-        }
-        state.SetBytesProcessed(state.iterations() * total_bytes);
+static void BM_String_RandomChunked(benchmark::State& st) {
+    const size_t total = st.range(0);
+    for (auto _ : st) {
+        std::string str;
+        AppendRandomChunked(str, total);
+        benchmark::DoNotOptimize(str);
     }
+    st.SetBytesProcessed(st.iterations() * total);
+}
 
-    // Benchmark: std::string append
-    static void BM_FermatString_Append(benchmark::State &state) {
-        const size_t total_bytes = state.range(0);
-        const auto data = GenerateRandomData(total_bytes);
-        for (auto _: state) {
-            fermat::BasicString<char, 64> str;
-            str.append(data.data(), data.size());
-            benchmark::DoNotOptimize(str);
-        }
-        state.SetBytesProcessed(state.iterations() * total_bytes);
+static void BM_FermatString_RandomChunked(benchmark::State& st) {
+    const size_t total = st.range(0);
+    for (auto _ : st) {
+        fermat::BasicString<char, 64> str;
+        AppendRandomChunked(str, total);
+        benchmark::DoNotOptimize(str);
     }
+    st.SetBytesProcessed(st.iterations() * total);
+}
 
-    // Benchmark: std::string append
-    static void BM_Buffer_Append(benchmark::State &state) {
-        const size_t total_bytes = state.range(0);
-        const auto data = GenerateRandomData(total_bytes);
-        for (auto _: state) {
-            fermat::Buffer<char, 64> str;
-            str.append(data.data(), data.size());
-            benchmark::DoNotOptimize(str);
-        }
-        state.SetBytesProcessed(state.iterations() * total_bytes);
+static void BM_Buffer_RandomChunked(benchmark::State& st) {
+    const size_t total = st.range(0);
+    for (auto _ : st) {
+        fermat::Buffer<char, 64> buf;
+        AppendRandomChunked(buf, total);
+        benchmark::DoNotOptimize(buf);
     }
+    st.SetBytesProcessed(st.iterations() * total);
+}
 
-    // Benchmark: IOBuf append in chunks (simulating incremental writes)
-    static void BM_IOBuf_AppendChunked(benchmark::State &state) {
-        const size_t total_bytes = state.range(0);
-        const size_t chunk_size = state.range(1);
-        const auto data = GenerateRandomData(total_bytes);
-        for (auto _: state) {
-            fermat::IOBuf<> buf;
-            size_t written = 0;
-            while (written < total_bytes) {
-                size_t n = std::min(chunk_size, total_bytes - written);
-                buf.append(data.data() + written, n);
-                written += n;
-            }
-            benchmark::DoNotOptimize(buf);
-        }
-        state.SetBytesProcessed(state.iterations() * total_bytes);
-    }
+#define BENCH_ARGS \
+    ->Args({1 << 10}) \
+    ->Args({10 << 10}) \
+    ->Args({100 << 10}) \
+    ->Args({1 << 20}) \
+    ->Args({10 << 20}) \
+    ->Args({20 << 20}) \
+    ->Args({50 << 20})
 
-    // Register benchmarks
-#define BENCH_ARGS ->Args({1 << 10, 0})   // 1KB
-#define BENCH_ARGS_10K ->Args({10 << 10, 0})
-#define BENCH_ARGS_100K ->Args({100 << 10, 0})
-#define BENCH_ARGS_1M ->Args({1 << 20, 0})
-#define BENCH_ARGS_10M ->Args({10 << 20, 0})
-#define BENCH_ARGS_20M ->Args({20 << 20, 0})
-#define BENCH_ARGS_50M ->Args({50 << 20, 0})
+BENCHMARK(BM_IOBuf_RandomChunked) BENCH_ARGS;
+BENCHMARK(BM_CordBuffer_RandomChunked) BENCH_ARGS;
+BENCHMARK(BM_String_RandomChunked) BENCH_ARGS;
+BENCHMARK(BM_FermatString_RandomChunked) BENCH_ARGS;
+BENCHMARK(BM_Buffer_RandomChunked) BENCH_ARGS;
 
-    BENCHMARK(BM_IOBuf_Append) BENCH_ARGS;
-    BENCHMARK(BM_IOBuf_Append) BENCH_ARGS_10K;
-    BENCHMARK(BM_IOBuf_Append) BENCH_ARGS_100K;
-    BENCHMARK(BM_IOBuf_Append) BENCH_ARGS_1M;
-    BENCHMARK(BM_IOBuf_Append) BENCH_ARGS_10M;
-    BENCHMARK(BM_IOBuf_Append) BENCH_ARGS_50M;
-
-    BENCHMARK(BM_CordBuffer_Append) BENCH_ARGS;
-    BENCHMARK(BM_CordBuffer_Append) BENCH_ARGS_10K;
-    BENCHMARK(BM_CordBuffer_Append) BENCH_ARGS_100K;
-    BENCHMARK(BM_CordBuffer_Append) BENCH_ARGS_1M;
-    BENCHMARK(BM_CordBuffer_Append) BENCH_ARGS_10M;
-    BENCHMARK(BM_CordBuffer_Append) BENCH_ARGS_50M;
-
-
-    BENCHMARK(BM_String_Append) BENCH_ARGS;
-    BENCHMARK(BM_String_Append) BENCH_ARGS_10K;
-    BENCHMARK(BM_String_Append) BENCH_ARGS_100K;
-    BENCHMARK(BM_String_Append) BENCH_ARGS_1M;
-    BENCHMARK(BM_String_Append) BENCH_ARGS_10M;
-    BENCHMARK(BM_String_Append) BENCH_ARGS_50M;
-
-
-    BENCHMARK(BM_FermatString_Append) BENCH_ARGS;
-    BENCHMARK(BM_FermatString_Append) BENCH_ARGS_10K;
-    BENCHMARK(BM_FermatString_Append) BENCH_ARGS_100K;
-    BENCHMARK(BM_FermatString_Append) BENCH_ARGS_1M;
-    BENCHMARK(BM_FermatString_Append) BENCH_ARGS_10M;
-    BENCHMARK(BM_FermatString_Append) BENCH_ARGS_50M;
-
-    BENCHMARK(BM_Buffer_Append) BENCH_ARGS;
-    BENCHMARK(BM_Buffer_Append) BENCH_ARGS_10K;
-    BENCHMARK(BM_Buffer_Append) BENCH_ARGS_100K;
-    BENCHMARK(BM_Buffer_Append) BENCH_ARGS_1M;
-    BENCHMARK(BM_Buffer_Append) BENCH_ARGS_10M;
-    BENCHMARK(BM_Buffer_Append) BENCH_ARGS_50M;
-
-    // Chunked append with 4KB chunks (typical block size)
-    BENCHMARK(BM_IOBuf_AppendChunked)->Args({1 << 20, 4096})->Name("BM_IOBuf_AppendChunked/1M/4K");
-    BENCHMARK(BM_IOBuf_AppendChunked)->Args({10 << 20, 4096})->Name("BM_IOBuf_AppendChunked/10M/4K");
-    BENCHMARK(BM_IOBuf_AppendChunked)->Args({20 << 20, 4096})->Name("BM_IOBuf_AppendChunked/20M/4K");
-    BENCHMARK(BM_IOBuf_AppendChunked)->Args({50 << 20, 4096})->Name("BM_IOBuf_AppendChunked/50M/4K");
-} // namespace
+}  // namespace
 
 BENCHMARK_MAIN();

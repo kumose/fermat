@@ -1,26 +1,17 @@
-///////////////////////////////////////////////////////////////////////////////
-// Copyright (c) Electronic Arts Inc. All rights reserved.
-///////////////////////////////////////////////////////////////////////////////
-
-///////////////////////////////////////////////////////////////////////////////
-// LruCache is a container that simplifies caching of objects in a map.
-// Basically, you give the container a key, like a string, and the data you want.
-// The container provides callback mechanisms to generate data if it's missing
-// as well as delete data when it's purged from the cache.  This container
-// uses a least recently used method: whatever the oldest item is will be 
-// replaced with a new entry.
+// Copyright (C) 2026 Kumo inc. and its affiliates. All Rights Reserved.
 //
-// Algorithmically, the container is a combination of a map and a list.
-// The list stores the age of the entries by moving the entry to the head
-// of the list on each access, either by a call to get() or to touch().
-// The map is just the map as one would expect.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// This is useful for caching off data that is expensive to generate, 
-// for example text to speech wave files that are dynamically generated,
-// but that will need to be reused, as is the case in narration of menu
-// entries as a user scrolls through the entries.
-///////////////////////////////////////////////////////////////////////////////
-
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 #pragma once
 
 #include <list>
@@ -294,8 +285,8 @@ namespace fermat {
 		const_iterator crend() const noexcept { return m_map.crend(); }
 
 		bool empty() const noexcept { return m_map.empty(); }
-		size_type size() const noexcept { return m_map.size(); }
-		size_type capacity() const noexcept { return m_capacity; }
+		[[nodiscard]] size_type size() const noexcept { return m_map.size(); }
+		[[nodiscard]] size_type capacity() const noexcept { return m_capacity; }
 
 		void clear() noexcept {
 			// Since we have a delete callback, we want to reuse the trim function by cheating the max

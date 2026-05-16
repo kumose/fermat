@@ -20,7 +20,6 @@ set(SRC
         io/iobuf.cc
         memory/arena.cc
         memory/resource_pool.cc
-        fake.cc
 )
 kmcmake_cc_library(
         NAMESPACE ${PROJECT_NAME}

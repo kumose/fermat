@@ -94,7 +94,7 @@ namespace fermat {
         std::string too_much(small_cap + 1, 'B');
         status = lease2->write(too_much.data(), too_much.size());
         EXPECT_FALSE(status.ok());
-        EXPECT_EQ(status.message(), "Lease capacity exceeded, size:0 len:11 capacity:10");
+        EXPECT_EQ(status.message(), "BufferLease capacity exceeded, size:0 len:11 capacity:10");
 
         // 4. No data should have been written; the lease size stays zero
         EXPECT_EQ(lease2->size(), 0);
@@ -188,9 +188,9 @@ namespace fermat {
         IOBuf<64, 4096> src, dst;
         src.append("shared");
         dst.append("dst");
-
+        src.shrink_immutable();
         auto status = src.append_to(dst);
-        ASSERT_TRUE(status.ok());
+        ASSERT_TRUE(status.ok())<<status.message();
         EXPECT_EQ(dst.flatten(), "dstshared");
         // src blocks become Immutable (can't be written without new allocation)
         auto *lease = src.borrow().value_or_die();

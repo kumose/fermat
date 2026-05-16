@@ -41,7 +41,8 @@ namespace fermat {
         using allocator_type = Allocator;
 
     public:
-        StringCore() noexcept { reset(); }
+        StringCore() noexcept {
+        }
 
         StringCore(const StringCore &rhs) {
             assert(&rhs != this);
@@ -52,7 +53,7 @@ namespace fermat {
 
         StringCore(StringCore &&goner) noexcept {
             // Take goner's guts
-            std::swap(data_, goner.data_);
+            std::swap(_data, goner._data);
             std::swap(size_, goner.size_);
             std::swap(_capacity, goner._capacity);
             goner.reset();
@@ -64,7 +65,7 @@ namespace fermat {
             init_string(data, size);
         }
 
-       virtual  ~StringCore() noexcept {
+        virtual ~StringCore() noexcept {
             deallocate();
         }
 
@@ -73,30 +74,30 @@ namespace fermat {
         // that situation actually makes the check more expensive than is
         // worth.
         void swap(StringCore &rhs) noexcept {
-            std::swap(data_, rhs.data_);
+            std::swap(_data, rhs._data);
             std::swap(size_, rhs.size_);
             std::swap(_capacity, rhs._capacity);
         }
 
         // In C++11 data() and c_str() are 100% equivalent.
-       [[nodiscard]] const Char *data() const { return data_; }
+        [[nodiscard]] const Char *data() const { return _data; }
 
-        Char *data() { return data_; }
+        Char *data() { return _data; }
 
-      [[nodiscard]]  const Char *c_str() const {
-            if (!data_) {
-                return &kZero;
-            }
-            return data_;
+        [[nodiscard]] const Char *c_str() const {
+            return _data;
         }
 
+        /// call must size > 0
         void shrink(const size_t delta) {
             if (delta >= size_) {
                 size_ = 0;
-                return;
+            } else {
+                size_ -= delta;
             }
-            size_ -= delta;
-            data_[size_] = '\0';
+            if (_data != &kZero) {
+                _data[size_] = '\0';
+            }
         }
 
         TURBO_NOINLINE
@@ -106,9 +107,9 @@ namespace fermat {
 
         Char *expandNoinit(size_t delta) {
             reserve_string((delta + size_));
-            auto ptr = &data_[size_];
+            auto ptr = _data + size_;
             size_ += delta;
-            data_[size_] = '\0';
+            _data[size_] = '\0';
             return ptr;
         }
 
@@ -116,7 +117,7 @@ namespace fermat {
             *expandNoinit(1) = c;
         }
 
-       [[nodiscard]] constexpr bool is_aligned() const {
+        [[nodiscard]] constexpr bool is_aligned() const {
             return Alignment != 0;
         }
 
@@ -124,21 +125,17 @@ namespace fermat {
             return Alignment;
         }
 
-      [[nodiscard]]  size_t size() const {
+        [[nodiscard]] size_t size() const {
             return size_;
         }
 
-       [[nodiscard]] size_t capacity() const {
-            return _capacity.first() ;
+        [[nodiscard]] size_t capacity() const {
+            return _capacity.first();
         }
 
     private:
-        Char *c_str() {
-            return data_;
-        }
-
         void reset() {
-            data_ = nullptr;
+            _data = const_cast<Char *>(&kZero);
             size_ = 0;
             _capacity.first() = 0;
         }
@@ -152,18 +149,16 @@ namespace fermat {
         }
 
         void deallocate() {
-            if (data_ && data_ != &kZero) {
+            if (_capacity.first()) {
                 auto n = _capacity.first() + 1;
-                _capacity.second().deallocate(data_, n);
+                _capacity.second().deallocate(_data, n);
             }
 
-            data_ = nullptr;
-            _capacity.first() = 0;
-            data_ = 0;
+            reset();
         }
 
         static constexpr Char kZero = {'\0'};
-        Char *data_{nullptr};
+        Char *_data{const_cast<Char *>(&kZero)};
         size_t size_{0};
         compressed_pair<size_t, allocator_type> _capacity{0, allocator_type{}};
 
@@ -183,8 +178,8 @@ namespace fermat {
         deallocate();
         if (rhs.size()) {
             _capacity.first() = rhs.size() + 1;
-            data_ = alloc(&_capacity.first());
-            std::memcpy(data_, rhs.data_, sizeof(Char) * (rhs.size_ + 1));
+            _data = alloc(&_capacity.first());
+            std::memcpy(_data, rhs._data, sizeof(Char) * (rhs.size_ + 1));
             size_ = rhs.size_;
         }
     }
@@ -193,21 +188,22 @@ namespace fermat {
     TURBO_NOINLINE void StringCore<Char, Alignment, A>::init_string(
         const Char *const data, const size_t size) {
         if (!data || !size) {
+            reset();
             return;
         }
         // Small strings are allocated normally. Don't forget to
         // allocate one extra Char for the terminating null.
-        _capacity.first() = size + 1;
+        auto n  = size + 1;
+        _data = alloc(&n);
+        std::memcpy(_data, data, size * sizeof(Char));
         size_ = size;
-        data_ = alloc(&_capacity.first());
-        std::memcpy(data_, data, size * sizeof(Char));
-        --_capacity.first();
-        data_[size_] = '\0';
+        _capacity.first() = n - 1;
+        _data[size_] = '\0';
     }
 
     template<class Char, size_t Alignment, typename A>
     inline Char *StringCore<Char, Alignment, A>::mutable_data() {
-        return data_;
+        return _data;
     }
 
 
@@ -229,12 +225,12 @@ namespace fermat {
         }
         auto ptr = alloc(&ns);
         if (size_ > 0) {
-            std::memcpy(ptr, data_, sizeof(Char) * (size_ + 1));
+            std::memcpy(ptr, _data, sizeof(Char) * (size_ + 1));
         }
         auto n = size_;
         deallocate();
         _capacity.first() = ns - 1;
-        data_ = ptr;
+        _data = ptr;
         size_ = n;
     }
 
@@ -257,7 +253,7 @@ namespace fermat {
             }
         }
 
-      [[nodiscard]]  bool isSane() const {
+        [[nodiscard]] bool isSane() const {
             return begin() <= end() && empty() == (size() == 0) &&
                    empty() == (begin() == end()) && size() <= max_size() &&
                    capacity() <= max_size() && size() <= capacity() &&
@@ -432,7 +428,8 @@ namespace fermat {
                 string_view_type(view).substr(pos, n), a, string_view_ctor{}) {
         }
 
-        ~BasicString() noexcept  = default;
+        ~BasicString() noexcept = default;
+
         BasicString &operator=(const BasicString &lhs);
 
         // Move assignment
@@ -483,7 +480,9 @@ namespace fermat {
             return *this;
         }
 
-        operator string_view_type() const noexcept { return {data(), size()}; }
+        operator string_view_type() const noexcept {
+            return {data(), size()};
+        }
 
         // C++11 21.4.3 iterators:
         iterator begin() { return store_.mutable_data(); }
@@ -538,15 +537,15 @@ namespace fermat {
         }
 
         // C++11 21.4.4 capacity:
-       [[nodiscard]] size_type size() const { return store_.size(); }
+        [[nodiscard]] size_type size() const { return store_.size(); }
 
-       [[nodiscard]] size_type length() const { return size(); }
+        [[nodiscard]] size_type length() const { return size(); }
 
         [[nodiscard]] size_type max_size() const { return std::numeric_limits<size_type>::max(); }
 
         void resize(size_type n, value_type c = value_type());
 
-       [[nodiscard]] size_type capacity() const { return store_.capacity(); }
+        [[nodiscard]] size_type capacity() const { return store_.capacity(); }
 
 
         void reserve(size_type res_arg = 0) {
@@ -564,14 +563,14 @@ namespace fermat {
 
         void clear() { resize(0); }
 
-       [[nodiscard]] bool empty() const { return size() == 0; }
+        [[nodiscard]] bool empty() const { return size() == 0; }
 
         // C++11 21.4.5 element access:
         const_reference operator[](size_type pos) const { return *(begin() + pos); }
 
         reference operator[](size_type pos) { return *(begin() + pos); }
 
-       [[nodiscard]] const_reference at(size_type n) const {
+        [[nodiscard]] const_reference at(size_type n) const {
             enforce<std::out_of_range>(n < size(), "");
             return (*this)[n];
         }
@@ -701,6 +700,10 @@ namespace fermat {
             insert(p, 1, c);
             return begin() + pos;
         }
+
+        void bestow(T *data, size_type size, size_type capacity) noexcept;
+
+        T *seize(size_type *size, size_type *capacity) noexcept;
 
     private:
         typedef std::basic_istream<value_type, traits_type> istream_type;
@@ -904,13 +907,13 @@ namespace fermat {
 
         [[nodiscard]] const value_type *c_str() const { return store_.c_str(); }
 
-       [[nodiscard]] const value_type *data() const { return c_str(); }
+        [[nodiscard]] const value_type *data() const { return c_str(); }
 
         value_type *data() { return store_.data(); }
 
-       [[nodiscard]] allocator_type get_allocator() const { return allocator_type(); }
+        [[nodiscard]] allocator_type get_allocator() const { return allocator_type(); }
 
-       [[nodiscard]] size_type find(const BasicString &str, size_type pos = 0) const {
+        [[nodiscard]] size_type find(const BasicString &str, size_type pos = 0) const {
             return find(str.data(), pos, str.length());
         }
 
@@ -1074,7 +1077,7 @@ namespace fermat {
     }
 
     template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S>& BasicString<E, Alignment, T, A, S>::operator=(
+    inline BasicString<E, Alignment, T, A, S> &BasicString<E, Alignment, T, A, S>::operator=(
         const BasicString &lhs) {
         Invariant checker(*this);
 
@@ -1131,6 +1134,47 @@ namespace fermat {
             container_internal::podFill(pData, pData + delta, c);
         }
         assert(this->size() == n);
+    }
+
+    template<typename E, size_t Alignment, class T, class A, class S>
+    void BasicString<E, Alignment, T, A, S>::bestow(T *data, size_type size, size_type capacity) noexcept {
+        if constexpr (Alignment != 0) {
+            // 2. Alignment check: Ensure the external pointer meets hardware/SIMD requirements.
+            KCHECK(reinterpret_cast<uintptr_t>(data) % Alignment == 0)
+                << "String::bestow -- pointer is not aligned to " << Alignment;
+        }
+        if (!capacity) {
+            clear();
+            return;
+        }
+        if (capacity < store_._capacity.first() || size >= capacity) {
+            assign(data, size);
+            store_._capacity.second().deallocate(data, capacity);
+            return;
+        }
+
+        store_.deallocate();
+        // 3. Ownership transfer: Assign external pointers to internal state.
+        store_._data = data;
+        store_.size_ = size;
+        store_._capacity.first() = capacity - 1;
+        store_._data[store_.size_] = '\0';
+    }
+
+    template<typename E, size_t Alignment, class T, class A, class S>
+    T *BasicString<E, Alignment, T, A, S>::seize(size_type *out_size, size_type *out_capacity) noexcept {
+        if (store_._capacity.first() == 0) {
+            return nullptr;
+        }
+        T *raw_ptr = store_._data;
+
+        if (out_size) *out_size = store_.size_;
+        if (out_capacity) *out_capacity = store_._capacity.first();
+
+        // Reset buffer to a safe, empty state without freeing memory
+        store_.reset();
+
+        return raw_ptr;
     }
 
     template<typename E, size_t Alignment, class T, class A, class S>
@@ -1208,9 +1252,9 @@ namespace fermat {
     TURBO_NOINLINE BasicString<E, Alignment, T, A, S> &BasicString<E, Alignment, T, A, S>::assign(
         const value_type *s, const size_type n) {
         if (n < capacity()) {
-            std::memcpy(store_.data_, s, n);
+            std::memcpy(store_._data, s, n);
             store_.size_ = n;
-            store_.data_[store_.size_] = '\0';
+            store_._data[store_.size_] = '\0';
         } else {
             store_.deallocate();
             store_.init_string(s, n);
@@ -1256,13 +1300,16 @@ namespace fermat {
     BasicString<E, Alignment, T, A,
         S>::find(const value_type *needle, const size_type pos, const size_type nsize) const {
         const size_type total_size = this->size();
-
+        if (nsize == 0) {
+            return (pos <= size()) ? pos : npos;
+        }
         // String_view is a non-owning wrapper, cost-free to construct.
         // We use it to delegate the heavy-lifting search to the standard library.
         std::basic_string_view<E> haystack_view(this->data(), total_size);
         std::basic_string_view<E> needle_view(needle, nsize);
 
-        return haystack_view.find(needle_view, pos);
+        auto p = haystack_view.find(needle_view, pos);
+        return p;
     }
 
     template<typename E, size_t Alignment, class T, class A, class S>

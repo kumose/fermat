@@ -94,7 +94,7 @@ namespace fermat {
 
         // The first item in the initializer list is pushed first. C++11 doesn't specify that std::stack has initializer list support.
 
-        bool empty() const;
+       [[nodiscard]] bool empty() const;
 
         size_type size() const;
 

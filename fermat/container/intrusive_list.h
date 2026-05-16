@@ -1,7 +1,17 @@
-///////////////////////////////////////////////////////////////////////////////
-// Copyright (c) Electronic Arts Inc. All rights reserved.
-///////////////////////////////////////////////////////////////////////////////
-
+// Copyright (C) 2026 Kumo inc. and its affiliates. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 ///////////////////////////////////////////////////////////////////////////////
 // The intrusive list container is similar to a list, with the primary
@@ -9,7 +19,7 @@
 // allocation.
 //
 // * Intrusive lists store the nodes directly in the data items. This
-//   is done by deriving the object from intrusive_list_node.
+//   is done by deriving the object from IntrusiveListNode.
 //
 // * The container does no memory allocation -- it works entirely with
 //   the submitted nodes. This does mean that it is the client's job to 
@@ -18,13 +28,13 @@
 // * Valid node pointers can be converted back to iterators in O(1).
 //   This is because objects in the list are also nodes in the list.
 //
-// * intrusive_list does not support copy construction or assignment; 
+// * IntrusiveList does not support copy construction or assignment; 
 //   the push, pop, and insert operations take ownership of the 
 //   passed object.
 //
 // Usage notes:
 //
-// * You can use an intrusive_list directly with the standard nodes
+// * You can use an IntrusiveList directly with the standard nodes
 //   if you have some other way of converting the node pointer back
 //   to your data pointer.
 //
@@ -37,28 +47,28 @@
 // * You can insert a node into multiple intrusive_lists. One way to do so
 //   is to (ab)use inheritance:
 //
-//      struct NodeA : public intrusive_list_node {};
-//      struct NodeB : public intrusive_list_node {};
+//      struct NodeA : public IntrusiveListNode {};
+//      struct NodeB : public IntrusiveListNode {};
 //      struct Object : public NodeA, nodeB {};
 //
-//      intrusive_list<NodeA> listA;
-//      intrusive_list<NodeB> listB;
+//      IntrusiveList<NodeA> listA;
+//      IntrusiveList<NodeB> listB;
 //
 //      listA.push_back(obj);
 //      listB.push_back(obj);
 //
 // * find() vs. locate()
-//   The find(v) algorithm returns an iterator p such that *p == v; intrusive_list::locate(v) 
-//   returns an iterator p such that &*p == &v. intrusive_list<> doesn't have find() mainly 
-//   because list<> doesn't have it either, but there's no reason it couldn't. intrusive_list
+//   The find(v) algorithm returns an iterator p such that *p == v; IntrusiveList::locate(v) 
+//   returns an iterator p such that &*p == &v. IntrusiveList<> doesn't have find() mainly 
+//   because list<> doesn't have it either, but there's no reason it couldn't. IntrusiveList
 //   uses the name 'find' because:
 //      - So as not to confuse the member function with the well-defined free function from algorithm.h.
 //      - Because it is not API-compatible with std::find().
 //      - Because it simply locates an object within the list based on its node entry and doesn't perform before any value-based searches or comparisons.
 //
-// Differences between intrusive_list and std::list:
+// Differences between IntrusiveList and std::list:
 //
-// Issue                            std::list       intrusive_list
+// Issue                            std::list       IntrusiveList
 // --------------------------------------------------------------
 // Automatic node ctor/dtor         Yes             No
 // Can memmove() container          Maybe*          No
@@ -81,53 +91,42 @@
 
 #include <iterator>
 #include <algorithm>
-
+#include <turbo/log/logging.h>
 
 namespace fermat {
     template<class T>
-    class intrusive_list;
+    class IntrusiveList;
 
-    /// intrusive_list_node
+    /// IntrusiveListNode
 	///
 	/// By design this must be a POD, as user structs will be inheriting from
 	/// it and they may wish to remain POD themselves. However, if the
-	/// FERMAT_VALIDATE_INTRUSIVE_LIST option is enabled
 	///
-    struct intrusive_list_node {
-        intrusive_list_node *mpNext;
-        intrusive_list_node *mpPrev;
+    struct IntrusiveListNode {
+        IntrusiveListNode *mpNext{nullptr};
+        IntrusiveListNode *mpPrev{nullptr};
 
-#if FERMAT_VALIDATE_INTRUSIVE_LIST
-        intrusive_list_node() // Implemented inline because GCC can't deal with member functions
-        {
-            // of may-alias classes being defined outside the declaration.
-            mpNext = mpPrev = nullptr;
+        IntrusiveListNode() = default;
+
+        ~IntrusiveListNode() {
+            KCHECK(!mpNext&& !mpPrev) << "~IntrusiveListNode(): List is non-empty.";
         }
-
-        ~intrusive_list_node() {
-
-#if FERMAT_ASSERT_ENABLED
-        if(mpNext|| mpPrev)
-        FERMAT_FAIL_MSG ("~intrusive_list_node(): List is non-empty.");
-#endif
-        }
-#endif
-    } FERMAT_MAY_ALIAS;
+    };
 
     // It's not clear if this really should be needed. An old GCC compatible compiler is generating some crashing optimized code when strict aliasing is enabled, but analysis of it seems to blame the compiler. However, this topic can be tricky.
 
 
-    /// intrusive_list_iterator
+    /// IntrusiveListIterator
 	///
     template<typename T, typename Pointer, typename Reference>
-    class intrusive_list_iterator {
+    class IntrusiveListIterator {
     public:
-        typedef intrusive_list_iterator<T, Pointer, Reference> this_type;
-        typedef intrusive_list_iterator<T, T *, T &> iterator;
-        typedef intrusive_list_iterator<T, const T *, const T &> const_iterator;
+        typedef IntrusiveListIterator<T, Pointer, Reference> this_type;
+        typedef IntrusiveListIterator<T, T *, T &> iterator;
+        typedef IntrusiveListIterator<T, const T *, const T &> const_iterator;
         typedef T value_type;
         typedef T node_type;
-        typedef intrusive_list_node base_node_type;
+        typedef IntrusiveListNode base_node_type;
         typedef ptrdiff_t difference_type;
         typedef Pointer pointer;
         typedef Reference reference;
@@ -137,17 +136,17 @@ namespace fermat {
         base_node_type *mpNode;
 
     public:
-        intrusive_list_iterator();
+        IntrusiveListIterator();
 
         // Note: you can also construct an iterator from T* via this, since T should inherit from
-        // intrusive_list_node.
-        explicit intrusive_list_iterator(const base_node_type *pNode);
+        // IntrusiveListNode.
+        explicit IntrusiveListIterator(const base_node_type *pNode);
 
         // Note: this isn't always a copy constructor, iterator is not always equal to this_type
-        intrusive_list_iterator(const iterator &x);
+        IntrusiveListIterator(const iterator &x);
 
         // Note: this isn't always a copy assignment operator, iterator is not always equal to this_type
-        intrusive_list_iterator &operator=(const iterator &x);
+        IntrusiveListIterator &operator=(const iterator &x);
 
         // Calling these on the end() of a list invokes undefined behavior.
         reference operator*() const;
@@ -159,62 +158,62 @@ namespace fermat {
         // undefined behavior.
         pointer nodePtr() const;
 
-        intrusive_list_iterator &operator++();
+        IntrusiveListIterator &operator++();
 
-        intrusive_list_iterator &operator--();
+        IntrusiveListIterator &operator--();
 
-        intrusive_list_iterator operator++(int);
+        IntrusiveListIterator operator++(int);
 
-        intrusive_list_iterator operator--(int);
+        IntrusiveListIterator operator--(int);
 
         // The C++ defect report #179 requires that we support comparisons between const and non-const iterators.
         // Thus we provide additional template paremeters here to support this. The defect report does not
         // require us to support comparisons between reverse_iterators and const_reverse_iterators.
         template<class PointerB, class ReferenceB>
-        bool operator==(const intrusive_list_iterator<T, PointerB, ReferenceB> &other) const {
+        bool operator==(const IntrusiveListIterator<T, PointerB, ReferenceB> &other) const {
             return mpNode == other.mpNode;
         }
 
         template<typename PointerB, typename ReferenceB>
-        inline bool operator!=(const intrusive_list_iterator<T, PointerB, ReferenceB> &other) const {
+        inline bool operator!=(const IntrusiveListIterator<T, PointerB, ReferenceB> &other) const {
             return mpNode != other.mpNode;
         }
 
         // We provide a version of operator!= for the case where the iterators are of the
         // same type. This helps prevent ambiguity errors in the presence of rel_ops.
-        inline bool operator!=(const intrusive_list_iterator other) const { return mpNode != other.mpNode; }
+        inline bool operator!=(const IntrusiveListIterator other) const { return mpNode != other.mpNode; }
 
     private:
         // for the "copy" constructor, which uses non-const iterator even in the
         // const_iterator case.  Also, some of the internal member functions in
-        // intrusive_list<T> want to use mpNode.
+        // IntrusiveList<T> want to use mpNode.
         friend const_iterator;
-        friend intrusive_list<T>;
+        friend IntrusiveList<T>;
 
         // for the comparison operators.
         template<class U, class Pointer1, class Reference1>
-        friend class intrusive_list_iterator;
-    }; // class intrusive_list_iterator
+        friend class IntrusiveListIterator;
+    }; // class IntrusiveListIterator
 
 
-    /// intrusive_list_base
+    /// IntrusiveListBase
 	///
-    class intrusive_list_base {
+    class IntrusiveListBase {
     public:
         typedef size_t size_type; // See config.h for the definition of this, which defaults to size_t.
         typedef ptrdiff_t difference_type;
 
     protected:
-        intrusive_list_node mAnchor; ///< Sentinel node (end). All data nodes are linked in a ring from this node.
+        IntrusiveListNode mAnchor; ///< Sentinel node (end). All data nodes are linked in a ring from this node.
 
     public:
-        intrusive_list_base();
+        IntrusiveListBase();
 
-        ~intrusive_list_base();
+        ~IntrusiveListBase();
 
-        bool empty() const noexcept;
+        [[nodiscard]] bool empty() const noexcept;
 
-        size_t size() const noexcept; ///< Returns the number of elements in the list; O(n).
+        [[nodiscard]] size_t size() const noexcept; ///< Returns the number of elements in the list; O(n).
         void clear() noexcept; ///< Clears the list; O(1). No deallocation occurs.
         void pop_front();
 
@@ -222,18 +221,18 @@ namespace fermat {
         void pop_back();
 
         ///< Removes an element from the back of the list; O(1). The element must exist, but is not deallocated.
-		FERMAT_API void reverse() noexcept; ///< Reverses a list so that front and back are swapped; O(n).
+        TURBO_DLL void reverse() noexcept; ///< Reverses a list so that front and back are swapped; O(n).
 
-		FERMAT_API bool validate() const;
+        TURBO_DLL bool validate() const;
 
         ///< Scans a list for linkage inconsistencies; O(n) time, O(1) space. Returns false if errors are detected, such as loops or branching.
-    }; // class intrusive_list_base
+    }; // class IntrusiveListBase
 
 
-    /// intrusive_list
+    /// IntrusiveList
 	///
 	/// Example usage:
-	///    struct IntNode : public fermat::intrusive_list_node {
+	///    struct IntNode : public fermat::IntrusiveListNode {
 	///        int mX;
 	///        IntNode(int x) : mX(x) { }
 	///    };
@@ -241,16 +240,16 @@ namespace fermat {
 	///    IntNode nodeA(0);
 	///    IntNode nodeB(1);
 	///
-	///    intrusive_list<IntNode> intList;
+	///    IntrusiveList<IntNode> intList;
 	///    intList.push_back(nodeA);
 	///    intList.push_back(nodeB);
 	///    intList.remove(nodeA);
 	///
-    template<typename T = intrusive_list_node>
-    class intrusive_list : public intrusive_list_base {
+    template<typename T = IntrusiveListNode>
+    class IntrusiveList : public IntrusiveListBase {
     public:
-        typedef intrusive_list<T> this_type;
-        typedef intrusive_list_base base_type;
+        typedef IntrusiveList<T> this_type;
+        typedef IntrusiveListBase base_type;
         typedef T node_type;
         typedef T value_type;
         typedef typename base_type::size_type size_type;
@@ -259,15 +258,15 @@ namespace fermat {
         typedef const T &const_reference;
         typedef T *pointer;
         typedef const T *const_pointer;
-        typedef intrusive_list_iterator<T, T *, T &> iterator;
-        typedef intrusive_list_iterator<T, const T *, const T &> const_iterator;
+        typedef IntrusiveListIterator<T, T *, T &> iterator;
+        typedef IntrusiveListIterator<T, const T *, const T &> const_iterator;
         typedef std::reverse_iterator<iterator> reverse_iterator;
         typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
     public:
-        intrusive_list(); ///< Creates an empty list.
-        intrusive_list(const this_type &x); ///< Creates an empty list; ignores the argument.
-        //intrusive_list(std::initializer_list<value_type> ilist); To consider: Is this feasible, given how initializer_list works by creating a temporary array? Even if it is feasible, is it a good idea?
+        IntrusiveList(); ///< Creates an empty list.
+        IntrusiveList(const this_type &x); ///< Creates an empty list; ignores the argument.
+        //IntrusiveList(std::initializer_list<value_type> ilist); To consider: Is this feasible, given how initializer_list works by creating a temporary array? Even if it is feasible, is it a good idea?
 
         this_type &operator=(const this_type &x); ///< Clears the list; ignores the argument.
         void swap(this_type &) noexcept; ///< Swaps the contents of two intrusive lists; O(1).
@@ -348,17 +347,17 @@ namespace fermat {
         ///< Moves the given element into this list before the element pointed to by pos; O(1).
 				///< Required: x must be in some list or have first/next pointers that point it itself.
 
-        void splice(const_iterator pos, intrusive_list &x);
+        void splice(const_iterator pos, IntrusiveList &x);
 
         ///< Moves the contents of a list into this list before the element pointed to by pos; O(1).
 				///< Required: &x != this (same as std::list).
 
-        void splice(const_iterator pos, intrusive_list &x, const_iterator i);
+        void splice(const_iterator pos, IntrusiveList &x, const_iterator i);
 
         ///< Moves the given element pointed to i within the list x into the current list before
 				///< the element pointed to by pos; O(1).
 
-        void splice(const_iterator pos, intrusive_list &x, const_iterator first, const_iterator last);
+        void splice(const_iterator pos, IntrusiveList &x, const_iterator first, const_iterator last);
 
         ///< Moves the range of elements [first, last) from list x into the current list before
 				///< the element pointed to by pos; O(1).
@@ -384,142 +383,135 @@ namespace fermat {
 
         template<typename Compare>
         void sort(Compare compare);
-
-    }; // intrusive_list
+    }; // IntrusiveList
 
 
     ///////////////////////////////////////////////////////////////////////
-    // intrusive_list_node
+    // IntrusiveListNode
     ///////////////////////////////////////////////////////////////////////
 
     // Moved to be inline within the class because the may-alias attribute is
     // triggering what appears to be a bug in GCC that effectively requires
     // may-alias structs to implement inline member functions within the class
     // declaration. We don't have a .cpp file for
-    // #if FERMAT_VALIDATE_INTRUSIVE_LIST
-    //     inline intrusive_list_node::intrusive_list_node()
+    //     inline IntrusiveListNode::IntrusiveListNode()
     //     {
     //         mpNext = mpPrev = nullptr;
     //     }
     //
-    //     inline intrusive_list_node::~intrusive_list_node()
+    //     inline IntrusiveListNode::~IntrusiveListNode()
     //     {
     //         #if FERMAT_ASSERT_ENABLED
     //             if(mpNext || mpPrev)
-    //                 FERMAT_FAIL_MSG("~intrusive_list_node(): List is non-empty.");
+    //                 FERMAT_FAIL_MSG("~IntrusiveListNode(): List is non-empty.");
     //         #endif
     //     }
-    // #endif
 
 
     ///////////////////////////////////////////////////////////////////////
-    // intrusive_list_iterator
+    // IntrusiveListIterator
     ///////////////////////////////////////////////////////////////////////
 
     template<typename T, typename Pointer, typename Reference>
-    inline intrusive_list_iterator<T, Pointer, Reference>::intrusive_list_iterator() {
-#if FERMAT_DEBUG
+    inline IntrusiveListIterator<T, Pointer, Reference>::IntrusiveListIterator() {
         mpNode = nullptr;
-#endif
     }
 
 
     template<typename T, typename Pointer, typename Reference>
-    inline intrusive_list_iterator<T, Pointer, Reference>::intrusive_list_iterator(const base_node_type *pNode)
+    inline IntrusiveListIterator<T, Pointer, Reference>::IntrusiveListIterator(const base_node_type *pNode)
         : mpNode(const_cast<base_node_type *>(pNode)) {
         // Empty
     }
 
 
     template<typename T, typename Pointer, typename Reference>
-    inline intrusive_list_iterator<T, Pointer, Reference>::intrusive_list_iterator(const iterator &x)
+    inline IntrusiveListIterator<T, Pointer, Reference>::IntrusiveListIterator(const iterator &x)
         : mpNode(x.mpNode) {
         // Empty
     }
 
     template<typename T, typename Pointer, typename Reference>
-    inline typename intrusive_list_iterator<T, Pointer, Reference>::this_type &
-    intrusive_list_iterator<T, Pointer, Reference>::operator=(const iterator &x) {
+    inline typename IntrusiveListIterator<T, Pointer, Reference>::this_type &
+    IntrusiveListIterator<T, Pointer, Reference>::operator=(const iterator &x) {
         mpNode = x.mpNode;
         return *this;
     }
 
     template<typename T, typename Pointer, typename Reference>
-    inline typename intrusive_list_iterator<T, Pointer, Reference>::reference
-    intrusive_list_iterator<T, Pointer, Reference>::operator*() const {
+    inline typename IntrusiveListIterator<T, Pointer, Reference>::reference
+    IntrusiveListIterator<T, Pointer, Reference>::operator*() const {
         return *static_cast<pointer>(mpNode);
     }
 
 
     template<typename T, typename Pointer, typename Reference>
-    inline typename intrusive_list_iterator<T, Pointer, Reference>::pointer
-    intrusive_list_iterator<T, Pointer, Reference>::operator->() const {
+    inline typename IntrusiveListIterator<T, Pointer, Reference>::pointer
+    IntrusiveListIterator<T, Pointer, Reference>::operator->() const {
         return static_cast<pointer>(mpNode);
     }
 
     template<typename T, typename Pointer, typename Reference>
-    inline typename intrusive_list_iterator<T, Pointer, Reference>::pointer
-    intrusive_list_iterator<T, Pointer, Reference>::nodePtr() const {
+    inline typename IntrusiveListIterator<T, Pointer, Reference>::pointer
+    IntrusiveListIterator<T, Pointer, Reference>::nodePtr() const {
         return static_cast<pointer>(mpNode);
     }
 
 
     template<typename T, typename Pointer, typename Reference>
-    inline typename intrusive_list_iterator<T, Pointer, Reference>::this_type &
-    intrusive_list_iterator<T, Pointer, Reference>::operator++() {
+    inline typename IntrusiveListIterator<T, Pointer, Reference>::this_type &
+    IntrusiveListIterator<T, Pointer, Reference>::operator++() {
         mpNode = mpNode->mpNext;
         return *this;
     }
 
 
     template<typename T, typename Pointer, typename Reference>
-    inline typename intrusive_list_iterator<T, Pointer, Reference>::this_type
-    intrusive_list_iterator<T, Pointer, Reference>::operator++(int) {
-        intrusive_list_iterator it(*this);
+    inline typename IntrusiveListIterator<T, Pointer, Reference>::this_type
+    IntrusiveListIterator<T, Pointer, Reference>::operator++(int) {
+        IntrusiveListIterator it(*this);
         mpNode = mpNode->mpNext;
         return it;
     }
 
 
     template<typename T, typename Pointer, typename Reference>
-    inline typename intrusive_list_iterator<T, Pointer, Reference>::this_type &
-    intrusive_list_iterator<T, Pointer, Reference>::operator--() {
+    inline typename IntrusiveListIterator<T, Pointer, Reference>::this_type &
+    IntrusiveListIterator<T, Pointer, Reference>::operator--() {
         mpNode = mpNode->mpPrev;
         return *this;
     }
 
 
     template<typename T, typename Pointer, typename Reference>
-    inline typename intrusive_list_iterator<T, Pointer, Reference>::this_type
-    intrusive_list_iterator<T, Pointer, Reference>::operator--(int) {
-        intrusive_list_iterator it(*this);
+    inline typename IntrusiveListIterator<T, Pointer, Reference>::this_type
+    IntrusiveListIterator<T, Pointer, Reference>::operator--(int) {
+        IntrusiveListIterator it(*this);
         mpNode = mpNode->mpPrev;
         return it;
     }
 
     ///////////////////////////////////////////////////////////////////////
-    // intrusive_list_base
+    // IntrusiveListBase
     ///////////////////////////////////////////////////////////////////////
 
-    inline intrusive_list_base::intrusive_list_base() {
+    inline IntrusiveListBase::IntrusiveListBase() {
         mAnchor.mpNext = mAnchor.mpPrev = &mAnchor;
     }
 
-    inline intrusive_list_base::~intrusive_list_base() {
-#if FERMAT_VALIDATE_INTRUSIVE_LIST
+    inline IntrusiveListBase::~IntrusiveListBase() {
         clear();
         mAnchor.mpNext = mAnchor.mpPrev = nullptr;
-#endif
     }
 
 
-    inline bool intrusive_list_base::empty() const noexcept {
+    inline bool IntrusiveListBase::empty() const noexcept {
         return mAnchor.mpPrev == &mAnchor;
     }
 
 
-    inline intrusive_list_base::size_type intrusive_list_base::size() const noexcept {
-        const intrusive_list_node *p = &mAnchor;
+    inline IntrusiveListBase::size_type IntrusiveListBase::size() const noexcept {
+        const IntrusiveListNode *p = &mAnchor;
         size_type n = (size_type) -1;
 
         do {
@@ -531,73 +523,106 @@ namespace fermat {
     }
 
 
-    inline void intrusive_list_base::clear() noexcept {
-#if FERMAT_VALIDATE_INTRUSIVE_LIST
+    inline void IntrusiveListBase::clear() noexcept {
         // Need to clear out all the next/prev pointers in the elements;
         // this makes this operation O(n) instead of O(1).
-        intrusive_list_node *pNode = mAnchor.mpNext;
+        IntrusiveListNode *pNode = mAnchor.mpNext;
 
         while (pNode != &mAnchor) {
-            intrusive_list_node *const pNextNode = pNode->mpNext;
+            IntrusiveListNode *const pNextNode = pNode->mpNext;
             pNode->mpNext = pNode->mpPrev = nullptr;
             pNode = pNextNode;
         }
-#endif
 
         mAnchor.mpNext = mAnchor.mpPrev = &mAnchor;
     }
 
 
-    inline void intrusive_list_base::pop_front() {
-#if FERMAT_VALIDATE_INTRUSIVE_LIST
-        intrusive_list_node *const pNode = mAnchor.mpNext;
-#endif
-
+    inline void IntrusiveListBase::pop_front() {
+        IntrusiveListNode *const pNode = mAnchor.mpNext;
         mAnchor.mpNext->mpNext->mpPrev = &mAnchor;
         mAnchor.mpNext = mAnchor.mpNext->mpNext;
 
-#if FERMAT_VALIDATE_INTRUSIVE_LIST
         if (pNode != &mAnchor)
             pNode->mpNext = pNode->mpPrev = nullptr;
-#if FERMAT_ASSERT_ENABLED
-			else
-        FERMAT_FAIL_MSG("intrusive_list::pop_front(): empty list.");
-#endif
-#endif
     }
 
 
-    inline void intrusive_list_base::pop_back() {
-#if FERMAT_VALIDATE_INTRUSIVE_LIST
-        intrusive_list_node *const pNode = mAnchor.mpPrev;
-#endif
-
+    inline void IntrusiveListBase::pop_back() {
+        IntrusiveListNode *const pNode = mAnchor.mpPrev;
         mAnchor.mpPrev->mpPrev->mpNext = &mAnchor;
         mAnchor.mpPrev = mAnchor.mpPrev->mpPrev;
 
-#if FERMAT_VALIDATE_INTRUSIVE_LIST
         if (pNode != &mAnchor)
             pNode->mpNext = pNode->mpPrev = nullptr;
-#if FERMAT_ASSERT_ENABLED
-			else
-        FERMAT_FAIL_MSG("intrusive_list::pop_back(): empty list.");
-#endif
-#endif
+    }
+
+
+    inline void IntrusiveListBase::reverse() noexcept {
+        IntrusiveListNode *pNode = &mAnchor;
+        do {
+            IntrusiveListNode *const pTemp = pNode->mpNext;
+            pNode->mpNext = pNode->mpPrev;
+            pNode->mpPrev = pTemp;
+            pNode = pNode->mpPrev;
+        } while (pNode != &mAnchor);
+    }
+
+
+    inline bool IntrusiveListBase::validate() const {
+        const IntrusiveListNode *p = &mAnchor;
+        const IntrusiveListNode *q = p;
+
+        // We do two tests below:
+        //
+        // 1) Prev and next pointers are symmetric. We check (p->next->prev == p)
+        //    for each node, which is enough to verify all links.
+        //
+        // 2) Loop check. We bump the q pointer at one-half rate compared to the
+        //    p pointer; (p == q) if and only if we are at the start (which we
+        //    don't check) or if there is a loop somewhere in the list.
+
+        do {
+            // validate node (even phase)
+            if (p->mpNext->mpPrev != p)
+                return false; // broken linkage detected
+
+            // bump only fast pointer
+            p = p->mpNext;
+            if (p == &mAnchor)
+                break;
+
+            if (p == q)
+                return false; // loop detected
+
+            // validate node (odd phase)
+            if (p->mpNext->mpPrev != p)
+                return false; // broken linkage detected
+
+            // bump both pointers
+            p = p->mpNext;
+            q = q->mpNext;
+
+            if (p == q)
+                return false; // loop detected
+        } while (p != &mAnchor);
+
+        return true;
     }
 
 
     ///////////////////////////////////////////////////////////////////////
-    // intrusive_list
+    // IntrusiveList
     ///////////////////////////////////////////////////////////////////////
 
     template<typename T>
-    inline intrusive_list<T>::intrusive_list() {
+    inline IntrusiveList<T>::IntrusiveList() {
     }
 
 
     template<typename T>
-    inline intrusive_list<T>::intrusive_list(const this_type & /*x*/)
-        : intrusive_list_base() {
+    inline IntrusiveList<T>::IntrusiveList(const this_type & /*x*/)
+        : IntrusiveListBase() {
         // We intentionally ignore argument x.
         // To consider: Shouldn't this function simply not exist? Is there a useful purpose for having this function?
         // There should be a comment here about it, though my first guess is that this exists to quell VC++ level 4/-Wall compiler warnings.
@@ -605,7 +630,7 @@ namespace fermat {
 
 
     template<typename T>
-    inline typename intrusive_list<T>::this_type &intrusive_list<T>::operator=(const this_type & /*x*/) {
+    inline typename IntrusiveList<T>::this_type &IntrusiveList<T>::operator=(const this_type & /*x*/) {
         // We intentionally ignore argument x.
         // See notes above in the copy constructor about questioning the existence of this function.
         return *this;
@@ -613,127 +638,110 @@ namespace fermat {
 
 
     template<typename T>
-    inline typename intrusive_list<T>::iterator intrusive_list<T>::begin() noexcept {
+    inline typename IntrusiveList<T>::iterator IntrusiveList<T>::begin() noexcept {
         return iterator(mAnchor.mpNext);
     }
 
 
     template<typename T>
-    inline typename intrusive_list<T>::const_iterator intrusive_list<T>::begin() const noexcept {
+    inline typename IntrusiveList<T>::const_iterator IntrusiveList<T>::begin() const noexcept {
         return const_iterator(mAnchor.mpNext);
     }
 
 
     template<typename T>
-    inline typename intrusive_list<T>::const_iterator intrusive_list<T>::cbegin() const noexcept {
+    inline typename IntrusiveList<T>::const_iterator IntrusiveList<T>::cbegin() const noexcept {
         return const_iterator(mAnchor.mpNext);
     }
 
 
     template<typename T>
-    inline typename intrusive_list<T>::iterator intrusive_list<T>::end() noexcept {
+    inline typename IntrusiveList<T>::iterator IntrusiveList<T>::end() noexcept {
         return iterator(&mAnchor);
     }
 
 
     template<typename T>
-    inline typename intrusive_list<T>::const_iterator intrusive_list<T>::end() const noexcept {
+    inline typename IntrusiveList<T>::const_iterator IntrusiveList<T>::end() const noexcept {
         return const_iterator(&mAnchor);
     }
 
 
     template<typename T>
-    inline typename intrusive_list<T>::const_iterator intrusive_list<T>::cend() const noexcept {
+    inline typename IntrusiveList<T>::const_iterator IntrusiveList<T>::cend() const noexcept {
         return const_iterator(&mAnchor);
     }
 
 
     template<typename T>
-    inline typename intrusive_list<T>::reverse_iterator intrusive_list<T>::rbegin() noexcept {
+    inline typename IntrusiveList<T>::reverse_iterator IntrusiveList<T>::rbegin() noexcept {
         return reverse_iterator(iterator(&mAnchor));
     }
 
 
     template<typename T>
-    inline typename intrusive_list<T>::const_reverse_iterator intrusive_list<T>::rbegin() const noexcept {
+    inline typename IntrusiveList<T>::const_reverse_iterator IntrusiveList<T>::rbegin() const noexcept {
         return const_reverse_iterator(const_iterator(&mAnchor));
     }
 
 
     template<typename T>
-    inline typename intrusive_list<T>::const_reverse_iterator intrusive_list<T>::crbegin() const noexcept {
+    inline typename IntrusiveList<T>::const_reverse_iterator IntrusiveList<T>::crbegin() const noexcept {
         return const_reverse_iterator(const_iterator(&mAnchor));
     }
 
 
     template<typename T>
-    inline typename intrusive_list<T>::reverse_iterator intrusive_list<T>::rend() noexcept {
+    inline typename IntrusiveList<T>::reverse_iterator IntrusiveList<T>::rend() noexcept {
         return reverse_iterator(iterator(mAnchor.mpNext));
     }
 
 
     template<typename T>
-    inline typename intrusive_list<T>::const_reverse_iterator intrusive_list<T>::rend() const noexcept {
+    inline typename IntrusiveList<T>::const_reverse_iterator IntrusiveList<T>::rend() const noexcept {
         return const_reverse_iterator(const_iterator(mAnchor.mpNext));
     }
 
 
     template<typename T>
-    inline typename intrusive_list<T>::const_reverse_iterator intrusive_list<T>::crend() const noexcept {
+    inline typename IntrusiveList<T>::const_reverse_iterator IntrusiveList<T>::crend() const noexcept {
         return const_reverse_iterator(const_iterator(mAnchor.mpNext));
     }
 
 
     template<typename T>
-    inline typename intrusive_list<T>::reference intrusive_list<T>::front() {
-#if FERMAT_VALIDATE_INTRUSIVE_LIST && FERMAT_ASSERT_ENABLED
-        if (mAnchor.mpNext == &mAnchor)
-            FERMAT_FAIL_MSG("intrusive_list::front(): empty list.");
-#endif
+    inline typename IntrusiveList<T>::reference IntrusiveList<T>::front() {
+        KCHECK(mAnchor.mpNext != &mAnchor) << "IntrusiveList::front(): empty list.";
 
         return *static_cast<T *>(mAnchor.mpNext);
     }
 
 
     template<typename T>
-    inline typename intrusive_list<T>::const_reference intrusive_list<T>::front() const {
-#if FERMAT_VALIDATE_INTRUSIVE_LIST && FERMAT_ASSERT_ENABLED
-        if (mAnchor.mpNext == &mAnchor)
-            FERMAT_FAIL_MSG("intrusive_list::front(): empty list.");
-#endif
+    inline typename IntrusiveList<T>::const_reference IntrusiveList<T>::front() const {
+        KCHECK(mAnchor.mpNext != &mAnchor) << "IntrusiveList::front(): empty list.";
 
         return *static_cast<const T *>(mAnchor.mpNext);
     }
 
 
     template<typename T>
-    inline typename intrusive_list<T>::reference intrusive_list<T>::back() {
-#if FERMAT_VALIDATE_INTRUSIVE_LIST && FERMAT_ASSERT_ENABLED
-        if (mAnchor.mpNext == &mAnchor)
-            FERMAT_FAIL_MSG("intrusive_list::back(): empty list.");
-#endif
-
+    inline typename IntrusiveList<T>::reference IntrusiveList<T>::back() {
+        KCHECK(mAnchor.mpNext != &mAnchor) << "IntrusiveList::back(): empty list.";
         return *static_cast<T *>(mAnchor.mpPrev);
     }
 
 
     template<typename T>
-    inline typename intrusive_list<T>::const_reference intrusive_list<T>::back() const {
-#if FERMAT_VALIDATE_INTRUSIVE_LIST && FERMAT_ASSERT_ENABLED
-        if (mAnchor.mpNext == &mAnchor)
-            FERMAT_FAIL_MSG("intrusive_list::back(): empty list.");
-#endif
-
+    inline typename IntrusiveList<T>::const_reference IntrusiveList<T>::back() const {
+        KCHECK(mAnchor.mpNext != &mAnchor) << "IntrusiveList::back(): empty list.";
         return *static_cast<const T *>(mAnchor.mpPrev);
     }
 
 
     template<typename T>
-    inline void intrusive_list<T>::push_front(value_type &x) {
-#if FERMAT_VALIDATE_INTRUSIVE_LIST && FERMAT_ASSERT_ENABLED
-        if (x.mpNext || x.mpPrev)
-            FERMAT_FAIL_MSG("intrusive_list::push_front(): element already on a list.");
-#endif
+    inline void IntrusiveList<T>::push_front(value_type &x) {
+        KCHECK(!x.mpNext && !x.mpPrev) << "IntrusiveList::push_front(): element already on a list.";
 
         x.mpNext = mAnchor.mpNext;
         x.mpPrev = &mAnchor;
@@ -743,11 +751,8 @@ namespace fermat {
 
 
     template<typename T>
-    inline void intrusive_list<T>::push_back(value_type &x) {
-#if FERMAT_VALIDATE_INTRUSIVE_LIST && FERMAT_ASSERT_ENABLED
-        if (x.mpNext || x.mpPrev)
-            FERMAT_FAIL_MSG("intrusive_list::push_back(): element already on a list.");
-#endif
+    inline void IntrusiveList<T>::push_back(value_type &x) {
+        KCHECK(!x.mpNext && !x.mpPrev) << "IntrusiveList::push_front(): element already on a list.";
 
         x.mpPrev = mAnchor.mpPrev;
         x.mpNext = &mAnchor;
@@ -757,8 +762,8 @@ namespace fermat {
 
 
     template<typename T>
-    inline bool intrusive_list<T>::contains(const value_type &x) const {
-        for (const intrusive_list_node *p = mAnchor.mpNext; p != &mAnchor; p = p->mpNext) {
+    inline bool IntrusiveList<T>::contains(const value_type &x) const {
+        for (const IntrusiveListNode *p = mAnchor.mpNext; p != &mAnchor; p = p->mpNext) {
             if (p == &x)
                 return true;
         }
@@ -768,8 +773,8 @@ namespace fermat {
 
 
     template<typename T>
-    inline typename intrusive_list<T>::iterator intrusive_list<T>::locate(value_type &x) {
-        for (intrusive_list_node *p = (T *) mAnchor.mpNext; p != &mAnchor; p = p->mpNext) {
+    inline typename IntrusiveList<T>::iterator IntrusiveList<T>::locate(value_type &x) {
+        for (IntrusiveListNode *p = (T *) mAnchor.mpNext; p != &mAnchor; p = p->mpNext) {
             if (p == &x)
                 return iterator(p);
         }
@@ -779,8 +784,8 @@ namespace fermat {
 
 
     template<typename T>
-    inline typename intrusive_list<T>::const_iterator intrusive_list<T>::locate(const value_type &x) const {
-        for (const intrusive_list_node *p = mAnchor.mpNext; p != &mAnchor; p = p->mpNext) {
+    inline typename IntrusiveList<T>::const_iterator IntrusiveList<T>::locate(const value_type &x) const {
+        for (const IntrusiveListNode *p = mAnchor.mpNext; p != &mAnchor; p = p->mpNext) {
             if (p == &x)
                 return const_iterator(p);
         }
@@ -790,14 +795,11 @@ namespace fermat {
 
 
     template<typename T>
-    inline typename intrusive_list<T>::iterator intrusive_list<T>::insert(const_iterator pos, value_type &x) {
-#if FERMAT_VALIDATE_INTRUSIVE_LIST && FERMAT_ASSERT_ENABLED
-        if (x.mpNext || x.mpPrev)
-            FERMAT_FAIL_MSG("intrusive_list::insert(): element already on a list.");
-#endif
+    inline typename IntrusiveList<T>::iterator IntrusiveList<T>::insert(const_iterator pos, value_type &x) {
+        KCHECK(!x.mpNext && !x.mpPrev) << "IntrusiveList::push_front(): element already on a list.";
 
-        intrusive_list_node &next = *pos.mpNode;
-        intrusive_list_node &prev = *next.mpPrev;
+        IntrusiveListNode &next = *pos.mpNode;
+        IntrusiveListNode &prev = *next.mpPrev;
 
         prev.mpNext = next.mpPrev = &x;
         x.mpPrev = &prev;
@@ -808,42 +810,35 @@ namespace fermat {
 
 
     template<typename T>
-    inline typename intrusive_list<T>::iterator
-    intrusive_list<T>::erase(const_iterator pos) {
-        intrusive_list_node &prev = *pos.mpNode->mpPrev;
-        intrusive_list_node &next = *pos.mpNode->mpNext;
+    inline typename IntrusiveList<T>::iterator
+    IntrusiveList<T>::erase(const_iterator pos) {
+        IntrusiveListNode &prev = *pos.mpNode->mpPrev;
+        IntrusiveListNode &next = *pos.mpNode->mpNext;
         prev.mpNext = &next;
         next.mpPrev = &prev;
-
-#if FERMAT_VALIDATE_INTRUSIVE_LIST
         iterator ii(pos.mpNode);
         ii.mpNode->mpPrev = ii.mpNode->mpNext = nullptr;
-#endif
-
         return iterator(&next);
     }
 
 
     template<typename T>
-    inline typename intrusive_list<T>::iterator
-    intrusive_list<T>::erase(const_iterator first, const_iterator last) {
-        intrusive_list_node &prev = *(first.mpNode->mpPrev);
-        intrusive_list_node &next = *last.mpNode;
+    inline typename IntrusiveList<T>::iterator
+    IntrusiveList<T>::erase(const_iterator first, const_iterator last) {
+        IntrusiveListNode &prev = *(first.mpNode->mpPrev);
+        IntrusiveListNode &next = *last.mpNode;
 
-#if FERMAT_VALIDATE_INTRUSIVE_LIST
         // need to clear out all the next/prev pointers in the elements;
         // this makes this operation O(n) instead of O(1), sadly, although
         // it's technically amortized O(1) since you could count yourself
         // as paying this cost with each insert.
-        intrusive_list_node *pCur = first.mpNode;
+        IntrusiveListNode *pCur = first.mpNode;
 
         while (pCur != &next) {
-            intrusive_list_node *const pCurNext = pCur->mpNext;
+            IntrusiveListNode *const pCurNext = pCur->mpNext;
             pCur->mpPrev = pCur->mpNext = nullptr;
             pCur = pCurNext;
         }
-#endif
-
         prev.mpNext = &next;
         next.mpPrev = &prev;
 
@@ -852,15 +847,15 @@ namespace fermat {
 
 
     template<typename T>
-    inline typename intrusive_list<T>::reverse_iterator
-    intrusive_list<T>::erase(const_reverse_iterator position) {
+    inline typename IntrusiveList<T>::reverse_iterator
+    IntrusiveList<T>::erase(const_reverse_iterator position) {
         return reverse_iterator(erase((++position).base()));
     }
 
 
     template<typename T>
-    inline typename intrusive_list<T>::reverse_iterator
-    intrusive_list<T>::erase(const_reverse_iterator first, const_reverse_iterator last) {
+    inline typename IntrusiveList<T>::reverse_iterator
+    IntrusiveList<T>::erase(const_reverse_iterator first, const_reverse_iterator last) {
         // Version which erases in order from first to last.
         // difference_type i(first.base() - last.base());
         // while(i--)
@@ -873,9 +868,9 @@ namespace fermat {
 
 
     template<typename T>
-    void intrusive_list<T>::swap(intrusive_list &x) noexcept{
+    void IntrusiveList<T>::swap(IntrusiveList &x) noexcept {
         // swap anchors
-        intrusive_list_node temp(mAnchor);
+        IntrusiveListNode temp(mAnchor);
         mAnchor = x.mAnchor;
         x.mAnchor = temp;
 
@@ -891,27 +886,25 @@ namespace fermat {
         else
             x.mAnchor.mpNext->mpPrev = x.mAnchor.mpPrev->mpNext = &x.mAnchor;
 
-#if FERMAT_VALIDATE_INTRUSIVE_LIST
         temp.mpPrev = temp.mpNext = nullptr;
-#endif
     }
 
 
     template<typename T>
-    void intrusive_list<T>::splice(const_iterator pos, value_type &value) {
+    void IntrusiveList<T>::splice(const_iterator pos, value_type &value) {
         // Note that splice(pos, x, pos) and splice(pos+1, x, pos)
         // are valid and need to be handled correctly.
 
         if (pos.mpNode != &value) {
             // Unlink item from old list.
-            intrusive_list_node &oldNext = *value.mpNext;
-            intrusive_list_node &oldPrev = *value.mpPrev;
+            IntrusiveListNode &oldNext = *value.mpNext;
+            IntrusiveListNode &oldPrev = *value.mpPrev;
             oldNext.mpPrev = &oldPrev;
             oldPrev.mpNext = &oldNext;
 
             // Relink item into new list.
-            intrusive_list_node &newNext = *pos.mpNode;
-            intrusive_list_node &newPrev = *newNext.mpPrev;
+            IntrusiveListNode &newNext = *pos.mpNode;
+            IntrusiveListNode &newPrev = *newNext.mpPrev;
 
             newPrev.mpNext = &value;
             newNext.mpPrev = &value;
@@ -922,14 +915,14 @@ namespace fermat {
 
 
     template<typename T>
-    void intrusive_list<T>::splice(const_iterator pos, intrusive_list &x) {
+    void IntrusiveList<T>::splice(const_iterator pos, IntrusiveList &x) {
         // Note: &x == this is prohibited, so self-insertion is not a problem.
         if (x.mAnchor.mpNext != &x.mAnchor) // If the list 'x' isn't empty...
         {
-            intrusive_list_node &next = *pos.mpNode;
-            intrusive_list_node &prev = *next.mpPrev;
-            intrusive_list_node &insertPrev = *x.mAnchor.mpNext;
-            intrusive_list_node &insertNext = *x.mAnchor.mpPrev;
+            IntrusiveListNode &next = *pos.mpNode;
+            IntrusiveListNode &prev = *next.mpPrev;
+            IntrusiveListNode &insertPrev = *x.mAnchor.mpNext;
+            IntrusiveListNode &insertNext = *x.mAnchor.mpPrev;
 
             prev.mpNext = &insertPrev;
             insertPrev.mpPrev = &prev;
@@ -941,7 +934,7 @@ namespace fermat {
 
 
     template<typename T>
-    void intrusive_list<T>::splice(const_iterator pos, intrusive_list & /*x*/, const_iterator i) {
+    void IntrusiveList<T>::splice(const_iterator pos, IntrusiveList & /*x*/, const_iterator i) {
         // Note: &x == this is prohibited, so self-insertion is not a problem.
 
         // Note that splice(pos, x, pos) and splice(pos + 1, x, pos)
@@ -955,14 +948,14 @@ namespace fermat {
 
         if (pos != ii) {
             // Unlink item from old list.
-            intrusive_list_node &oldNext = *ii.mpNode->mpNext;
-            intrusive_list_node &oldPrev = *ii.mpNode->mpPrev;
+            IntrusiveListNode &oldNext = *ii.mpNode->mpNext;
+            IntrusiveListNode &oldPrev = *ii.mpNode->mpPrev;
             oldNext.mpPrev = &oldPrev;
             oldPrev.mpNext = &oldNext;
 
             // Relink item into new list.
-            intrusive_list_node &newNext = *pos.mpNode;
-            intrusive_list_node &newPrev = *newNext.mpPrev;
+            IntrusiveListNode &newNext = *pos.mpNode;
+            IntrusiveListNode &newPrev = *newNext.mpPrev;
 
             newPrev.mpNext = ii.mpNode;
             newNext.mpPrev = ii.mpNode;
@@ -973,20 +966,20 @@ namespace fermat {
 
 
     template<typename T>
-    void intrusive_list<T>::splice(const_iterator pos, intrusive_list & /*x*/, const_iterator first,
-                                   const_iterator last) {
+    void IntrusiveList<T>::splice(const_iterator pos, IntrusiveList & /*x*/, const_iterator first,
+                                  const_iterator last) {
         // Note: &x == this is prohibited, so self-insertion is not a problem.
         if (first != last) {
-            intrusive_list_node &insertPrev = *first.mpNode;
-            intrusive_list_node &insertNext = *last.mpNode->mpPrev;
+            IntrusiveListNode &insertPrev = *first.mpNode;
+            IntrusiveListNode &insertNext = *last.mpNode->mpPrev;
 
             // remove from old list
             insertNext.mpNext->mpPrev = insertPrev.mpPrev;
             insertPrev.mpPrev->mpNext = insertNext.mpNext;
 
             // insert into this list
-            intrusive_list_node &next = *pos.mpNode;
-            intrusive_list_node &prev = *next.mpPrev;
+            IntrusiveListNode &next = *pos.mpNode;
+            IntrusiveListNode &prev = *next.mpPrev;
 
             prev.mpNext = &insertPrev;
             insertPrev.mpPrev = &prev;
@@ -997,20 +990,17 @@ namespace fermat {
 
 
     template<typename T>
-    inline void intrusive_list<T>::remove(value_type &value) {
-        intrusive_list_node &prev = *value.mpPrev;
-        intrusive_list_node &next = *value.mpNext;
+    inline void IntrusiveList<T>::remove(value_type &value) {
+        IntrusiveListNode &prev = *value.mpPrev;
+        IntrusiveListNode &next = *value.mpNext;
         prev.mpNext = &next;
         next.mpPrev = &prev;
-
-#if FERMAT_VALIDATE_INTRUSIVE_LIST
         value.mpPrev = value.mpNext = nullptr;
-#endif
     }
 
 
     template<typename T>
-    void intrusive_list<T>::merge(this_type &x) {
+    void IntrusiveList<T>::merge(this_type &x) {
         if (this != &x) {
             iterator first(begin());
             iterator firstX(x.begin());
@@ -1035,7 +1025,7 @@ namespace fermat {
 
     template<typename T>
     template<typename Compare>
-    void intrusive_list<T>::merge(this_type &x, Compare compare) {
+    void IntrusiveList<T>::merge(this_type &x, Compare compare) {
         if (this != &x) {
             iterator first(begin());
             iterator firstX(x.begin());
@@ -1059,7 +1049,7 @@ namespace fermat {
 
 
     template<typename T>
-    void intrusive_list<T>::unique() {
+    void IntrusiveList<T>::unique() {
         iterator first(begin());
         const iterator last(end());
 
@@ -1079,7 +1069,7 @@ namespace fermat {
 
     template<typename T>
     template<typename BinaryPredicate>
-    void intrusive_list<T>::unique(BinaryPredicate predicate) {
+    void IntrusiveList<T>::unique(BinaryPredicate predicate) {
         iterator first(begin());
         const iterator last(end());
 
@@ -1098,7 +1088,7 @@ namespace fermat {
 
 
     template<typename T>
-    void intrusive_list<T>::sort() {
+    void IntrusiveList<T>::sort() {
         // We implement the algorithm employed by Chris Caulfield whereby we use recursive
         // function calls to sort the list. The sorting of a very large list may fail due to stack overflow
         // if the stack is exhausted. The limit depends on the platform and the avaialble stack space.
@@ -1135,7 +1125,7 @@ namespace fermat {
 
     template<typename T>
     template<typename Compare>
-    void intrusive_list<T>::sort(Compare compare) {
+    void IntrusiveList<T>::sort(Compare compare) {
         // We implement the algorithm employed by Chris Caulfield whereby we use recursive
         // function calls to sort the list. The sorting of a very large list may fail due to stack overflow
         // if the stack is exhausted. The limit depends on the platform and the avaialble stack space.
@@ -1175,12 +1165,12 @@ namespace fermat {
     ///////////////////////////////////////////////////////////////////////
 
     template<typename T>
-    bool operator==(const intrusive_list<T> &a, const intrusive_list<T> &b) {
-        // If we store an mSize member for intrusive_list, we want to take advantage of it here.
-        typename intrusive_list<T>::const_iterator ia = a.begin();
-        typename intrusive_list<T>::const_iterator ib = b.begin();
-        typename intrusive_list<T>::const_iterator enda = a.end();
-        typename intrusive_list<T>::const_iterator endb = b.end();
+    bool operator==(const IntrusiveList<T> &a, const IntrusiveList<T> &b) {
+        // If we store an mSize member for IntrusiveList, we want to take advantage of it here.
+        typename IntrusiveList<T>::const_iterator ia = a.begin();
+        typename IntrusiveList<T>::const_iterator ib = b.begin();
+        typename IntrusiveList<T>::const_iterator enda = a.end();
+        typename IntrusiveList<T>::const_iterator endb = b.end();
 
         while ((ia != enda) && (ib != endb) && (*ia == *ib)) {
             ++ia;
@@ -1190,33 +1180,32 @@ namespace fermat {
     }
 
     template<typename T>
-    bool operator!=(const intrusive_list<T> &a, const intrusive_list<T> &b) {
+    bool operator!=(const IntrusiveList<T> &a, const IntrusiveList<T> &b) {
         return !(a == b);
     }
 
     template<typename T>
-    bool operator<(const intrusive_list<T> &a, const intrusive_list<T> &b) {
+    bool operator<(const IntrusiveList<T> &a, const IntrusiveList<T> &b) {
         return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
     }
 
     template<typename T>
-    bool operator>(const intrusive_list<T> &a, const intrusive_list<T> &b) {
+    bool operator>(const IntrusiveList<T> &a, const IntrusiveList<T> &b) {
         return b < a;
     }
 
     template<typename T>
-    bool operator<=(const intrusive_list<T> &a, const intrusive_list<T> &b) {
+    bool operator<=(const IntrusiveList<T> &a, const IntrusiveList<T> &b) {
         return !(b < a);
     }
 
     template<typename T>
-    bool operator>=(const intrusive_list<T> &a, const intrusive_list<T> &b) {
+    bool operator>=(const IntrusiveList<T> &a, const IntrusiveList<T> &b) {
         return !(a < b);
     }
 
     template<typename T>
-    void swap(intrusive_list<T> &a, intrusive_list<T> &b) noexcept {
+    void swap(IntrusiveList<T> &a, IntrusiveList<T> &b) noexcept {
         a.swap(b);
     }
 } // namespace fermat
-
