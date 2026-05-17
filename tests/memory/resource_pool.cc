@@ -44,7 +44,7 @@ protected:
 
 /// Test basic allocation, construction, find, and release.
 TEST_F(ResourcePoolTest, BasicAllocateAndFree) {
-    int64_t rid;
+    uint64_t rid;
     TestObject* obj = TestPool::get_uninitialize(rid);
     ASSERT_NE(obj, nullptr);
     EXPECT_NE(rid, 0);
@@ -67,7 +67,7 @@ TEST_F(ResourcePoolTest, BasicAllocateAndFree) {
 
 /// Test allocation with construction arguments.
 TEST_F(ResourcePoolTest, ConstructWithArguments) {
-    int64_t rid;
+    uint64_t rid;
     TestObject* obj = TestPool::get(rid, 100);
     ASSERT_NE(obj, nullptr);
     EXPECT_EQ(obj->value, 100);
@@ -81,7 +81,7 @@ TEST_F(ResourcePoolTest, ConstructWithArguments) {
 
 /// Test put_raw releases slot back to free list, making it reusable.
 TEST_F(ResourcePoolTest, PutRawRecyclesSlot) {
-    int64_t rid1, rid2;
+    uint64_t rid1, rid2;
     TestObject* obj1 = TestPool::get(rid1, 10);
     ASSERT_NE(obj1, nullptr);
 
@@ -98,12 +98,12 @@ TEST_F(ResourcePoolTest, PutRawRecyclesSlot) {
 
 /// Test that stale IDs (wrong version) are rejected by put_raw and find.
 TEST_F(ResourcePoolTest, StaleIdIgnored) {
-    int64_t rid;
+    uint64_t rid;
     TestObject* obj = TestPool::get(rid, 5);
     ASSERT_NE(obj, nullptr);
 
     /// Store a copy of the ID before releasing.
-    int64_t stale_rid = rid;
+    uint64_t stale_rid = rid;
 
     /// Release the object.
     TestPool::put(rid);
@@ -115,7 +115,7 @@ TEST_F(ResourcePoolTest, StaleIdIgnored) {
     EXPECT_EQ(TestPool::find(stale_rid), nullptr);
 
     /// Pool should still be functional: allocate again.
-    int64_t new_rid;
+    uint64_t new_rid;
     TestObject* new_obj = TestPool::get(new_rid, 10);
     ASSERT_NE(new_obj, nullptr);
     TestPool::put(new_rid);
@@ -133,7 +133,7 @@ TEST_F(ResourcePoolTest, ConcurrentAccess) {
         threads.emplace_back([&start] {
             while (!start.load()) { std::this_thread::yield(); }
             for (int i = 0; i < kOpsPerThread; ++i) {
-                int64_t rid;
+                uint64_t rid;
                 TestObject* obj = TestPool::get(rid, i);
                 if (obj != nullptr) {
                     EXPECT_EQ(obj->value, i);
@@ -158,7 +158,7 @@ TEST_F(ResourcePoolTest, FindInvalidId) {
     EXPECT_EQ(TestPool::find(0), nullptr);
 
     /// Create a valid ID, then corrupt shard_id to 255.
-    int64_t rid;
+    uint64_t rid;
     TestPool::get(rid, 99);
     ResourceId bad_rid(rid);
     bad_rid.set_shard_id(255);   // shard 255 may not exist (only 0..255 are valid, but out-of-range shard?)
@@ -175,7 +175,7 @@ TEST_F(ResourcePoolTest, AutoExpandBlock) {
     /// SlotSize = 64, BlockSize = 8, so maximum objects = 512.
     std::vector<int64_t> rids;
     for (int i = 0; i < 130; ++i) {   // More than one block (64+64)
-        int64_t rid;
+        uint64_t rid;
         TestObject* obj = TestPool::get(rid, i);
         ASSERT_NE(obj, nullptr);
         rids.push_back(rid);

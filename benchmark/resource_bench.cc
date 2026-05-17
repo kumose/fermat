@@ -26,7 +26,7 @@ using ShardedPool = ResourcePool<TestObject, 8, 64, 1024, 64>;
 template<typename Pool>
 static void BM_AllocFree(benchmark::State& state) {
     for (auto _ : state) {
-        int64_t rid;
+        uint64_t rid;
         TestObject* obj = Pool::get_uninitialize(rid);
         if (obj) {
             ::new (obj) TestObject(1);
@@ -43,7 +43,7 @@ static void BM_AllocFree(benchmark::State& state) {
 template<typename Pool>
 static void BM_GetPut(benchmark::State& state) {
     for (auto _ : state) {
-        int64_t rid;
+        uint64_t rid;
         TestObject* obj = Pool::get(rid, 42);
         if (obj) {
             benchmark::DoNotOptimize(obj);
@@ -68,7 +68,7 @@ static void BM_MultiThread(benchmark::State& state) {
                 std::this_thread::yield();
             }
             for (auto _ : state) {
-                int64_t rid;
+                uint64_t rid;
                 TestObject* obj = Pool::get(rid, t);
                 if (obj) {
                     benchmark::DoNotOptimize(obj);

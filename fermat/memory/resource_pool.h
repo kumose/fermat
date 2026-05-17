@@ -38,9 +38,9 @@ namespace fermat {
         explicit ResourceId(uint64_t val = kInvalidId) noexcept : raw_(val) {
         }
 
-        uint64_t encode() const noexcept { return raw_; }
+        [[nodiscard]] uint64_t encode() const noexcept { return raw_; }
 
-        uint32_t encode_short() const noexcept {
+       [[nodiscard]] uint32_t encode_short() const noexcept {
             return static_cast<uint32_t>(raw_ & 0xFFFFFFFFULL);
         }
 
@@ -62,11 +62,11 @@ namespace fermat {
         }
 
         // Getter
-        uint8_t shard_id() const noexcept { return static_cast<uint8_t>(raw_ & 0xFFULL); }
-        uint8_t block_id() const noexcept { return static_cast<uint8_t>((raw_ >> 8) & 0xFFULL); }
-        uint16_t slot_id() const noexcept { return static_cast<uint16_t>((raw_ >> 16) & 0xFFFFULL); }
-        uint16_t version() const noexcept { return static_cast<uint16_t>((raw_ >> 32) & 0xFFFFULL); }
-        uint16_t user_space() const noexcept { return static_cast<uint16_t>(raw_ >> 48); }
+       [[nodiscard]] uint8_t shard_id() const noexcept { return static_cast<uint8_t>(raw_ & 0xFFULL); }
+       [[nodiscard]] uint8_t block_id() const noexcept { return static_cast<uint8_t>((raw_ >> 8) & 0xFFULL); }
+       [[nodiscard]] uint16_t slot_id() const noexcept { return static_cast<uint16_t>((raw_ >> 16) & 0xFFFFULL); }
+       [[nodiscard]] uint16_t version() const noexcept { return static_cast<uint16_t>((raw_ >> 32) & 0xFFFFULL); }
+       [[nodiscard]] uint16_t user_space() const noexcept { return static_cast<uint16_t>(raw_ >> 48); }
 
         // Setter
         void set_shard_id(uint8_t v) noexcept {
@@ -93,7 +93,7 @@ namespace fermat {
             set_version(version() + 1);
         }
 
-        std::string to_string() const {
+      [[nodiscard]]  std::string to_string() const {
             return turbo::str_format("{shard:%d, block:%d, slot:%d, version:%d, user:%d}",
                                      shard_id(), block_id(), slot_id(), version(), user_space());
         }
@@ -162,7 +162,7 @@ namespace fermat {
         static std::atomic<int32_t> g_thread_shard_id;
     };
 
-    template<typename T, size_t BlockSize, size_t SlotSize>
+    template<typename T, uint8_t BlockSize, uint16_t SlotSize>
     class ResourceShard {
     public:
         ResourceShard();
@@ -172,7 +172,7 @@ namespace fermat {
         bool create_block(uint8_t shard);
 
         /// Finds an object within this shard by block, slot, and expected version.
-        T *find(uint8_t block_id, uint16_t slot_id, uint16_t expected_version);
+       [[nodiscard]] T *find(uint8_t block_id, uint16_t slot_id, uint16_t expected_version);
 
         std::mutex blocks_mutex;
         std::array<ResourceBlock<T, SlotSize> *, BlockSize> blocks;
@@ -181,7 +181,7 @@ namespace fermat {
         std::vector<uint32_t> free_list;
     };
 
-    template<typename T, size_t BlockSize = 8, size_t SlotSize = 64,
+    template<typename T, uint8_t BlockSize = 8, uint16_t SlotSize = 64,
         size_t TlsCache = 1024, size_t Batch = 64>
     class ResourcePool {
     public:
@@ -196,7 +196,7 @@ namespace fermat {
         /// Uses shard_id to route to the appropriate shard, then validates version.
         /// @param id The 64-bit resource ID.
         /// @return Pointer to the object if valid and version matches, otherwise nullptr.
-        static T *find(int64_t id) {
+        static T *find(uint64_t id) {
             ResourceId rid(id);
             uint8_t shard = rid.shard_id();
             uint8_t block = rid.block_id();
@@ -215,7 +215,7 @@ namespace fermat {
 
         /// Allocates an uninitialized object from the pool.
         /// The returned 64-bit ID includes shard, block, slot, and version.
-        static T *get_uninitialize(int64_t &rid_out) {
+        static T *get_uninitialize(uint64_t &rid_out) {
             auto &pool = instance();
 
             /// Obtain a free slot index (32-bit short ID containing shard|block|slot).
@@ -248,7 +248,7 @@ namespace fermat {
 
         // Construct object with arguments and allocate.
         template<typename... Args>
-        static T *get(int64_t &rid, Args &&... args) {
+        static T *get(uint64_t &rid, Args &&... args) {
             T *ptr = get_uninitialize(rid);
             if (!ptr) return nullptr;
             new(ptr) T(std::forward<Args>(args)...);
@@ -258,7 +258,7 @@ namespace fermat {
         /// Releases a raw object (without destructor) back to the pool.
         /// The ID must be a valid resource ID obtained from get() or get_uninitialize().
         /// If the ID is stale (version mismatch), the call is ignored.
-        static void put_raw(int64_t rid_val) {
+        static void put_raw(uint64_t rid_val) {
             ResourceId rid(rid_val);
             uint8_t shard_id = rid.shard_id();
             uint8_t block_id = rid.block_id();
@@ -285,7 +285,7 @@ namespace fermat {
         }
 
         // Release constructed object (calls destructor then put_raw).
-        static void put(int64_t rid) {
+        static void put(uint64_t rid) {
             T *ptr = find(rid);
             if (!ptr) return;
             ptr->~T();
@@ -363,17 +363,17 @@ namespace fermat {
         static thread_local uint8_t tls_shard_id;
     };
 
-    template<typename T, size_t B, size_t S, size_t C, size_t BT>
+    template<typename T, uint8_t B, uint16_t S, size_t C, size_t BT>
     thread_local std::vector<uint32_t> ResourcePool<T, B, S, C, BT>::tls_free_list_;
 
-    template<typename T, size_t BlockSize, size_t SlotSize>
+    template<typename T, uint8_t BlockSize, uint16_t SlotSize>
     ResourceShard<T, BlockSize, SlotSize>::ResourceShard() {
         blocks.fill(nullptr);
         metas.fill(nullptr);
         free_list.reserve(SlotSize);
     }
 
-    template<typename T, size_t BlockSize, size_t SlotSize>
+    template<typename T, uint8_t BlockSize, uint16_t SlotSize>
     ResourceShard<T, BlockSize, SlotSize>::~ResourceShard() {
         std::lock_guard<std::mutex> lock_resource(blocks_mutex);
         for (size_t i = 0; i < BlockSize; ++i) {
@@ -392,7 +392,7 @@ namespace fermat {
         free_list.clear();
     }
 
-    template<typename T, size_t BlockSize, size_t SlotSize>
+    template<typename T, uint8_t BlockSize, uint16_t SlotSize>
     bool ResourceShard<T, BlockSize, SlotSize>::create_block(uint8_t shard_id) {
         size_t idx = 0;
         while (idx < BlockSize && blocks[idx] != nullptr) ++idx;
@@ -402,7 +402,7 @@ namespace fermat {
         size_t block_size = sizeof(ResourceBlock<T, SlotSize>);
         void *block_mem = Malloc::good_alloc(&block_size);
         if (!block_mem) throw std::bad_alloc();
-        ResourceBlock<T, SlotSize> *new_block = new(block_mem) ResourceBlock<T, SlotSize>();
+        auto *new_block = new(block_mem) ResourceBlock<T, SlotSize>();
 
         size_t meta_size = sizeof(ResourceMeta<SlotSize>);
         void *meta_mem = Malloc::good_alloc(&meta_size);
@@ -410,7 +410,7 @@ namespace fermat {
             Malloc::good_free(block_mem);
             return false;
         }
-        ResourceMeta<SlotSize> *new_meta = new(meta_mem) ResourceMeta<SlotSize>();
+        auto *new_meta = new(meta_mem) ResourceMeta<SlotSize>();
 
         /// Initialize all version slots to 0.
         for (size_t i = 0; i < SlotSize; ++i) {
@@ -421,7 +421,7 @@ namespace fermat {
         metas[idx] = new_meta;
 
         // Use the existing encode_short function to avoid repeating bit shifts.
-        uint8_t block_id = static_cast<uint8_t>(idx);
+        auto block_id = static_cast<uint8_t>(idx);
         for (uint16_t slot = 0; slot < SlotSize; ++slot) {
             uint32_t encoded = ResourceId::encode_short(shard_id, block_id, slot);
             free_list.push_back(encoded);
@@ -429,7 +429,7 @@ namespace fermat {
         return true;
     }
 
-    template<typename T, size_t BlockSize, size_t SlotSize>
+    template<typename T, uint8_t BlockSize, uint16_t SlotSize>
     T *ResourceShard<T, BlockSize, SlotSize>::find(uint8_t block_id, uint16_t slot_id, uint16_t expected_version) {
         if (block_id >= BlockSize || slot_id >= SlotSize) {
             return nullptr;
