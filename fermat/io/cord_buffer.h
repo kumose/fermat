@@ -16,153 +16,11 @@
 #pragma once
 
 #include <fermat/container/buffer.h>
-#include <fermat/container/stl.h>
+#include <fermat/io/buffer_lease.h>
 #include <memory>
 #include <new>
 
 namespace fermat {
-    template<size_t Alignment, size_t BlockSize>
-    class CordBuffer;
-    template<size_t Alignment, size_t BlockSize>
-    class IOBuf;
-
-    /// @brief A managed view for writing into borrowed CordBuffer segments.
-    ///
-    /// Lease provides a safe, sequential writing interface over discrete memory spans.
-    /// It prevents common pitfalls like manual pointer arithmetic and buffer overflows
-    /// by encapsulating the span collection and internal offsets.
-    class BufferLease {
-    public:
-        /// @brief Write data sequentially into the leased spans (append mode).
-        ///        Data is copied from @p data into the internal buffers, automatically
-        ///        crossing span boundaries. The write cursor advances by @p len bytes.
-        /// @param data Pointer to the source data.
-        /// @param len  Number of bytes to write.
-        /// @return turbo::OkStatus on success, or turbo::OutOfRangeError if remaining capacity is insufficient.
-        turbo::Status write(const char *data, size_t len);
-
-        /// @brief Shrink the written size by removing @p n bytes from the end.
-        ///        This rewinds both the total size and the internal write cursors.
-        /// @param n Number of bytes to remove (clamped to current size).
-        void pop_back(size_t n);
-
-        /// @brief Reset the lease to its initial empty state.
-        ///        Clears all written data and resets write position to the beginning.
-        void clear();
-
-        /// @brief Get the total number of bytes successfully written (via write or advance).
-        /// @return Total bytes written so far.
-       [[nodiscard]] size_t size() const { return _total_size; }
-
-        /// @brief Get the total capacity (maximum writable bytes) of this lease.
-        /// @return Capacity in bytes.
-        size_t capacity() const { return _capacity; }
-
-        /// @brief Check if there is any remaining writable space.
-        /// @return true if remaining() > 0, false otherwise.
-        operator bool() const noexcept {
-            return _capacity - _total_size > 0;
-        }
-
-        /// @brief Get the number of bytes still available for writing.
-        /// @return Remaining capacity.
-        size_t remaining() const { return _capacity - _total_size; }
-
-        /// @brief Check if no data has been written yet.
-        /// @return true if size() == 0.
-        bool empty() const noexcept {
-            return _total_size == 0;
-        }
-
-        /// @brief Check whether this lease is currently borrowed (i.e., has valid spans).
-        /// @return true if capacity > 0, false otherwise.
-        bool borrowed() const noexcept {
-            return _capacity != 0;
-        }
-
-
-        /// @brief Zero-copy write helpers: collect writable segments, fill externally, then commit.
-        ///
-        /// These two methods are used together for advanced scenarios where you need
-        /// to write directly into the lease's internal buffers without an extra copy
-        /// (e.g., using readv/writev, DMA, or filling iovec arrays).
-        ///
-        /// Typical usage:
-        ///   1. Call visit_remaining() with a visitor that collects each writable segment
-        ///      (pointer + capacity) into an iovec array or similar structure.
-        ///   2. Use the collected information to perform a system call (e.g., readv)
-        ///      that fills the buffers. Let N be the total number of bytes actually written.
-        ///   3. Call advance(N) exactly once to commit the written bytes.
-        ///   4. Finally, commit the lease to the CordBuffer via CordBuffer::commit().
-        ///
-        /// Important:
-        ///   - visit_remaining() does NOT advance the write cursor.
-        ///   - The visitor may be called multiple times (once per contiguous block).
-        ///   - Do NOT call write() on the same lease when using this low-level pair.
-        ///   - advance() must be called exactly once after all segments have been filled,
-        ///     with the total number of bytes written across all segments.
-        ///
-        /// Example (using readv):
-        ///   struct iovec iov[16];
-        ///   int iovcnt = 0;
-        ///   lease.visit_remaining([&](char* ptr, size_t cap) {
-        ///       iov[iovcnt].iov_base = ptr;
-        ///       iov[iovcnt].iov_len  = cap;
-        ///       ++iovcnt;
-        ///       return iovcnt < 16;   // continue while space remains in array
-        ///   });
-        ///   ssize_t n = readv(fd, iov, iovcnt);
-        ///   if (n > 0) lease.advance(n);
-        ///   iob.commit(lease);
-        ///
-        /// @param visitor Callback with signature bool(char* buffer, size_t capacity).
-        ///                Return true to continue to next segment, false to stop.
-        /// @param n       Total number of bytes actually written (must <= remaining()).
-        using VisitorCallback = std::function<bool(char *, size_t)>;
-
-        void visit_remaining(const VisitorCallback &visitor) const;
-
-        void advance(size_t n);
-
-    private:
-        /// @brief Default constructor (only CordBuffer can create a Lease).
-        BufferLease() = default;
-
-        /// @brief Initialize the lease with multiple non‑contiguous writable spans.
-        /// @param sp Vector of spans borrowed from CordBuffer.
-        void set(std::vector<turbo::span<char> > sp);
-
-        /// @brief Initialize the lease with a single contiguous writable span.
-        /// @param sp A single span borrowed from CordBuffer.
-        void set(turbo::span<char> sp);
-
-        void clear_lease();
-
-        /// Copy/move constructors and assignment operators are defaulted.
-        /// They are kept private because Lease instances are not meant to be
-        /// copied or moved by users; only CordBuffer manages them.
-        BufferLease(BufferLease &) = default;
-
-        BufferLease(BufferLease &&) noexcept = default;
-
-        BufferLease &operator=(const BufferLease &) = default;
-
-        BufferLease &operator=(BufferLease &&) noexcept = default;
-
-        template<size_t Alignment, size_t BlockSize>
-        friend class CordBuffer;
-        template<size_t Alignment, size_t BlockSize>
-        friend class IOBuf;
-
-    private:
-        std::vector<turbo::span<char> > _spans;
-        size_t _total_size{0};
-        size_t _index{0};
-        size_t _offset{0};
-        size_t _capacity{0};
-    };
-
-
     template<size_t Alignment = 64, size_t BlockSize = 4096>
     class CordBuffer {
     public:
@@ -171,7 +29,6 @@ namespace fermat {
         static constexpr bool is_iobuf = true;
         static constexpr size_t kBlockSize = BlockSize;
         static constexpr size_t kAlignment = Alignment;
-
 
     public:
         CordBuffer() = default;
@@ -205,7 +62,7 @@ namespace fermat {
             return *this;
         }
 
-        ~CordBuffer()  = default;
+        ~CordBuffer() = default;
 
         [[nodiscard]] size_t block_size() const;
 
@@ -220,11 +77,33 @@ namespace fermat {
 
         turbo::Status append(const void *data, size_t size);
 
+        void reserve_writeable(size_t n);
+
+        void reserve(size_t n) {
+            if (n <= _writeable + _total_size) {
+                return;
+            }
+            reserve_writeable(n - _total_size);
+        }
+
+        BufferLease *borrow(size_t byte_size);
+
+        void commit(BufferLease *l);
+
+        void build();
+
+        std::vector<Buffer<char, Alignment>> release();
+
+        const std::vector<Buffer<char, Alignment>> &buffers() const;
 
     protected:
-        Buffer<char, Alignment> _current;
-        std::list<Buffer<char, Alignment>> _views; ///< All block views (including Umount ones).
-        size_t _total_size{0}; ///< Total logical bytes stored.
+        std::list<Buffer<char, Alignment> > _current;
+        ///< All block views (including Umount ones).
+        std::list<Buffer<char, Alignment> > _views;
+        ///< Total logical bytes stored.
+        size_t _total_size{0};
+        size_t _writeable{0};
+        BufferLease _lease;
     };
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -264,27 +143,108 @@ namespace fermat {
     }
 
     template<size_t Alignment, size_t BlockSize>
+    void CordBuffer<Alignment, BlockSize>::reserve_writeable(size_t n) {
+        while (n > _writeable) {
+            Buffer<char, Alignment> new_buffer;
+            new_buffer.reserve(BlockSize);
+            _current.push_back(std::move(new_buffer));
+            _writeable += BlockSize;
+        }
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    BufferLease *CordBuffer<Alignment, BlockSize>::borrow(size_t byte_size) {
+        KCHECK(!_lease.borrowed());
+        if (byte_size == 0) return nullptr;
+        reserve_writeable(byte_size);
+        std::vector<turbo::span<char> > vec;
+        size_t remain = byte_size;
+        for (auto &b: _current) {
+            auto write_able_size = b.capacity() - b.size();
+            if (remain > write_able_size) {
+                vec.emplace_back(b.data() + b.size(), write_able_size);
+                remain -= write_able_size;
+            } else {
+                vec.emplace_back(b.data() + b.size(), remain);
+                remain = 0;
+                break;
+            }
+        }
+        _lease.set(vec);
+        return &_lease;
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    void CordBuffer<Alignment, BlockSize>::commit(BufferLease *l) {
+        KCHECK(l == &_lease) << "Fatal: Lease does not belong to this IOBuf. "
+                     << "Expected internal lease address " << &_lease
+                     << ", got " << l << ". Possible double commit or foreign lease.";
+        if (!_lease.borrowed()) {
+            return;
+        }
+        auto n = _lease.size();
+        while (n > 0) {
+            DKCHECK(!_views.empty());
+            auto &b = _current.front();
+            auto sz = b.size();
+            if (n >= b.capacity() - sz) {
+                auto tmp = std::move(_current.front());
+                _current.pop_front();
+                tmp.resize(tmp.capacity());
+                _views.push_back(std::move(tmp));
+                n -= (b.capacity() - sz);
+            } else {
+                b.resize(sz + n);
+                n = 0;
+            }
+        }
+        _total_size += _lease.size();
+        _writeable -= _lease.size();
+        _lease.clear();
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    void CordBuffer<Alignment, BlockSize>::build() {
+        if (!_current.empty()) {
+            auto &b = _current.front();
+            if (b.size() == 0) return;
+            auto tmp = std::move(_current.front());
+            _current.pop_front();
+            _views.push_back(std::move(tmp));
+        }
+        /// lease should commit it self, just make the last block to views;
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    std::vector<Buffer<char, Alignment>> CordBuffer<Alignment, BlockSize>::release() {
+        return std::move(_views);
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    const std::vector<Buffer<char, Alignment>> &CordBuffer<Alignment, BlockSize>::buffers() const {
+        return _views;
+    }
+
+    template<size_t Alignment, size_t BlockSize>
     turbo::Status CordBuffer<Alignment, BlockSize>::append(const void *data, size_t size) {
         if (size == 0 || data == nullptr) return turbo::OkStatus();
-        if (_current.capacity() == 0) {
-            _current.reserve(BlockSize);
-        }
+        reserve_writeable(size);
         const char *src = static_cast<const char *>(data);
         auto remnain = size;
         while (remnain > 0) {
-            if (_current.size()  == _current.capacity()) {
-                _views.push_back(std::move(_current));
-                _current.reserve(BlockSize);
-            }
-            auto app_len = std::min(remnain, _current.capacity() - _current.size());
-            _current.append(src, app_len);
+            auto &b = _current.front();
+            auto app_len = std::min(remnain, b.capacity() - b.size());
+            b.append(src, app_len);
             remnain -= app_len;
             src += app_len;
+            if (b.size() == b.capacity()) {
+                auto tmp = std::move(_current.front());
+                _current.pop_front();
+                _views.push_back(std::move(tmp));
+            }
         }
         _total_size += size;
-
-        return  turbo::OkStatus();
+        _writeable -= size;
+        return turbo::OkStatus();
     }
-
-
 } // namespace fermat

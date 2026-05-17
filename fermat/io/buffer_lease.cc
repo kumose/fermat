@@ -13,10 +13,11 @@
 // limitations under the License.
 //
 
-#include <fermat/io/cord_buffer.h>
+#include <fermat/io/buffer_lease.h>
 
 namespace fermat {
-    void BufferLease::set(std::vector<turbo::span<char> > sp) {
+
+     void BufferLease::set(std::vector<turbo::span<char> > sp) {
         _spans = std::move(sp);
         for (const auto &s: _spans) {
             _capacity += s.size();
@@ -129,4 +130,4 @@ namespace fermat {
     }
 
 
-} // namespace fermat
+}  // namespace fermat

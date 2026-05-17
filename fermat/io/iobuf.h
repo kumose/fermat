@@ -16,7 +16,7 @@
 #pragma once
 
 #include <fermat/container/buffer.h>
-#include <fermat/io/cord_buffer.h>
+#include <fermat/io/buffer_lease.h>
 #include <fermat/container/stl.h>
 #include <memory>
 #include <new>

@@ -68,7 +68,7 @@ static void BM_IOBuf_RandomChunked(benchmark::State& st) {
 static void BM_CordBuffer_RandomChunked(benchmark::State& st) {
     const size_t total = st.range(0);
     for (auto _ : st) {
-        fermat::CordBuffer<64, 128 * 1024> buf;
+        fermat::CordBuffer<64, 16 * 1024> buf;
         AppendRandomChunked(buf, total);
         benchmark::DoNotOptimize(buf);
     }
