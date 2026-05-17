@@ -156,7 +156,7 @@ namespace fermat {
         }
 
         static int32_t get_short_id() noexcept {
-            static thread_local uint8_t short_tls_shard_id = get_shard_id() %256;
+            static thread_local uint8_t short_tls_shard_id = get_shard_id() % 256;
             return short_tls_shard_id;
         }
 
@@ -166,6 +166,7 @@ namespace fermat {
 
     template<typename T, size_t BlockSize, size_t SlotSize>
     class ResourceShard {
+    public:
         ResourceShard();
 
         ~ResourceShard();
@@ -234,7 +235,7 @@ namespace fermat {
 
             /// Atomically increment the version to mark this slot as allocated.
             uint16_t old_ver = ver_atom.fetch_add(1, std::memory_order_relaxed);
-            KCHECK(old_ver%2  == 0);
+            KCHECK(old_ver%2 == 0);
 
             /// Build the full 64-bit resource ID with the new version.
             ResourceId rid;
@@ -246,6 +247,7 @@ namespace fermat {
 
             return &shard.blocks[block_id]->data[slot_id];
         }
+
         // Construct object with arguments and allocate.
         template<typename... Args>
         static T *get(int64_t &rid, Args &&... args) {
@@ -276,8 +278,8 @@ namespace fermat {
             // CAS to increment version; if it fails, the ID is already stale (already freed).
             if (!ver_atom.compare_exchange_strong(old_ver, new_ver,
                                                   std::memory_order_acq_rel)) {
-                return;  // Stale ID, ignore.
-                                                  }
+                return; // Stale ID, ignore.
+            }
 
             // Slot is now free (version increased). Encode short ID and return to shard's free list.
             uint32_t short_id = ResourceId::encode_short(shard_id, block_id, slot_id);
@@ -308,7 +310,7 @@ namespace fermat {
 
             /// 2. Refill TLS from global free list.
             if (!fetch_to_tls()) {
-                return false;   // No free slots globally and cannot create new block.
+                return false; // No free slots globally and cannot create new block.
             }
 
             /// 3. After refill, TLS must have at least one slot.
@@ -320,7 +322,7 @@ namespace fermat {
         /// Refills the thread-local cache by taking a batch of slots from the global free list.
         /// Returns true if at least one slot was obtained, false if global list is empty.
         bool fetch_to_tls() {
-            auto shard_id  = ThreadShard::get_short_id();
+            auto shard_id = ThreadShard::get_short_id();
             auto &shard = _shards[shard_id];
             std::lock_guard<std::mutex> lock(shard.blocks_mutex);
             if (shard.free_list.empty()) {
@@ -344,12 +346,12 @@ namespace fermat {
             }
 
             {
-                static size_t hf_cache_size = TlsCache/ 2;
+                static size_t hf_cache_size = TlsCache / 2;
                 uint8_t shard_id = ThreadShard::get_short_id();
                 auto &shard = _shards[shard_id];
                 std::lock_guard lock(shard.blocks_mutex);
                 shard.free_list.push_back(idx);
-                for (size_t i = 0; i < hf_cache_size; ++i ) {
+                for (size_t i = 0; i < hf_cache_size; ++i) {
                     auto id = tls_free_list_.back();
                     shard.free_list.push_back(id);
                     tls_free_list_.pop_back();
