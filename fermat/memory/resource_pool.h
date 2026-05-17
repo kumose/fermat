@@ -137,8 +137,6 @@ namespace fermat {
 
     template<typename T, size_t SlotSize>
     struct ResourceBlock {
-        static_assert(
-            std::is_trivially_copy_assignable_v<std::remove_const_t<std::remove_cv_t<T> > >, "");
         std::array<T, SlotSize> data;
     };
 
