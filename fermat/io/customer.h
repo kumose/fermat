@@ -18,7 +18,7 @@
 #include <turbo/container/span.h>
 #include <fermat/container/stl.h>
 #include <fermat/container/traits.h>
-#include <fermat/io/receiver.h>
+#include <fermat/container/receiver.h>
 #include <fermat/memory/allocator.h>
 #include <type_traits>
 #include <turbo/log/check.h>

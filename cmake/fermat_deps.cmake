@@ -61,7 +61,7 @@ kmcmake_private_find_package(Threads REQUIRED)
 list(APPEND KMCMAKE_SYSTEM_DYLINK Threads::Threads)
 find_package(turbo REQUIRED)
 find_package(mimalloc REQUIRED)
-
+find_package(unofficial-brpc REQUIRED)
 ############################################################
 #
 # add you libs to the KMCMAKE_DEPS_LINK variable eg as turbo
@@ -70,6 +70,7 @@ find_package(mimalloc REQUIRED)
 ##########################################################
 set(KMCMAKE_DEPS_LINK
         #${TURBO_LIB}
+        unofficial::brpc::brpc
         mimalloc-static
         turbo::turbo_static
         ${KMCMAKE_SYSTEM_DYLINK}

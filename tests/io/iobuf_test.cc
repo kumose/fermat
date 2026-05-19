@@ -94,7 +94,7 @@ namespace fermat {
         std::string too_much(small_cap + 1, 'B');
         status = lease2->write(too_much.data(), too_much.size());
         EXPECT_FALSE(status.ok());
-        EXPECT_EQ(status.message(), "BufferLease capacity exceeded, size:0 len:11 capacity:10");
+        EXPECT_EQ(status.message(), "DeprecateBufferLease capacity exceeded, size:0 len:11 capacity:10");
 
         // 4. No data should have been written; the lease size stays zero
         EXPECT_EQ(lease2->size(), 0);

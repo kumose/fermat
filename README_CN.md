@@ -27,20 +27,20 @@ s.reserve(10 * 1024 * 1024);
 for (int i = 0; i < 1000000; ++i) s.append("a");
 ```
 
-### 分块缓冲区 CordBuffer / IOBuf
+### 分块缓冲区 CordBufferBase / IOBuf
 
 随机分块追加（16KB 块）50MB 吞吐量：
 
 | 容器 | 吞吐量 |
 |------|--------|
-| CordBuffer | 13.87 GiB/s |
+| CordBufferBase | 13.87 GiB/s |
 | IOBuf | 9.56 GiB/s |
 | std::string | 2.08 GiB/s |
 
-CordBuffer 写入即见，适合流式追加、日志、网络收包。IOBuf 支持 borrow/commit 原子提交，适合 readv 等事务写入。
+CordBufferBase 写入即见，适合流式追加、日志、网络收包。IOBuf 支持 borrow/commit 原子提交，适合 readv 等事务写入。
 
 ```cpp
-fermat::CordBuffer<64, 16*1024> cb;
+fermat::CordBufferBase<64, 16*1024> cb;
 cb.append("data", 4);
 
 fermat::IOBuf<64, 16*1024> ib;
@@ -222,7 +222,7 @@ fermat::Reader::custom_until(source, appender, '\n'); // 读至换行符
 | 需求 | 推荐组件 |
 |------|-----------|
 | 常规字符串（累积大数据需 reserve） | KString |
-| 流式追加大数据（写入即见） | CordBuffer |
+| 流式追加大数据（写入即见） | CordBufferBase |
 | 原子提交的大数据写入（如 readv） | IOBuf |
 | 零拷贝跨块遍历 IOBuf | Peeker<IOBuf> |
 | 从 IOBuf 消费数据到容器 | Customer / Reader |

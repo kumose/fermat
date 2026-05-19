@@ -22,15 +22,15 @@
 
 namespace fermat {
 
-    /// @brief A managed view for writing into borrowed CordBuffer segments.
+    /// @brief A managed view for writing into borrowed CordBufferBase segments.
     ///
     /// Lease provides a safe, sequential writing interface over discrete memory spans.
     /// It prevents common pitfalls like manual pointer arithmetic and buffer overflows
     /// by encapsulating the span collection and internal offsets.
-    class BufferLease {
+    class DeprecateBufferLease {
     public:
-        /// @brief Default constructor (only CordBuffer can create a Lease).
-        BufferLease() = default;
+        /// @brief Default constructor (only CordBufferBase can create a Lease).
+        DeprecateBufferLease() = default;
 
         /// @brief Write data sequentially into the leased spans (append mode).
         ///        Data is copied from @p data into the internal buffers, automatically
@@ -92,7 +92,7 @@ namespace fermat {
         ///   2. Use the collected information to perform a system call (e.g., readv)
         ///      that fills the buffers. Let N be the total number of bytes actually written.
         ///   3. Call advance(N) exactly once to commit the written bytes.
-        ///   4. Finally, commit the lease to the CordBuffer via CordBuffer::commit().
+        ///   4. Finally, commit the lease to the CordBufferBase via CordBufferBase::commit().
         ///
         /// Important:
         ///   - visit_remaining() does NOT advance the write cursor.
@@ -124,18 +124,86 @@ namespace fermat {
         void advance(size_t n);
 
         /// @brief Initialize the lease with multiple non‑contiguous writable spans.
-        /// @param sp Vector of spans borrowed from CordBuffer.
+        /// @param sp Vector of spans borrowed from CordBufferBase.
         void set(std::vector<turbo::span<char> > sp);
 
         /// @brief Initialize the lease with a single contiguous writable span.
-        /// @param sp A single span borrowed from CordBuffer.
+        /// @param sp A single span borrowed from CordBufferBase.
         void set(turbo::span<char> sp);
 
         void clear_lease();
 
         /// Copy/move constructors and assignment operators are defaulted.
         /// They are kept private because Lease instances are not meant to be
-        /// copied or moved by users; only CordBuffer manages them.
+        /// copied or moved by users; only CordBufferBase manages them.
+        DeprecateBufferLease(DeprecateBufferLease &) = default;
+
+        DeprecateBufferLease(DeprecateBufferLease &&) noexcept = default;
+
+        DeprecateBufferLease &operator=(const DeprecateBufferLease &) = default;
+
+        DeprecateBufferLease &operator=(DeprecateBufferLease &&) noexcept = default;
+
+        [[nodiscard]] const std::vector<turbo::span<char>> &spans() const noexcept {
+            return _spans;
+        }
+    private:
+        std::vector<turbo::span<char> > _spans;
+        size_t _total_size{0};
+        size_t _index{0};
+        size_t _offset{0};
+        size_t _capacity{0};
+    };
+
+    class BufferLease {
+    public:
+        /// @brief Default constructor (only CordBufferBase can create a Lease).
+        BufferLease() = default;
+
+        /// @brief Reset the lease to its initial empty state.
+        ///        Clears all written data and resets write position to the beginning.
+        void clear();
+
+        /// @brief Get the total number of bytes successfully written (via write or advance).
+        /// @return Total bytes written so far.
+       [[nodiscard]] size_t size() const { return _total_size; }
+
+        /// @brief Get the total capacity (maximum writable bytes) of this lease.
+        /// @return Capacity in bytes.
+       [[nodiscard]] size_t capacity() const { return _capacity; }
+
+
+        /// @brief Get the number of bytes still available for writing.
+        /// @return Remaining capacity.
+        [[nodiscard]] size_t remaining() const { return _capacity - _total_size; }
+
+        /// @brief Check if no data has been written yet.
+        /// @return true if size() == 0.
+        [[nodiscard]] bool empty() const noexcept {
+            return _total_size == 0;
+        }
+
+        /// @brief Check whether this lease is currently borrowed (i.e., has valid spans).
+        /// @return true if capacity > 0, false otherwise.
+        [[nodiscard]] bool borrowed() const noexcept {
+            return _capacity != 0;
+        }
+
+        void set_size(size_t n);
+
+        /// @brief Initialize the lease with multiple non‑contiguous writable spans.
+        /// @param sp Vector of spans borrowed from CordBufferBase.
+        void set(std::vector<turbo::span<char> > sp);
+
+        /// @brief Initialize the lease with a single contiguous writable span.
+        /// @param sp A single span borrowed from CordBufferBase.
+        void set(turbo::span<char> sp);
+
+        void clear_lease();
+
+        /// Copy/move constructors and assignment operators are defaulted.
+        /// They are kept private because Lease instances are not meant to be
+        /// copied or moved by users; only CordBufferBase manages them.
         BufferLease(BufferLease &) = default;
 
         BufferLease(BufferLease &&) noexcept = default;
@@ -144,12 +212,12 @@ namespace fermat {
 
         BufferLease &operator=(BufferLease &&) noexcept = default;
 
-
+        [[nodiscard]] const std::vector<turbo::span<char>> &spans() const noexcept {
+            return _spans;
+        }
     private:
         std::vector<turbo::span<char> > _spans;
         size_t _total_size{0};
-        size_t _index{0};
-        size_t _offset{0};
         size_t _capacity{0};
     };
 

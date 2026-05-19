@@ -170,7 +170,7 @@ namespace fermat {
               _view_start(std::exchange(rhs._view_start, 0)),
               _lease(std::move(rhs._lease)) {
             // After moving _views, rhs._views is empty. Its _lease is now moved,
-            // so rhs._lease will have _capacity = 0 (since BufferLease's move constructor
+            // so rhs._lease will have _capacity = 0 (since DeprecateBufferLease's move constructor
             // moves the spans and resets the source to empty). That is desirable.
             // No further action needed.
         }
@@ -204,11 +204,11 @@ namespace fermat {
 
         turbo::Result<size_t> write_able_size() const;
 
-        turbo::Result<BufferLease *> borrow();
+        turbo::Result<DeprecateBufferLease *> borrow();
 
-        turbo::Result<BufferLease *> borrow(size_t byte_size, std::optional<int> combine = std::nullopt);
+        turbo::Result<DeprecateBufferLease *> borrow(size_t byte_size, std::optional<int> combine = std::nullopt);
 
-        void commit(BufferLease *lease);
+        void commit(DeprecateBufferLease *lease);
 
         turbo::Result<size_t> shrink();
 
@@ -302,14 +302,14 @@ namespace fermat {
 
         void alloc_block(size_t n, bool combine);
 
-        turbo::Result<BufferLease *> get_combine_write_able(size_t byte_size, int combine);
+        turbo::Result<DeprecateBufferLease *> get_combine_write_able(size_t byte_size, int combine);
 
     protected:
         std::vector<block_view_type> _views; ///< All block views (including Umount ones).
         size_t _total_size{0}; ///< Total logical bytes stored.
         size_t _index{0}; ///< Index of the view currently being written (next commit position).
         size_t _view_start{0}; ///< First logical block index (skip Umount prefix).
-        BufferLease _lease; ///< Active lease, if any.
+        DeprecateBufferLease _lease; ///< Active lease, if any.
     };
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -530,7 +530,7 @@ namespace fermat {
     }
 
     template<size_t Alignment, size_t BlockSize>
-    void IOBuf<Alignment, BlockSize>::commit(BufferLease *l) {
+    void IOBuf<Alignment, BlockSize>::commit(DeprecateBufferLease *l) {
         KCHECK(l == &_lease) << "Fatal: Lease does not belong to this IOBuf. "
                      << "Expected internal lease address " << &_lease
                      << ", got " << l << ". Possible double commit or foreign lease.";
@@ -664,7 +664,7 @@ namespace fermat {
     }
 
     template<size_t Alignment, size_t BlockSize>
-    turbo::Result<BufferLease *> IOBuf<Alignment,
+    turbo::Result<DeprecateBufferLease *> IOBuf<Alignment,
         BlockSize>::get_combine_write_able(
         size_t byte_size, int combine) {
         if (_lease.borrowed()) {
@@ -693,7 +693,7 @@ namespace fermat {
     }
 
     template<size_t Alignment, size_t BlockSize>
-    turbo::Result<BufferLease *> IOBuf<Alignment, BlockSize>::borrow(
+    turbo::Result<DeprecateBufferLease *> IOBuf<Alignment, BlockSize>::borrow(
         size_t byte_size, std::optional<int> combine) {
         /// *combine > BlockSize go to big block mode
         if (combine.has_value() && *combine > BlockSize) {
@@ -719,7 +719,7 @@ namespace fermat {
     }
 
     template<size_t Alignment, size_t BlockSize>
-    turbo::Result<BufferLease *> IOBuf<Alignment, BlockSize>::borrow() {
+    turbo::Result<DeprecateBufferLease *> IOBuf<Alignment, BlockSize>::borrow() {
         if (_lease.borrowed()) {
             return turbo::unavailable_error("resource locked: block is currently under borrowing transaction");
         }

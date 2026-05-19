@@ -1,0 +1,18 @@
+/home/jeff/github/kumose/fermat/tests/io/peeker_test.cc: In member function ‘virtual void fermat::PeekerIOBufTest_OperatorStarAndIncrementDecrement_Test::TestBody()’:
+/home/jeff/github/kumose/fermat/tests/io/peeker_test.cc:188:28: warning: ISO C++ says that these are ambiguous, even though the worst conversion for the first is better than the worst conversion for the second:
+  188 |         auto p3 = peeker - 1u; // negative move should clamp to 0
+      |                            ^~
+In file included from /home/jeff/github/kumose/fermat/tests/io/peeker_test.cc:16:
+/home/jeff/github/kumose/fermat/fermat/io/peeker.h:243:16: note: candidate 1: ‘fermat::Peeker<Source, typename std::enable_if<is_iobuf_v<Source>, void>::type> fermat::Peeker<Source, typename std::enable_if<is_iobuf_v<Source>, void>::type>::operator-(size_t) [with Source = fermat::IOBuf<64, 4096>; typename std::enable_if<is_iobuf_v<Source>, void>::type = void; size_t = long unsigned int]’
+  243 |         Peeker operator-(size_t n) {
+      |                ^~~~~~~~
+/home/jeff/github/kumose/fermat/tests/io/peeker_test.cc:188:28: note: candidate 2: ‘operator-(int, unsigned int)’ (built-in)
+  188 |         auto p3 = peeker - 1u; // negative move should clamp to 0
+      |                            ^~
+/home/jeff/github/kumose/fermat/tests/io/cord_buffer_test.cc: In member function ‘virtual void fermat::CordBufferTest_FormatSinkWorks_Test::TestBody()’:
+/home/jeff/github/kumose/fermat/tests/io/cord_buffer_test.cc:186:22: error: ‘using TestCordBuffer = class fermat::CordBufferBase<64, 4096>’ {aka ‘class fermat::CordBufferBase<64, 4096>’} has no member named ‘format_sink’
+  186 |     auto sink = cord.format_sink();
+      |                      ^~~~~~~~~~~
+make[2]: *** [tests/io/CMakeFiles/io_cord_buffer_test.dir/build.make:79: tests/io/CMakeFiles/io_cord_buffer_test.dir/cord_buffer_test.cc.o] Error 1
+make[1]: *** [CMakeFiles/Makefile2:741: tests/io/CMakeFiles/io_cord_buffer_test.dir/all] Error 2
+make: *** [Makefile:146: all] Error 2

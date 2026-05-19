@@ -259,6 +259,39 @@ kmcmake_cc_bm(
 )
 
 
+kmcmake_cc_bm(
+        NAME malloc_bench
+        MODULE mem
+        SOURCES
+        malloc_bench.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        benchmark::benchmark_main
+        benchmark::benchmark
+        ${KMCMAKE_DEPS_LINK}
+)
+#[[
+kmcmake_cc_bm(
+        NAME deque_bench.cc
+        MODULE mem
+        SOURCES
+        deque_bench.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        benchmark::benchmark_main
+        benchmark::benchmark
+        ${KMCMAKE_DEPS_LINK}
+)
+]]
+
 
 #[[
 kmcmake_cc_bm(

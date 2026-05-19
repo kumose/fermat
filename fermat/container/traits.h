@@ -272,38 +272,6 @@ namespace fermat {
         static constexpr size_t kAlignment = 0;
     };
 
-    /// resize/append/assign
-    template<typename T>
-    struct is_contiguous_string_receiver : std::false_type {
-        static constexpr size_t kAlignment = 0;
-    };
-
-    template<>
-    struct is_contiguous_string_receiver<std::string> : std::true_type {
-        static constexpr size_t kAlignment = 0;
-    };
-
-    /// resize/data
-    template<typename T>
-    struct is_contiguous_vector_receiver : std::false_type {
-        static constexpr size_t kAlignment = 0;
-    };
-
-    template<>
-    struct is_contiguous_vector_receiver<std::vector<char> > : std::true_type {
-        static constexpr size_t kAlignment = 0;
-    };
-
-    template<>
-    struct is_contiguous_vector_receiver<std::vector<int8_t> > : std::true_type {
-        static constexpr size_t kAlignment = 0;
-    };
-
-    template<>
-    struct is_contiguous_vector_receiver<std::vector<uint8_t> > : std::true_type {
-        static constexpr size_t kAlignment = 0;
-    };
-
     namespace detail {
         template<typename, typename = void>
         struct is_transparent_comparison : std::false_type {

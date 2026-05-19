@@ -98,4 +98,4 @@ namespace fermat::container_internal {
             kSizeTypeMaxIsEnough || static_cast<IntSourceType>(std::numeric_limits<SizeType>::max()) >=
             n) << assertMessage;
     }
-} // namespace fermat
+} // namespace fermat::container_internal

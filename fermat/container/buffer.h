@@ -293,7 +293,7 @@ namespace fermat {
 
         void append(const value_type *value, size_type size);
 
-        void append_confident(const value_type *value, size_type size);
+        void append_confident(const value_type *TURBO_RESTRICT value, size_type size);
 
         reference append();
 
@@ -939,7 +939,7 @@ namespace fermat {
     }
 
     template<typename T, size_t Alignment, typename Allocator>
-    void Buffer<T, Alignment, Allocator>::append_confident(const value_type *value, size_type size) {
+    void Buffer<T, Alignment, Allocator>::append_confident(const value_type * TURBO_RESTRICT value, size_type size) {
         if (TURBO_UNLIKELY(size == 0)) return;
 
         // Direct memcpy without any bounds or capacity logic.
@@ -1998,18 +1998,4 @@ namespace fermat {
         static constexpr size_t kAlignment = Alignment;
     };
 
-    template<size_t Alignment>
-    struct is_contiguous_vector_receiver<Buffer<char, Alignment> > : std::true_type {
-        static constexpr size_t kAlignment = 0;
-    };
-
-    template<size_t Alignment>
-    struct is_contiguous_vector_receiver<Buffer<int8_t, Alignment> > : std::true_type {
-        static constexpr size_t kAlignment = 0;
-    };
-
-    template<size_t Alignment>
-    struct is_contiguous_vector_receiver<Buffer<uint8_t, Alignment> > : std::true_type {
-        static constexpr size_t kAlignment = 0;
-    };
 } // namespace fermat

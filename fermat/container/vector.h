@@ -28,6 +28,7 @@
 #include <utility>
 #include <turbo/strings/str_format.h>
 #include <fermat/memory/object_pool.h>
+#include <fermat/container/construct.h>
 #include <fermat/container/utility.h>
 #include <fermat/container/traits.h>
 #include <fermat/container/compressed_pair.h>
@@ -93,18 +94,6 @@ namespace fermat {
         void do_free(T *p, size_type n);
 
         void uninitialized_n(size_t n);
-
-        void construct_at(T *ptr, const T *, size_type n);
-
-        void construct_at(T *ptr, size_type n);
-
-        template<typename... Args>
-        void construct_args_at(T *ptr, size_type n, const Args &... args);
-
-        template<typename... Args>
-        void construct_args_at(T *ptr, Args &&... args);
-
-        void construct_move_at(T *ptr, T *, size_type n);
     }; // VectorBase
 
 
@@ -130,9 +119,6 @@ namespace fermat {
         using base_type::do_allocate;
         using base_type::do_allocate_size;
         using base_type::do_free;
-        using base_type::construct_move_at;
-        using base_type::construct_at;
-        using base_type::construct_args_at;
 
     public:
         typedef T value_type;
@@ -463,78 +449,6 @@ namespace fermat {
     }
 
     template<typename T, size_t Alignment, typename Allocator>
-    void VectorBase<T, Alignment, Allocator>::construct_at(T *ptr, const T *values, size_type n) {
-        if constexpr (std::is_trivially_copyable_v<T>) {
-            if (n > 0) {
-                std::memcpy(static_cast<void *>(ptr), static_cast<const void *>(values), n * sizeof(T));
-            }
-        } else {
-            for (size_t i = 0; i < n; ++i) {
-                ::new(static_cast<void *>(ptr + i)) T(values[i]);
-            }
-        }
-    }
-
-    template<typename T, size_t Alignment, typename Allocator>
-    void VectorBase<T, Alignment, Allocator>::construct_at(T *ptr, size_type n) {
-        if constexpr (std::is_trivially_default_constructible_v<T>) {
-            if (n > 0) {
-                // For POD/Trivial types, zero-initialize the memory block.
-                // Note: If you don't need zero-initialization for PODs,
-                // you could technically leave this empty to maximize performance.
-                std::memset(static_cast<void *>(ptr), 0, n * sizeof(T));
-            }
-        } else {
-            for (size_type i = 0; i < n; ++i) {
-                // Value-initialization: invokes the default constructor.
-                ::new(static_cast<void *>(ptr + i)) T();
-            }
-        }
-    }
-
-    template<typename T, size_t Alignment, typename Allocator>
-    template<typename... Args>
-    void VectorBase<T, Alignment, Allocator>::construct_args_at(T *ptr, size_type n, const Args &... args) {
-        for (size_type i = 0; i < n; ++i) {
-            if constexpr (sizeof...(Args) > 0) {
-                if (i < n - 1) {
-                    // Construct via lvalue references for all but the last element
-                    ::new(static_cast<void *>(ptr + i)) T(args...);
-                } else {
-                    // Forward arguments to the last element to allow move semantics
-                    ::new(static_cast<void *>(ptr + i)) T(std::forward<Args>(args)...);
-                }
-            } else {
-                // Default construction if no arguments are provided
-                ::new(static_cast<void *>(ptr + i)) T();
-            }
-        }
-    }
-
-    template<typename T, size_t Alignment, typename Allocator>
-    template<typename... Args>
-    void VectorBase<T, Alignment, Allocator>::construct_args_at(T *ptr, Args &&... args) {
-        // This will correctly call T(const T&) if an lvalue is passed,
-        // or T(T&&) if std::move() is used.
-        ::new(static_cast<T *>(ptr)) T(std::forward<Args>(args)...);
-    }
-
-    template<typename T, size_t Alignment, typename Allocator>
-    void VectorBase<T, Alignment, Allocator>::construct_move_at(T *ptr, T *values, size_type n) {
-        if constexpr (std::is_trivially_copyable_v<T>) {
-            if (n > 0) {
-                // Trivial types can be moved safely via memmove (handles overlap).
-                std::memmove(static_cast<void *>(ptr), static_cast<const void *>(values), n * sizeof(T));
-            }
-        } else {
-            for (size_type i = 0; i < n; ++i) {
-                // Placement new with move semantics.
-                ::new(static_cast<void *>(ptr + i)) T(std::move(values[i]));
-            }
-        }
-    }
-
-    template<typename T, size_t Alignment, typename Allocator>
     inline void VectorBase<T, Alignment, Allocator>::do_free(T *p, size_type n) {
         if (p) {
             _capacity_end.second().deallocate(p, n);
@@ -586,7 +500,8 @@ namespace fermat {
 
 
     template<typename T, size_t Alignment, typename Allocator>
-    inline Vector<T, Alignment, Allocator>::Vector(size_type n, const value_type &value, const allocator_type &allocator)
+    inline Vector<T, Alignment, Allocator>::Vector(size_type n, const value_type &value,
+                                                   const allocator_type &allocator)
         : base_type(n, allocator) {
         std::uninitialized_fill_n(_begin, n, value);
         _end = _begin + n;
@@ -602,13 +517,14 @@ namespace fermat {
 
     template<typename T, size_t Alignment, typename Allocator>
     inline Vector<T, Alignment, Allocator>::Vector(this_type &&x, const allocator_type &allocator) noexcept
-    :base_type(allocator) {
+        : base_type(allocator) {
         DoSwap(x);
     }
 
 
     template<typename T, size_t Alignment, typename Allocator>
-    inline Vector<T, Alignment, Allocator>::Vector(std::initializer_list<value_type> ilist, const allocator_type &allocator)
+    inline Vector<T, Alignment, Allocator>::Vector(std::initializer_list<value_type> ilist,
+                                                   const allocator_type &allocator)
         : base_type(allocator) {
         DoInit(ilist.begin(), ilist.end(), std::false_type());
     }
@@ -616,7 +532,8 @@ namespace fermat {
 
     template<typename T, size_t Alignment, typename Allocator>
     template<typename InputIterator>
-    inline Vector<T, Alignment, Allocator>::Vector(InputIterator first, InputIterator last, const allocator_type &allocator)
+    inline Vector<T, Alignment, Allocator>::Vector(InputIterator first, InputIterator last,
+                                                   const allocator_type &allocator)
         : base_type(allocator) {
         DoInit(first, last, std::is_integral<InputIterator>());
     }
@@ -977,17 +894,18 @@ namespace fermat {
 
     template<typename T, size_t Alignment, typename Allocator>
     inline void Vector<T, Alignment, Allocator>::push_back(const value_type &value) {
-        if (_end < _capacity_end.first())
-            construct_at(_end++, std::addressof(value), 1);
-        else
+        if (_end < _capacity_end.first()) {
+            construct_at(_end++, value);
+        } else {
             DoInsertValueEnd(value);
+        }
     }
 
 
     template<typename T, size_t Alignment, typename Allocator>
     inline void Vector<T, Alignment, Allocator>::push_back(value_type &&value) {
         if (_end < _capacity_end.first())
-            construct_move_at(_end++, &value, 1);
+            construct_at(_end++, std::move(value));
         else
             DoInsertValueEnd(std::move(value));
     }
@@ -997,7 +915,7 @@ namespace fermat {
     inline typename Vector<T, Alignment, Allocator>::reference
     Vector<T, Alignment, Allocator>::push_back() {
         if (_end < _capacity_end.first())
-            construct_at(_end++, 1);
+            construct_at(_end++);
         else
             DoInsertValueEnd();
 
@@ -1036,7 +954,7 @@ namespace fermat {
         if ((_end == _capacity_end.first()) || (position != _end))
             DoInsertValue(position, std::forward<Args>(args)...);
         else {
-            construct_args_at(_end, std::forward<Args>(args)...);
+            construct_at(_end, std::forward<Args>(args)...);
             ++_end; // Increment this after the construction above in case the construction throws an exception.
         }
 
@@ -1048,7 +966,7 @@ namespace fermat {
     inline typename Vector<T, Alignment, Allocator>::reference
     Vector<T, Alignment, Allocator>::emplace_back(Args &&... args) {
         if (_end < _capacity_end.first()) {
-            construct_args_at(_end, std::forward<Args>(args)...);
+            construct_at(_end, std::forward<Args>(args)...);
             ++_end; // Increment this after the construction above in case the construction throws an exception.
         } else
             DoInsertValueEnd(std::forward<Args>(args)...);
@@ -1068,7 +986,7 @@ namespace fermat {
         if ((_end == _capacity_end.first()) || (position != _end))
             DoInsertValue(position, value);
         else {
-            construct_at(_end, &value, 1);
+            construct_at(_end, value);
             ++_end; // Increment this after the construction above in case the construction throws an exception.
         }
 
@@ -1668,52 +1586,49 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     template<typename... Args>
     void Vector<T, Alignment, Allocator>::DoInsertValue(const_iterator position, Args &&... args) {
-        // To consider: It's feasible that the args is from a value_type comes from within the current sequence itself and
-        // so we need to be sure to handle that case. This is different from insert(position, const value_type&) because in
-        // this case value is potentially being modified.
-
-
         if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
             KCHECK(false) << "Vector::insert/emplace -- invalid position";
 
-        // C++11 stipulates that position is const_iterator, but the return value is iterator.
         iterator destPosition = const_cast<value_type *>(position);
 
-        if (_end != _capacity_end.first()) // If size < capacity ...
-        {
-            // We need to take into account the possibility that args is a value_type that comes from within the Vector itself.
-            // creating a temporary value on the stack here is not an optimal way to solve this because sizeof(value_type) may be
-            // too much for the given platform. An alternative solution may be to specialize this function for the case of the
-            // argument being const value_type& or value_type&&.
+        if (_end != _capacity_end.first()) {
+            /// Insertion with spare capacity
             KCHECK(position < _end);
-            // While insert at end() is valid, our design is such that calling code should handle that case before getting here, as our streamlined logic directly doesn't handle this particular case due to resulting negative ranges.
 
+            /// Create a temporary copy (handles self-referential arguments)
             value_type value(std::forward<Args>(args)...);
-            // Need to do this before the move_backward below because maybe args refers to something within the moving range.
-            construct_move_at(_end, _end - 1, 1);
-            // _end is uninitialized memory, so we must construct into it instead of move into it like we do with the other elements below.
+
+            /// Move-construct the last element to the uninitialized `_end` position
+            construct_at(_end, std::move(*(_end - 1)));
+
+            /// Shift the range [destPosition, _end-1) one step to the right
             std::move_backward(destPosition, _end - 1, _end);
-            // We need to go backward because of potential overlap issues.
-            std::destroy_at(destPosition);
-            construct_move_at(destPosition, std::addressof(value), 1);
-            // Move the value argument to the given position.
+
+            /// Destroy the original element at destPosition
+            destroy_at(destPosition);
+
+            /// Move-construct the new value into place
+            construct_at(destPosition, std::move(value));
+
             ++_end;
-        } else // else (size == capacity)
-        {
-            const size_type nPosSize = size_type(destPosition - _begin); // Index of the insertion position.
-            const size_type nPrevSize = size_type(_end - _begin);
+        } else {
+            /// No spare capacity: reallocate
+            const size_type nPosSize = destPosition - _begin;
+            const size_type nPrevSize = _end - _begin;
             size_type nNewCapacity = GetNewCapacity(nPrevSize);
-            pointer const pNewData = do_allocate(&nNewCapacity);
+            pointer pNewData = do_allocate(&nNewCapacity);
 
+            /// Construct the new element directly at the insertion point in the new buffer
+            construct_at(pNewData + nPosSize, std::forward<Args>(args)...);
 
-            construct_args_at(pNewData + nPosSize, std::forward<Args>(args)...);
-            // Because the old data is potentially being moved rather than copied, we need to move
+            /// Move existing elements before insertion point
             pointer pNewEnd = std::uninitialized_move(_begin, destPosition, pNewData);
-            // the value first, because it might possibly be a reference to the old data being moved.
-            pNewEnd = std::uninitialized_move(destPosition, _end, ++pNewEnd);
+            /// Move existing elements after insertion point, one step further
+            pNewEnd = std::uninitialized_move(destPosition, _end, pNewEnd + 1);
 
+            /// Destroy old elements and free old memory
             std::destroy(_begin, _end);
-            do_free(_begin, (size_type) (_capacity_end.first() - _begin));
+            do_free(_begin, (_capacity_end.first() - _begin));
 
             _begin = pNewData;
             _end = pNewEnd;
@@ -1732,7 +1647,7 @@ namespace fermat {
 
         // Because args... may potentially reference an element (or its sub-object) of this Vector, we need to construct
         // the new element first, prior to moving it (leaving it in an unspecified state) with the call to uninitialized_move.
-        construct_args_at(pNewData + nPrevSize, std::forward<Args>(args)...);
+        construct_at(pNewData + nPrevSize, std::forward<Args>(args)...);
         pointer pNewEnd = std::uninitialized_move(_begin, _end, pNewData);
         pNewEnd++;
 
@@ -1753,6 +1668,7 @@ namespace fermat {
             return false;
         return true;
     }
+
     template<typename T, size_t Alignment, typename Allocator>
     void Vector<T, Alignment, Allocator>::bestow(T *data, size_type size, size_type capacity) noexcept {
         // 1. Pre-condition: Buffer must be empty to avoid accidental data loss.
@@ -1959,20 +1875,5 @@ namespace fermat {
     template<size_t Alignment>
     struct is_contiguous_string_visitor<Vector<char, Alignment> > : std::true_type {
         static constexpr size_t kAlignment = Alignment;
-    };
-
-    template<size_t Alignment>
-    struct is_contiguous_vector_receiver<Vector<char, Alignment> > : std::true_type {
-        static constexpr size_t kAlignment = 0;
-    };
-
-    template<size_t Alignment>
-    struct is_contiguous_vector_receiver<Vector<int8_t, Alignment> > : std::true_type {
-        static constexpr size_t kAlignment = 0;
-    };
-
-    template<size_t Alignment>
-    struct is_contiguous_vector_receiver<Vector<uint8_t, Alignment> > : std::true_type {
-        static constexpr size_t kAlignment = 0;
     };
 } // namespace fermat

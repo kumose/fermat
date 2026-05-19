@@ -2094,10 +2094,6 @@ namespace fermat {
         static constexpr size_t kAlignment = Alignment;
     };
 
-    template<size_t Alignment>
-    struct is_contiguous_string_receiver<BasicString<char, Alignment> > : std::true_type {
-        static constexpr size_t kAlignment = 0;
-    };
 } // namespace fermat
 
 

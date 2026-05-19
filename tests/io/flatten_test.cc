@@ -16,7 +16,7 @@
 
 #include <gtest/gtest.h>
 #include <fermat/io/iobuf.h>
-#include <fermat/io/receiver.h>
+#include <fermat/container/receiver.h>
 #include <fermat/io/customer.h>   // provides Customer, Reader
 #include <string_view>
 #include <tests/io/io_test.h>

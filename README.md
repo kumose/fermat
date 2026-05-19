@@ -29,21 +29,21 @@ s.reserve(10 * 1024 * 1024);
 for (int i = 0; i < 1000000; ++i) s.append("a");
 ```
 
-### Chunked Buffers `CordBuffer` / `IOBuf`
+### Chunked Buffers `CordBufferBase` / `IOBuf`
 
 Random chunked append (16KB block size), throughput at 50MB:
 
 | Container        | Throughput     |
 |------------------|----------------|
-| `CordBuffer`     | 13.87 GiB/s    |
+| `CordBufferBase`     | 13.87 GiB/s    |
 | `IOBuf`          | 9.56 GiB/s     |
 | `std::string`    | 2.08 GiB/s     |
 
-- **CordBuffer**: writes are immediately visible, no state machine. Suitable for streaming append, logging, network receiving.
+- **CordBufferBase**: writes are immediately visible, no state machine. Suitable for streaming append, logging, network receiving.
 - **IOBuf**: supports `borrow()` / `commit()` for atomic commits; uncommitted data is not visible to reads. Suitable for `readv` and transactional writes.
 
 ```cpp
-fermat::CordBuffer<64, 16*1024> cb;
+fermat::CordBufferBase<64, 16*1024> cb;
 cb.append("data", 4);
 
 fermat::IOBuf<64, 16*1024> ib;
@@ -229,7 +229,7 @@ fermat::Reader::custom_until(source, appender, '\n');    // read up to newline
 | Requirement                                           | Recommended Component          |
 |-------------------------------------------------------|--------------------------------|
 | General strings (reserve for large accumulation)     | `KString`                      |
-| Streaming large data (writes visible immediately)    | `CordBuffer`                   |
+| Streaming large data (writes visible immediately)    | `CordBufferBase`                   |
 | Atomic commit large writes (e.g., `readv`)            | `IOBuf`                        |
 | Zero‑copy cross‑block iteration over `IOBuf`          | `Peeker<IOBuf>`                |
 | Consume data from `IOBuf` into a container            | `Customer` / `Reader`          |

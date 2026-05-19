@@ -14,96 +14,107 @@
 
 #include <benchmark/benchmark.h>
 #include <fermat/io/iobuf.h>
-#include <fermat/io/cord_buffer.h>
+#include <fermat/container/cord_buffer.h>
 #include <fermat/container/string.h>
 #include <fermat/container/buffer.h>
+#include <butil/iobuf.h>
 #include <string>
 #include <random>
 #include <vector>
 
 namespace {
+    constexpr size_t kMaxChunkSize = 4096;
 
-constexpr size_t kMaxChunkSize = 4096;
-
-static const std::vector<char>& GetRandomData() {
-    static std::vector<char> data(kMaxChunkSize);
-    static std::mt19937 rng(12345);
-    static std::uniform_int_distribution<int> dist(0, 255);
-    static bool init = [] {
-        for (size_t i = 0; i < kMaxChunkSize; ++i)
-            data[i] = static_cast<char>(dist(rng));
-        return true;
-    }();
-    (void)init;
-    return data;
-}
-
-inline size_t RandomChunkSize() {
-    thread_local std::mt19937 rng(std::random_device{}());
-    std::uniform_int_distribution<size_t> dist(1, kMaxChunkSize);
-    return dist(rng);
-}
-
-template <typename Container>
-void AppendRandomChunked(Container& c, size_t total) {
-    const auto& data = GetRandomData();
-    size_t remain = total;
-    while (remain) {
-        size_t n = std::min(RandomChunkSize(), remain);
-        c.append(data.data(), n);
-        remain -= n;
+    static const std::vector<char> &GetRandomData() {
+        static std::vector<char> data(kMaxChunkSize);
+        static std::mt19937 rng(12345);
+        static std::uniform_int_distribution<int> dist(0, 255);
+        static bool init = [] {
+            for (size_t i = 0; i < kMaxChunkSize; ++i)
+                data[i] = static_cast<char>(dist(rng));
+            return true;
+        }();
+        (void) init;
+        return data;
     }
-}
 
-static void BM_IOBuf_RandomChunked(benchmark::State& st) {
-    const size_t total = st.range(0);
-    for (auto _ : st) {
-        fermat::IOBuf<64, 16 * 1024> buf;
-        AppendRandomChunked(buf, total);
-        benchmark::DoNotOptimize(buf);
+    inline size_t RandomChunkSize() {
+        thread_local std::mt19937 rng(std::random_device{}());
+        std::uniform_int_distribution<size_t> dist(1, kMaxChunkSize);
+        return dist(rng);
     }
-    st.SetBytesProcessed(st.iterations() * total);
-}
 
-static void BM_CordBuffer_RandomChunked(benchmark::State& st) {
-    const size_t total = st.range(0);
-    for (auto _ : st) {
-        fermat::CordBuffer<64, 16 * 1024> buf;
-        AppendRandomChunked(buf, total);
-        benchmark::DoNotOptimize(buf);
+    template<typename Container>
+    void AppendRandomChunked(Container &c, size_t total) {
+        const auto &data = GetRandomData();
+        size_t remain = total;
+        while (remain) {
+            size_t n = std::min(RandomChunkSize(), remain);
+            c.append(data.data(), n);
+            remain -= n;
+        }
     }
-    st.SetBytesProcessed(st.iterations() * total);
-}
 
-static void BM_String_RandomChunked(benchmark::State& st) {
-    const size_t total = st.range(0);
-    for (auto _ : st) {
-        std::string str;
-        AppendRandomChunked(str, total);
-        benchmark::DoNotOptimize(str);
+    static void BM_IOBuf_RandomChunked(benchmark::State &st) {
+        const size_t total = st.range(0);
+        for (auto _: st) {
+            fermat::IOBuf<64, 16 * 1024> buf;
+            AppendRandomChunked(buf, total);
+            benchmark::DoNotOptimize(buf);
+        }
+        st.SetBytesProcessed(st.iterations() * total);
     }
-    st.SetBytesProcessed(st.iterations() * total);
-}
 
-static void BM_FermatString_RandomChunked(benchmark::State& st) {
-    const size_t total = st.range(0);
-    for (auto _ : st) {
-        fermat::BasicString<char, 64> str;
-        AppendRandomChunked(str, total);
-        benchmark::DoNotOptimize(str);
+    static void BM_CordBufferRaw_RandomChunked(benchmark::State &st) {
+        const size_t total = st.range(0);
+        for (auto _: st) {
+            fermat::CordBufferBase<0, 16 * 1024> buf;
+            AppendRandomChunked(buf, total);
+            benchmark::DoNotOptimize(buf);
+        }
+        st.SetBytesProcessed(st.iterations() * total);
     }
-    st.SetBytesProcessed(st.iterations() * total);
-}
 
-static void BM_Buffer_RandomChunked(benchmark::State& st) {
-    const size_t total = st.range(0);
-    for (auto _ : st) {
-        fermat::Buffer<char, 64> buf;
-        AppendRandomChunked(buf, total);
-        benchmark::DoNotOptimize(buf);
+    static void BM_String_RandomChunked(benchmark::State &st) {
+        const size_t total = st.range(0);
+        for (auto _: st) {
+            std::string str;
+            AppendRandomChunked(str, total);
+            benchmark::DoNotOptimize(str);
+        }
+        st.SetBytesProcessed(st.iterations() * total);
     }
-    st.SetBytesProcessed(st.iterations() * total);
-}
+
+    static void BM_FermatString_RandomChunked(benchmark::State &st) {
+        const size_t total = st.range(0);
+        for (auto _: st) {
+            fermat::BasicString<char, 64> str;
+            AppendRandomChunked(str, total);
+            benchmark::DoNotOptimize(str);
+        }
+        st.SetBytesProcessed(st.iterations() * total);
+    }
+
+    static void BM_Buffer_RandomChunked(benchmark::State &st) {
+        const size_t total = st.range(0);
+        for (auto _: st) {
+            fermat::Buffer<char, 64> buf;
+            AppendRandomChunked(buf, total);
+            benchmark::DoNotOptimize(buf);
+        }
+        st.SetBytesProcessed(st.iterations() * total);
+    }
+
+    static void BM_BrpcIOBuf_RandomChunked(benchmark::State &st) {
+        const size_t total = st.range(0);
+        for (auto _: st) {
+            butil::IOBuf buf;
+            AppendRandomChunked(buf, total);
+            benchmark::DoNotOptimize(buf);
+        }
+        st.SetBytesProcessed(st.iterations() * total);
+    }
+
 
 #define BENCH_ARGS \
     ->Args({1 << 10}) \
@@ -114,12 +125,12 @@ static void BM_Buffer_RandomChunked(benchmark::State& st) {
     ->Args({20 << 20}) \
     ->Args({50 << 20})
 
-BENCHMARK(BM_IOBuf_RandomChunked) BENCH_ARGS;
-BENCHMARK(BM_CordBuffer_RandomChunked) BENCH_ARGS;
-BENCHMARK(BM_String_RandomChunked) BENCH_ARGS;
-BENCHMARK(BM_FermatString_RandomChunked) BENCH_ARGS;
-BENCHMARK(BM_Buffer_RandomChunked) BENCH_ARGS;
-
-}  // namespace
+    BENCHMARK(BM_IOBuf_RandomChunked) BENCH_ARGS;
+    BENCHMARK(BM_CordBufferRaw_RandomChunked) BENCH_ARGS;
+    BENCHMARK(BM_String_RandomChunked) BENCH_ARGS;
+    BENCHMARK(BM_FermatString_RandomChunked) BENCH_ARGS;
+    BENCHMARK(BM_Buffer_RandomChunked) BENCH_ARGS;
+    BENCHMARK(BM_BrpcIOBuf_RandomChunked) BENCH_ARGS;
+} // namespace
 
 BENCHMARK_MAIN();

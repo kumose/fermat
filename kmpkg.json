@@ -3,6 +3,7 @@
     "benchmark",
     "gtest",
     "mimalloc",
-    "turbo"
+    "turbo",
+    "brpc"
   ]
 }

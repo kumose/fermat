@@ -16,24 +16,24 @@
 #include <fermat/io/buffer_lease.h>
 
 namespace fermat {
-
-     void BufferLease::set(std::vector<turbo::span<char> > sp) {
+    void DeprecateBufferLease::set(std::vector<turbo::span<char> > sp) {
         _spans = std::move(sp);
         for (const auto &s: _spans) {
             _capacity += s.size();
         }
     }
 
-    void BufferLease::set(turbo::span<char> sp) {
+    void DeprecateBufferLease::set(turbo::span<char> sp) {
         _capacity = sp.size();
         _spans.push_back(sp);
     }
 
     /// @brief Sequential write that automatically handles crossing span boundaries.
-    turbo::Status BufferLease::write(const char *data, size_t len) {
+    turbo::Status DeprecateBufferLease::write(const char *data, size_t len) {
         if (len == 0) return turbo::OkStatus();
         if (_total_size + len > _capacity) {
-            return turbo::out_of_range_error("BufferLease capacity exceeded, size:", _total_size, " len:", len, " capacity:", _capacity);
+            return turbo::out_of_range_error("DeprecateBufferLease capacity exceeded, size:", _total_size, " len:", len,
+                                             " capacity:", _capacity);
         }
 
         size_t written = 0;
@@ -58,7 +58,7 @@ namespace fermat {
     }
 
     /// @brief Rewind the internal write cursor and total size.
-    void BufferLease::pop_back(size_t n) {
+    void DeprecateBufferLease::pop_back(size_t n) {
         if (n == 0 || _total_size == 0) return;
 
         size_t to_remove = std::min(n, _total_size);
@@ -76,19 +76,19 @@ namespace fermat {
     }
 
     /// @brief Reset all internal write markers.
-    void BufferLease::clear() {
+    void DeprecateBufferLease::clear() {
         _total_size = 0;
         _index = 0;
         _offset = 0;
     }
 
-    void BufferLease::clear_lease() {
+    void DeprecateBufferLease::clear_lease() {
         clear();
         _capacity = 0;
         _spans.clear();
     }
 
-    void BufferLease::visit_remaining(const VisitorCallback &visitor) const {
+    void DeprecateBufferLease::visit_remaining(const VisitorCallback &visitor) const {
         if (_index >= _spans.size()) return;
 
         size_t current_idx = _index;
@@ -110,7 +110,7 @@ namespace fermat {
         }
     }
 
-    void BufferLease::advance(size_t n) {
+    void DeprecateBufferLease::advance(size_t n) {
         if (n == 0 || _total_size + n > _capacity) return;
 
         size_t to_move = n;
@@ -129,5 +129,33 @@ namespace fermat {
         }
     }
 
+    void BufferLease::set(std::vector<turbo::span<char> > sp) {
+        _spans = std::move(sp);
+        for (const auto &s: _spans) {
+            _capacity += s.size();
+        }
+    }
 
-}  // namespace fermat
+    void BufferLease::set(turbo::span<char> sp) {
+        _capacity = sp.size();
+        _spans.push_back(sp);
+    }
+
+    /// @brief Reset all internal write markers.
+    void BufferLease::clear() {
+        _total_size = 0;
+    }
+
+    void BufferLease::clear_lease() {
+        clear();
+        _capacity = 0;
+        _spans.clear();
+    }
+
+
+    void BufferLease::set_size(size_t n) {
+        DKCHECK(n <= _capacity);
+        _total_size = n;
+    }
+
+} // namespace fermat

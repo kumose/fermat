@@ -39,28 +39,8 @@ namespace fermat {
     };
 
     template<size_t Alignment>
-    struct is_contiguous_string_receiver<AlignedString<Alignment> > : std::true_type {
-        static constexpr size_t kAlignment = 0;
-    };
-
-    template<size_t Alignment>
     struct is_contiguous_string_visitor<AlignedVector<char, Alignment> > : std::true_type {
         static constexpr size_t kAlignment = Alignment;
-    };
-
-    template<size_t Alignment>
-    struct is_contiguous_vector_receiver<AlignedVector<char, Alignment> > : std::true_type {
-        static constexpr size_t kAlignment = 0;
-    };
-
-    template<size_t Alignment>
-    struct is_contiguous_vector_receiver<AlignedVector<int8_t, Alignment> > : std::true_type {
-        static constexpr size_t kAlignment = 0;
-    };
-
-    template<size_t Alignment>
-    struct is_contiguous_vector_receiver<AlignedVector<uint8_t, Alignment> > : std::true_type {
-        static constexpr size_t kAlignment = 0;
     };
 
 } // namespace fermat
