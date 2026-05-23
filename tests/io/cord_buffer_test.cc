@@ -181,24 +181,5 @@ TEST(CordBufferTest, EmptyBufferOperations) {
 }
 
 
-/// Verifies that output_stream() and format() can co-exist.
-TEST(CordBufferTest, OutputStreamAndFormatInterop) {
-    TestCordBuffer cord;
-    auto os = cord.output_stream();
-    void* data;
-    int size;
-    os.next(&data, &size);
-    // Write directly via output_stream
-    char* buf = static_cast<char*>(data);
-    buf[0] = 'A';
-    buf[1] = 'B';
-    // Then use format
-    cord.format("C");
-    // Flatten only works after commit? Note: output_stream's next doesn't auto-commit.
-    // In real usage, the stream would be flushed. For test, we need to simulate.
-    // Since output_stream is not fully implemented in this test, we skip detailed validation.
-    // This test just ensures no compilation errors.
-    SUCCEED();
-}
 
 }  // namespace fermat

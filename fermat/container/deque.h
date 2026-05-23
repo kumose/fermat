@@ -122,11 +122,9 @@ namespace fermat {
                   const DequeIterator<U, PointerB, ReferenceB, kDequeSubarraySizeU> &b);
 
     protected:
-        T *mpCurrent; // Where we currently point. Declared first because it's used most often.
-        T *mpBegin; // The beginning of the current subarray.
-        T *mpEnd;
-        // The end of the current subarray. To consider: remove this member, as it is always equal to 'mpBegin + kDequeSubarraySize'. Given that Deque subarrays usually consist of hundreds of bytes, this isn't a massive win. Also, now that we are implementing a zero-allocation new Deque policy, mpEnd may in fact not be equal to 'mpBegin + kDequeSubarraySize'.
-        T **mpCurrentArrayPtr;
+        T *_current; // Where we currently point. Declared first because it's used most often.
+        T *_begin; // The beginning of the current subarray.
+        T **_current_array_ptr;
         // Pointer to current subarray. We could alternatively implement this as a list node iterator if the Deque used a linked list.
 
         struct Increment {
@@ -140,8 +138,8 @@ namespace fermat {
 
         DequeIterator(T **pCurrentArrayPtr, T *pCurrent);
 
-        DequeIterator(const const_iterator &x, FromConst) : mpCurrent(x.mpCurrent), mpBegin(x.mpBegin), mpEnd(x.mpEnd),
-                                                            mpCurrentArrayPtr(x.mpCurrentArrayPtr) {
+        DequeIterator(const const_iterator &x, FromConst) : _current(x._current), _begin(x._begin),
+                                                            _current_array_ptr(x._current_array_ptr) {
         }
 
         DequeIterator(const iterator &x, Increment);
@@ -158,7 +156,7 @@ namespace fermat {
         // true means that value_type has the type_trait is_trivially_copyable,
         void move_backward(const iterator &first, const iterator &last, std::false_type); // false means it does not.
 
-        void SetSubarray(T **pCurrentArrayPtr);
+        void set_subarray(T **pCurrentArrayPtr);
     };
 
 
@@ -185,21 +183,21 @@ namespace fermat {
             kMinPtrArraySize = 8,
             /// A new empty Deque has a ptrArraySize of 0, but any allocated ptrArrays use this min size.
             kSubarraySize = kDequeSubarraySize ///
-            //kNodeSize        = kDequeSubarraySize * sizeof(T)   /// Disabled because it prevents the ability to do this: struct X{ std::Deque<X, EASTLAllocatorType, 16> mDequeOfSelf; };
+            //kNodeSize        = kDequeSubarraySize * sizeof(T)
         };
 
     protected:
-        enum Side /// Defines the side of the Deque: front or back.
-        {
+        /// Defines the side of the Deque: front or back.
+        enum Side {
             kSideFront, /// Identifies the front side of the Deque.
             kSideBack /// Identifies the back side of the Deque.
         };
 
-        T **mpPtrArray; // Array of pointers to subarrays.
-        size_type mnPtrArraySize; // Possibly we should store this as T** mpArrayEnd.
-        iterator mItBegin; // Where within the subarrays is our beginning.
-        iterator mItEnd; // Where within the subarrays is our end.
-        allocator_type mAllocator; // To do: Use base class optimization to make this go away.
+        T **_ptr_array; // Array of pointers to subarrays.
+        size_type _ptr_array_size; // Possibly we should store this as T** mpArrayEnd.
+        iterator _it_begin; // Where within the subarrays is our beginning.
+        iterator _it_end; // Where within the subarrays is our end.
+        allocator_type _allocator; // To do: Use base class optimization to make this go away.
 
     public:
         DequeBase(const allocator_type &allocator);
@@ -227,11 +225,11 @@ namespace fermat {
 
         void do_free_ptr_array(T **p, size_t n);
 
-        iterator DoReallocSubarray(size_type nAdditionalCapacity, Side allocationSide);
+        iterator do_realloc_subarray(size_type nAdditionalCapacity, Side allocationSide);
 
         void DoReallocPtrArray(size_type nAdditionalCapacity, Side allocationSide);
 
-        void DoInit(size_type n);
+        void do_init(size_type n);
     }; // DequeBase
 
 
@@ -252,6 +250,8 @@ namespace fermat {
     /// we will leave it as-is. It can probably be solved by adding some extra code to
     /// the Do* functions and adding good comments explaining the situation.
     ///
+#define DEQUE_DEFAULT_SUBARRAY_SIZE(T) ((sizeof(T) <= 4) ? 64 : ((sizeof(T) <= 8) ? 32 : ((sizeof(T) <= 16) ? 16 : ((sizeof(T) <= 32) ? 8 : 4))))
+
     template<typename T, typename Allocator = BasicAllocator<T, 0>, unsigned kDequeSubarraySize = 64>
     class Deque : public DequeBase<T, Allocator, kDequeSubarraySize> {
     public:
@@ -278,17 +278,17 @@ namespace fermat {
     protected:
         using base_type::kSideFront;
         using base_type::kSideBack;
-        using base_type::mpPtrArray;
-        using base_type::mnPtrArraySize;
-        using base_type::mItBegin;
-        using base_type::mItEnd;
-        using base_type::mAllocator;
+        using base_type::_ptr_array;
+        using base_type::_ptr_array_size;
+        using base_type::_it_begin;
+        using base_type::_it_end;
+        using base_type::_allocator;
         using base_type::do_allocate_subarray;
         using base_type::DoFreeSubarray;
         using base_type::DoFreeSubarrays;
         using base_type::do_allocate_ptr_array;
         using base_type::do_free_ptr_array;
-        using base_type::DoReallocSubarray;
+        using base_type::do_realloc_subarray;
         using base_type::DoReallocPtrArray;
 
     public:
@@ -302,7 +302,7 @@ namespace fermat {
 
         Deque(const this_type &x);
 
-        Deque(this_type &&x);
+        Deque(this_type &&x) noexcept;
 
         Deque(this_type &&x, const allocator_type &allocator);
 
@@ -321,9 +321,9 @@ namespace fermat {
 
         this_type &operator=(std::initializer_list<value_type> ilist);
 
-        this_type &operator=(this_type &&x);
+        this_type &operator=(this_type &&x) noexcept;
 
-        void swap(this_type &x);
+        void swap(this_type &x) noexcept;
 
         void assign(size_type n, const value_type &value);
 
@@ -442,45 +442,45 @@ namespace fermat {
 
     protected:
         template<typename Integer>
-        void DoInit(Integer n, Integer value, std::true_type);
+        void do_init(Integer n, Integer value, std::true_type);
 
         template<typename InputIterator>
-        void DoInit(InputIterator first, InputIterator last, std::false_type);
+        void do_init(InputIterator first, InputIterator last, std::false_type);
 
         template<typename InputIterator>
-        void DoInitFromIterator(InputIterator first, InputIterator last, std::input_iterator_tag);
+        void do_init_from_iterator(InputIterator first, InputIterator last, std::input_iterator_tag);
 
         template<typename ForwardIterator>
-        void DoInitFromIterator(ForwardIterator first, ForwardIterator last, std::forward_iterator_tag);
+        void do_init_from_iterator(ForwardIterator first, ForwardIterator last, std::forward_iterator_tag);
 
-        void DoFillInit(const value_type &value);
-
-        template<typename Integer>
-        void DoAssign(Integer n, Integer value, std::true_type);
-
-        template<typename InputIterator>
-        void DoAssign(InputIterator first, InputIterator last, std::false_type);
-
-        void DoAssignValues(size_type n, const value_type &value);
+        void do_fill_init(const value_type &value);
 
         template<typename Integer>
-        iterator DoInsert(const const_iterator &position, Integer n, Integer value, std::true_type);
+        void do_assign(Integer n, Integer value, std::true_type);
 
         template<typename InputIterator>
-        iterator DoInsert(const const_iterator &position, const InputIterator &first, const InputIterator &last,
-                          std::false_type);
+        void do_assign(InputIterator first, InputIterator last, std::false_type);
+
+        void do_assign_values(size_type n, const value_type &value);
+
+        template<typename Integer>
+        iterator do_insert(const const_iterator &position, Integer n, Integer value, std::true_type);
 
         template<typename InputIterator>
-        iterator DoInsertFromIterator(const_iterator position, const InputIterator &first, const InputIterator &last,
-                                      std::input_iterator_tag);
+        iterator do_insert(const const_iterator &position, const InputIterator &first, const InputIterator &last,
+                           std::false_type);
+
+        template<typename InputIterator>
+        iterator do_insert_from_iterator(const_iterator position, const InputIterator &first, const InputIterator &last,
+                                         std::input_iterator_tag);
 
         template<typename ForwardIterator>
-        iterator DoInsertFromIterator(const_iterator position, const ForwardIterator &first,
-                                      const ForwardIterator &last, std::forward_iterator_tag);
+        iterator do_insert_from_iterator(const_iterator position, const ForwardIterator &first,
+                                         const ForwardIterator &last, std::forward_iterator_tag);
 
-        iterator DoInsertValues(const_iterator position, size_type n, const value_type &value);
+        iterator do_insert_values(const_iterator position, size_type n, const value_type &value);
 
-        void DoSwap(this_type &x);
+        void do_swap(this_type &x);
     }; // class Deque
 
 
@@ -490,49 +490,49 @@ namespace fermat {
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     DequeBase<T, Allocator, kDequeSubarraySize>::DequeBase(const allocator_type &allocator)
-        : mpPtrArray(NULL),
-          mnPtrArraySize(0),
-          mItBegin(),
-          mItEnd(),
-          mAllocator(allocator) {
+        : _ptr_array(nullptr),
+          _ptr_array_size(0),
+          _it_begin(),
+          _it_end(),
+          _allocator(allocator) {
         // It is assumed here that the Deque subclass will init us when/as needed.
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     DequeBase<T, Allocator, kDequeSubarraySize>::DequeBase(size_type n)
-        : mpPtrArray(NULL),
-          mnPtrArraySize(0),
-          mItBegin(),
-          mItEnd(),
-          mAllocator() {
-        // It's important to note that DoInit creates space for elements and assigns
-        // mItBegin/mItEnd to point to them, but these elements are not constructed.
+        : _ptr_array(nullptr),
+          _ptr_array_size(0),
+          _it_begin(),
+          _it_end(),
+          _allocator() {
+        // It's important to note that do_init creates space for elements and assigns
+        // _it_begin/_it_end to point to them, but these elements are not constructed.
         // You need to immediately follow this constructor with code that constructs the values.
-        DoInit(n);
+        do_init(n);
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     DequeBase<T, Allocator, kDequeSubarraySize>::DequeBase(size_type n, const allocator_type &allocator)
-        : mpPtrArray(NULL),
-          mnPtrArraySize(0),
-          mItBegin(),
-          mItEnd(),
-          mAllocator(allocator) {
-        // It's important to note that DoInit creates space for elements and assigns
-        // mItBegin/mItEnd to point to them, but these elements are not constructed.
+        : _ptr_array(nullptr),
+          _ptr_array_size(0),
+          _it_begin(),
+          _it_end(),
+          _allocator(allocator) {
+        // It's important to note that do_init creates space for elements and assigns
+        // _it_begin/_it_end to point to them, but these elements are not constructed.
         // You need to immediately follow this constructor with code that constructs the values.
-        DoInit(n);
+        do_init(n);
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     DequeBase<T, Allocator, kDequeSubarraySize>::~DequeBase() {
-        if (mpPtrArray) {
-            DoFreeSubarrays(mItBegin.mpCurrentArrayPtr, mItEnd.mpCurrentArrayPtr + 1);
-            do_free_ptr_array(mpPtrArray, mnPtrArraySize);
-            mpPtrArray = nullptr;
+        if (_ptr_array) {
+            DoFreeSubarrays(_it_begin._current_array_ptr, _it_end._current_array_ptr + 1);
+            do_free_ptr_array(_ptr_array, _ptr_array_size);
+            _ptr_array = nullptr;
         }
     }
 
@@ -540,30 +540,30 @@ namespace fermat {
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     const typename DequeBase<T, Allocator, kDequeSubarraySize>::allocator_type &
     DequeBase<T, Allocator, kDequeSubarraySize>::get_allocator() const noexcept {
-        return mAllocator;
+        return _allocator;
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     typename DequeBase<T, Allocator, kDequeSubarraySize>::allocator_type &
     DequeBase<T, Allocator, kDequeSubarraySize>::get_allocator() noexcept {
-        return mAllocator;
+        return _allocator;
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     void DequeBase<T, Allocator, kDequeSubarraySize>::set_allocator(const allocator_type &allocator) {
         // The only time you can set an allocator is with an empty unused container, such as right after construction.
-        if (TURBO_LIKELY(mAllocator != allocator)) {
-            // our Deque implementation always has allocations for mpPtrArray. this set_allocator() is unlike other container's set_allocator() member function
+        if (TURBO_LIKELY(_allocator != allocator)) {
+            // our Deque implementation always has allocations for _ptr_array. this set_allocator() is unlike other container's set_allocator() member function
             // in that it actually frees allocations when assigning the allocator. this lack of consistency is unfortunate.
-            if (TURBO_LIKELY(mpPtrArray && (mItBegin.mpCurrent == mItEnd.mpCurrent))) // is the container empty?
+            if (TURBO_LIKELY(_ptr_array && (_it_begin._current == _it_end._current))) // is the container empty?
             {
-                DoFreeSubarrays(mItBegin.mpCurrentArrayPtr, mItEnd.mpCurrentArrayPtr + 1);
-                do_free_ptr_array(mpPtrArray, mnPtrArraySize);
+                DoFreeSubarrays(_it_begin._current_array_ptr, _it_end._current_array_ptr + 1);
+                do_free_ptr_array(_ptr_array, _ptr_array_size);
 
-                mAllocator = allocator;
-                DoInit(0);
+                _allocator = allocator;
+                do_init(0);
             } else {
                 throw std::logic_error("Deque::set_allocator -- attempt to change allocator after inserting elements.");
             }
@@ -574,10 +574,10 @@ namespace fermat {
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     T *DequeBase<T, Allocator, kDequeSubarraySize>::do_allocate_subarray() {
         size_type n = kDequeSubarraySize;
-        T *p = mAllocator.allocate(&n);
+        T *p = _allocator.allocate(&n);
         KCHECK(p != nullptr) << "the behaviour of std::allocators that return nullptr is not defined.";
 
-#if EASTL_DEBUG
+#if FERMAT_DEBUG
         memset((void *) p, 0, kDequeSubarraySize * sizeof(T));
 #endif
 
@@ -588,7 +588,7 @@ namespace fermat {
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     void DequeBase<T, Allocator, kDequeSubarraySize>::DoFreeSubarray(T *p) {
         if (p)
-            mAllocator.deallocate(p, kDequeSubarraySize);
+            _allocator.deallocate(p, kDequeSubarraySize);
     }
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
@@ -602,7 +602,7 @@ namespace fermat {
         T **pp = (T **) BasicAllocator<T *, 0>().allocate(n);
         KCHECK(pp != nullptr) << "the behaviour of std::allocators that return nullptr is not defined.";
 
-#if EASTL_DEBUG
+#if FERMAT_DEBUG
         memset((void *) pp, 0, n * sizeof(T *));
 #endif
 
@@ -619,7 +619,8 @@ namespace fermat {
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     typename DequeBase<T, Allocator, kDequeSubarraySize>::iterator
-    DequeBase<T, Allocator, kDequeSubarraySize>::DoReallocSubarray(size_type nAdditionalCapacity, Side allocationSide) {
+    DequeBase<T, Allocator,
+        kDequeSubarraySize>::do_realloc_subarray(size_type nAdditionalCapacity, Side allocationSide) {
         // nAdditionalCapacity refers to the amount of additional space we need to be
         // able to store in this Deque. Typically this function is called as part of
         // an insert or append operation. This is the function that makes sure there
@@ -630,47 +631,47 @@ namespace fermat {
 
         if (allocationSide == kSideFront) {
             // There might be some free space (nCurrentAdditionalCapacity) at the front of the existing subarray.
-            const size_type nCurrentAdditionalCapacity = (size_type) (mItBegin.mpCurrent - mItBegin.mpBegin);
+            const size_type nCurrentAdditionalCapacity = (size_type) (_it_begin._current - _it_begin._begin);
 
-            if (TURBO_UNLIKELY(nCurrentAdditionalCapacity < nAdditionalCapacity))
-            // If we need to grow downward into a new subarray...
-            {
+            if (TURBO_UNLIKELY(nCurrentAdditionalCapacity < nAdditionalCapacity)) {
+                // If we need to grow downward into a new subarray...
+
                 const difference_type nSubarrayIncrease = (difference_type) (
                     ((nAdditionalCapacity - nCurrentAdditionalCapacity) + kDequeSubarraySize - 1) / kDequeSubarraySize);
                 difference_type i;
 
-                if (nSubarrayIncrease > (mItBegin.mpCurrentArrayPtr - mpPtrArray))
+                if (nSubarrayIncrease > (_it_begin._current_array_ptr - _ptr_array))
                     // If there are not enough pointers in front of the current (first) one...
-                    DoReallocPtrArray((size_type) (nSubarrayIncrease - (mItBegin.mpCurrentArrayPtr - mpPtrArray)),
+                    DoReallocPtrArray((size_type) (nSubarrayIncrease - (_it_begin._current_array_ptr - _ptr_array)),
                                       kSideFront);
 
                 for (i = 1; i <= nSubarrayIncrease; ++i)
-                    mItBegin.mpCurrentArrayPtr[-i] = do_allocate_subarray();
+                    _it_begin._current_array_ptr[-i] = do_allocate_subarray();
             }
 
-            return mItBegin - (difference_type) nAdditionalCapacity;
-        } else // else kSideBack
-        {
-            const size_type nCurrentAdditionalCapacity = (size_type) ((mItEnd.mpEnd - 1) - mItEnd.mpCurrent);
+            return _it_begin - (difference_type) nAdditionalCapacity;
+        } else {
+            auto const nCurrentAdditionalCapacity = (size_type) ((_it_end._begin + kDequeSubarraySize - 1) - _it_end._current);
 
-            if (TURBO_UNLIKELY(nCurrentAdditionalCapacity < nAdditionalCapacity))
-            // If we need to grow forward into a new subarray...
-            {
-                const difference_type nSubarrayIncrease = (difference_type) (
+            if (TURBO_UNLIKELY(nCurrentAdditionalCapacity < nAdditionalCapacity)) {
+                // If we need to grow forward into a new subarray...
+
+                auto const nSubarrayIncrease = (difference_type) (
                     ((nAdditionalCapacity - nCurrentAdditionalCapacity) + kDequeSubarraySize - 1) / kDequeSubarraySize);
                 difference_type i;
 
-                if (nSubarrayIncrease > ((mpPtrArray + mnPtrArraySize) - mItEnd.mpCurrentArrayPtr) - 1)
+                if (nSubarrayIncrease > ((_ptr_array + _ptr_array_size) - _it_end._current_array_ptr) - 1)
                     // If there are not enough pointers after the current (last) one...
                     DoReallocPtrArray(
                         (size_type) (nSubarrayIncrease - (
-                                         ((mpPtrArray + mnPtrArraySize) - mItEnd.mpCurrentArrayPtr) - 1)), kSideBack);
+                                         ((_ptr_array + _ptr_array_size) - _it_end._current_array_ptr) - 1)),
+                        kSideBack);
 
                 for (i = 1; i <= nSubarrayIncrease; ++i)
-                    mItEnd.mpCurrentArrayPtr[i] = do_allocate_subarray();
+                    _it_end._current_array_ptr[i] = do_allocate_subarray();
             }
 
-            return mItEnd + (difference_type) nAdditionalCapacity;
+            return _it_end + (difference_type) nAdditionalCapacity;
         }
     }
 
@@ -680,7 +681,7 @@ namespace fermat {
                                                                         Side allocationSide) {
         // This function is not called unless the capacity is known to require a resize.
         //
-        // We have an array of pointers (mpPtrArray), of which a segment of them are in use and
+        // We have an array of pointers (_ptr_array), of which a segment of them are in use and
         // at either end of the array are zero or more unused pointers. This function is being
         // called because we need to extend the capacity on either side of this array by
         // nAdditionalCapacity pointers. However, it's possible that if the user is continually
@@ -694,25 +695,25 @@ namespace fermat {
         // Balanced pointer array     Unbalanced pointer array (unused space at front, no free space at back)
         // ----++++++++++++----        ---------+++++++++++
 
-        const size_type nUnusedPtrCountAtFront = (size_type) (mItBegin.mpCurrentArrayPtr - mpPtrArray);
-        const size_type nUsedPtrCount = (size_type) (mItEnd.mpCurrentArrayPtr - mItBegin.mpCurrentArrayPtr) + 1;
+        const size_type nUnusedPtrCountAtFront = (size_type) (_it_begin._current_array_ptr - _ptr_array);
+        const size_type nUsedPtrCount = (size_type) (_it_end._current_array_ptr - _it_begin._current_array_ptr) + 1;
         const size_type nUsedPtrSpace = nUsedPtrCount * sizeof(void *);
-        const size_type nUnusedPtrCountAtBack = (mnPtrArraySize - nUnusedPtrCountAtFront) - nUsedPtrCount;
+        const size_type nUnusedPtrCountAtBack = (_ptr_array_size - nUnusedPtrCountAtFront) - nUsedPtrCount;
         value_type **pPtrArrayBegin;
 
-        if ((allocationSide == kSideBack) && (nAdditionalCapacity <= nUnusedPtrCountAtFront))
-        // If we can take advantage of unused pointers at the front without doing any reallocation...
-        {
+        if ((allocationSide == kSideBack) && (nAdditionalCapacity <= nUnusedPtrCountAtFront)) {
+            // If we can take advantage of unused pointers at the front without doing any reallocation...
+
             if (nAdditionalCapacity < (nUnusedPtrCountAtFront / 2))
                 // Possibly use more space than required, if there's a lot of extra space.
                 nAdditionalCapacity = (nUnusedPtrCountAtFront / 2);
 
-            pPtrArrayBegin = mpPtrArray + (nUnusedPtrCountAtFront - nAdditionalCapacity);
-            memmove(pPtrArrayBegin, mItBegin.mpCurrentArrayPtr, nUsedPtrSpace);
+            pPtrArrayBegin = _ptr_array + (nUnusedPtrCountAtFront - nAdditionalCapacity);
+            memmove(pPtrArrayBegin, _it_begin._current_array_ptr, nUsedPtrSpace);
 
-#if EASTL_DEBUG
+#if FERMAT_DEBUG
             memset(pPtrArrayBegin + nUsedPtrCount, 0,
-                   (size_t) (mpPtrArray + mnPtrArraySize) - (size_t) (pPtrArrayBegin + nUsedPtrCount));
+                   (size_t) (_ptr_array + _ptr_array_size) - (size_t) (pPtrArrayBegin + nUsedPtrCount));
 #endif
         } else if ((allocationSide == kSideFront) && (nAdditionalCapacity <= nUnusedPtrCountAtBack))
         // If we can take advantage of unused pointers at the back without doing any reallocation...
@@ -721,41 +722,42 @@ namespace fermat {
                 // Possibly use more space than required, if there's a lot of extra space.
                 nAdditionalCapacity = (nUnusedPtrCountAtBack / 2);
 
-            pPtrArrayBegin = mItBegin.mpCurrentArrayPtr + nAdditionalCapacity;
-            memmove(pPtrArrayBegin, mItBegin.mpCurrentArrayPtr, nUsedPtrSpace);
+            pPtrArrayBegin = _it_begin._current_array_ptr + nAdditionalCapacity;
+            memmove(pPtrArrayBegin, _it_begin._current_array_ptr, nUsedPtrSpace);
 
-#if EASTL_DEBUG
-            memset(mpPtrArray, 0, (size_t) ((uintptr_t) pPtrArrayBegin - (uintptr_t) mpPtrArray));
+#if FERMAT_DEBUG
+            memset(_ptr_array, 0, (size_t) ((uintptr_t) pPtrArrayBegin - (uintptr_t) _ptr_array));
 #endif
         } else {
             // In this case we will have to do a reallocation.
-            size_type nNewPtrArraySize = mnPtrArraySize + std::max(mnPtrArraySize, nAdditionalCapacity) + 2;
+            size_type nNewPtrArraySize = _ptr_array_size + std::max(_ptr_array_size, nAdditionalCapacity) + 2;
             // Allocate extra capacity.
             value_type **const pNewPtrArray = do_allocate_ptr_array(&nNewPtrArraySize);
 
-            pPtrArrayBegin = pNewPtrArray + (mItBegin.mpCurrentArrayPtr - mpPtrArray) + ((allocationSide == kSideFront)
-                                 ? nAdditionalCapacity
-                                 : 0);
+            pPtrArrayBegin = pNewPtrArray + (_it_begin._current_array_ptr - _ptr_array) + ((allocationSide ==
+                                     kSideFront)
+                                     ? nAdditionalCapacity
+                                     : 0);
 
-            // The following is equivalent to: std::copy(mItBegin.mpCurrentArrayPtr, mItEnd.mpCurrentArrayPtr + 1, pPtrArrayBegin);
+            // The following is equivalent to: std::copy(_it_begin._current_array_ptr, _it_end._current_array_ptr + 1, pPtrArrayBegin);
             // It's OK to use memcpy instead of memmove because the destination is guaranteed to non-overlap the source.
-            if (mpPtrArray) // Could also say: 'if(mItBegin.mpCurrentArrayPtr)'
-                memcpy(pPtrArrayBegin, mItBegin.mpCurrentArrayPtr, nUsedPtrSpace);
+            if (_ptr_array) // Could also say: 'if(_it_begin._current_array_ptr)'
+                memcpy(pPtrArrayBegin, _it_begin._current_array_ptr, nUsedPtrSpace);
 
-            do_free_ptr_array(mpPtrArray, mnPtrArraySize);
+            do_free_ptr_array(_ptr_array, _ptr_array_size);
 
-            mpPtrArray = pNewPtrArray;
-            mnPtrArraySize = nNewPtrArraySize;
+            _ptr_array = pNewPtrArray;
+            _ptr_array_size = nNewPtrArraySize;
         }
 
         // We need to reset the begin and end iterators, as code that calls this expects them to *not* be invalidated.
-        mItBegin.SetSubarray(pPtrArrayBegin);
-        mItEnd.SetSubarray((pPtrArrayBegin + nUsedPtrCount) - 1);
+        _it_begin.set_subarray(pPtrArrayBegin);
+        _it_end.set_subarray((pPtrArrayBegin + nUsedPtrCount) - 1);
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    void DequeBase<T, Allocator, kDequeSubarraySize>::DoInit(size_type n) {
+    void DequeBase<T, Allocator, kDequeSubarraySize>::do_init(size_type n) {
         // This code is disabled because it doesn't currently work properly.
         // We are trying to make it so that a Deque can have a zero allocation
         // initial empty state, but we (OK, I) am having a hard time making
@@ -766,10 +768,10 @@ namespace fermat {
         // Always have at least one, even if n is zero.
         const size_type kMinPtrArraySize_ = kMinPtrArraySize;
 
-        mnPtrArraySize = std::max(kMinPtrArraySize_, (nNewPtrArraySize + 2));
-        mpPtrArray = do_allocate_ptr_array(&mnPtrArraySize);
+        _ptr_array_size = std::max(kMinPtrArraySize_, (nNewPtrArraySize + 2));
+        _ptr_array = do_allocate_ptr_array(&_ptr_array_size);
 
-        value_type **const pPtrArrayBegin = (mpPtrArray + ((mnPtrArraySize - nNewPtrArraySize) / 2));
+        value_type **const pPtrArrayBegin = (_ptr_array + ((_ptr_array_size - nNewPtrArraySize) / 2));
         // Try to place it in the middle.
         value_type **const pPtrArrayEnd = pPtrArrayBegin + nNewPtrArraySize;
         value_type **pPtrArrayCurrent = pPtrArrayBegin;
@@ -778,24 +780,11 @@ namespace fermat {
         while (pPtrArrayCurrent < pPtrArrayEnd)
             *pPtrArrayCurrent++ = do_allocate_subarray();
 
-        mItBegin.SetSubarray(pPtrArrayBegin);
-        mItBegin.mpCurrent = mItBegin.mpBegin;
+        _it_begin.set_subarray(pPtrArrayBegin);
+        _it_begin._current = _it_begin._begin;
 
-        mItEnd.SetSubarray(pPtrArrayEnd - 1);
-        mItEnd.mpCurrent = mItEnd.mpBegin + (difference_type) (n % kDequeSubarraySize);
-        //}
-        //else // Else we do a zero-allocation initialization.
-        //{
-        //    mpPtrArray     = NULL;
-        //    mnPtrArraySize = 0;
-        //
-        //    mItBegin.mpCurrentArrayPtr = NULL;
-        //    mItBegin.mpBegin           = NULL;
-        //    mItBegin.mpEnd             = NULL; // We intentionally create a situation whereby the subarray that has no capacity.
-        //    mItBegin.mpCurrent         = NULL;
-        //
-        //    mItEnd = mItBegin;
-        //}
+        _it_end.set_subarray(pPtrArrayEnd - 1);
+        _it_end._current = _it_end._begin + (difference_type) (n % kDequeSubarraySize);
     }
 
 
@@ -805,32 +794,31 @@ namespace fermat {
 
     template<typename T, typename Pointer, typename Reference, unsigned kDequeSubarraySize>
     DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::DequeIterator()
-        : mpCurrent(NULL), mpBegin(NULL), mpEnd(NULL), mpCurrentArrayPtr(NULL) {
+        : _current(nullptr), _begin(nullptr),_current_array_ptr(nullptr) {
         // Empty
     }
 
 
     template<typename T, typename Pointer, typename Reference, unsigned kDequeSubarraySize>
     DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::DequeIterator(T **pCurrentArrayPtr, T *pCurrent)
-        : mpCurrent(pCurrent), mpBegin(*pCurrentArrayPtr), mpEnd(pCurrent + kDequeSubarraySize),
-          mpCurrentArrayPtr(pCurrentArrayPtr) {
+        : _current(pCurrent), _begin(*pCurrentArrayPtr),
+          _current_array_ptr(pCurrentArrayPtr) {
         // Empty
     }
 
 
     template<typename T, typename Pointer, typename Reference, unsigned kDequeSubarraySize>
     DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::DequeIterator(const iterator &x)
-        : mpCurrent(x.mpCurrent), mpBegin(x.mpBegin), mpEnd(x.mpEnd), mpCurrentArrayPtr(x.mpCurrentArrayPtr) {
+        : _current(x._current), _begin(x._begin),  _current_array_ptr(x._current_array_ptr) {
         // Empty
     }
 
     template<typename T, typename Pointer, typename Reference, unsigned kDequeSubarraySize>
     DequeIterator<T, Pointer, Reference, kDequeSubarraySize> &DequeIterator<T, Pointer, Reference,
         kDequeSubarraySize>::operator=(const iterator &x) {
-        mpCurrent = x.mpCurrent;
-        mpBegin = x.mpBegin;
-        mpEnd = x.mpEnd;
-        mpCurrentArrayPtr = x.mpCurrentArrayPtr;
+        _current = x._current;
+        _begin = x._begin;
+        _current_array_ptr = x._current_array_ptr;
 
         return *this;
     }
@@ -838,14 +826,14 @@ namespace fermat {
 
     template<typename T, typename Pointer, typename Reference, unsigned kDequeSubarraySize>
     DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::DequeIterator(const iterator &x, Increment)
-        : mpCurrent(x.mpCurrent), mpBegin(x.mpBegin), mpEnd(x.mpEnd), mpCurrentArrayPtr(x.mpCurrentArrayPtr) {
+        : _current(x._current), _begin(x._begin),  _current_array_ptr(x._current_array_ptr) {
         operator++();
     }
 
 
     template<typename T, typename Pointer, typename Reference, unsigned kDequeSubarraySize>
     DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::DequeIterator(const iterator &x, Decrement)
-        : mpCurrent(x.mpCurrent), mpBegin(x.mpBegin), mpEnd(x.mpEnd), mpCurrentArrayPtr(x.mpCurrentArrayPtr) {
+        : _current(x._current), _begin(x._begin), _current_array_ptr(x._current_array_ptr) {
         operator--();
     }
 
@@ -853,24 +841,23 @@ namespace fermat {
     template<typename T, typename Pointer, typename Reference, unsigned kDequeSubarraySize>
     typename DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::pointer
     DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::operator->() const {
-        return mpCurrent;
+        return _current;
     }
 
 
     template<typename T, typename Pointer, typename Reference, unsigned kDequeSubarraySize>
     typename DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::reference
     DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::operator*() const {
-        return *mpCurrent;
+        return *_current;
     }
 
 
     template<typename T, typename Pointer, typename Reference, unsigned kDequeSubarraySize>
     typename DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::this_type &
     DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::operator++() {
-        if (TURBO_UNLIKELY(++mpCurrent == mpEnd)) {
-            mpBegin = *++mpCurrentArrayPtr;
-            mpEnd = mpBegin + kDequeSubarraySize;
-            mpCurrent = mpBegin;
+        if (TURBO_UNLIKELY(++_current == _begin + kDequeSubarraySize)) {
+            _begin = *++_current_array_ptr;
+            _current = _begin;
         }
         return *this;
     }
@@ -888,12 +875,11 @@ namespace fermat {
     template<typename T, typename Pointer, typename Reference, unsigned kDequeSubarraySize>
     typename DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::this_type &
     DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::operator--() {
-        if (TURBO_UNLIKELY(mpCurrent == mpBegin)) {
-            mpBegin = *--mpCurrentArrayPtr;
-            mpEnd = mpBegin + kDequeSubarraySize;
-            mpCurrent = mpEnd; // fall through...
+        if (TURBO_UNLIKELY(_current == _begin)) {
+            _begin = *--_current_array_ptr;
+            _current = _begin + kDequeSubarraySize; // fall through...
         }
-        --mpCurrent;
+        --_current;
         return *this;
     }
 
@@ -910,12 +896,12 @@ namespace fermat {
     template<typename T, typename Pointer, typename Reference, unsigned kDequeSubarraySize>
     typename DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::this_type &
     DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::operator+=(difference_type n) {
-        const difference_type subarrayPosition = (mpCurrent - mpBegin) + n;
+        const difference_type subarrayPosition = (_current - _begin) + n;
 
         // Cast from signed to unsigned (size_t) in order to obviate the need to compare to < 0.
         if ((size_t) subarrayPosition < (size_t) kDequeSubarraySize)
         // If the new position is within the current subarray (i.e. >= 0 && < kSubArraySize)...
-            mpCurrent += n;
+            _current += n;
         else {
             // This implementation is a branchless version which works by offsetting
             // the math to always be in the positive range. Much of the values here
@@ -927,11 +913,10 @@ namespace fermat {
             // is >= 2^24 or 16,777,216.
             static_assert((kDequeSubarraySize & (kDequeSubarraySize - 1)) == 0, "Verify that it is a power of 2.");
             const difference_type subarrayIndex =
-                    (((16777216 + subarrayPosition) / (difference_type) kDequeSubarraySize)) - (
-                        16777216 / (difference_type) kDequeSubarraySize);
+                    subarrayPosition / (difference_type) kDequeSubarraySize;
 
-            SetSubarray(mpCurrentArrayPtr + subarrayIndex);
-            mpCurrent = mpBegin + (subarrayPosition - (subarrayIndex * (difference_type) kDequeSubarraySize));
+            set_subarray(_current_array_ptr + subarrayIndex);
+            _current = _begin + (subarrayPosition - (subarrayIndex * (difference_type) kDequeSubarraySize));
         }
         return *this;
     }
@@ -964,11 +949,11 @@ namespace fermat {
                                                                    std::true_type) {
         // To do: Implement this as a loop which does memcpys between subarrays appropriately.
         //        Currently we only do memcpy if the entire operation occurs within a single subarray.
-        if ((first.mpBegin == last.mpBegin) && (first.mpBegin == mpBegin))
+        if ((first._begin == last._begin) && (first._begin == _begin))
         // If all operations are within the same subarray, implement the operation as a memmove.
         {
-            memmove(mpCurrent, first.mpCurrent, (size_t) ((uintptr_t) last.mpCurrent - (uintptr_t) first.mpCurrent));
-            return *this + (last.mpCurrent - first.mpCurrent);
+            memmove(_current, first._current, (size_t) ((uintptr_t) last._current - (uintptr_t) first._current));
+            return *this + (last._current - first._current);
         }
         return std::move(first, last, *this);
     }
@@ -987,10 +972,10 @@ namespace fermat {
         const iterator &first, const iterator &last, std::true_type) {
         // To do: Implement this as a loop which does memmoves between subarrays appropriately.
         //        Currently we only do memcpy if the entire operation occurs within a single subarray.
-        if ((first.mpBegin == last.mpBegin) && (first.mpBegin == mpBegin))
+        if ((first._begin == last._begin) && (first._begin == _begin))
             // If all operations are within the same subarray, implement the operation as a memcpy.
-            memmove(mpCurrent - (last.mpCurrent - first.mpCurrent), first.mpCurrent,
-                    (size_t) ((uintptr_t) last.mpCurrent - (uintptr_t) first.mpCurrent));
+            memmove(_current - (last._current - first._current), first._current,
+                    (size_t) ((uintptr_t) last._current - (uintptr_t) first._current));
         else
             std::move_backward(first, last, *this);
     }
@@ -1004,10 +989,9 @@ namespace fermat {
 
 
     template<typename T, typename Pointer, typename Reference, unsigned kDequeSubarraySize>
-    void DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::SetSubarray(T **pCurrentArrayPtr) {
-        mpCurrentArrayPtr = pCurrentArrayPtr;
-        mpBegin = *pCurrentArrayPtr;
-        mpEnd = mpBegin + kDequeSubarraySize;
+    void DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::set_subarray(T **pCurrentArrayPtr) {
+        _current_array_ptr = pCurrentArrayPtr;
+        _begin = *pCurrentArrayPtr;
     }
 
 
@@ -1018,7 +1002,7 @@ namespace fermat {
         kDequeSubarraySize>
     inline bool operator==(const DequeIterator<T, PointerA, ReferenceA, kDequeSubarraySize> &a,
                            const DequeIterator<T, PointerB, ReferenceB, kDequeSubarraySize> &b) {
-        return a.mpCurrent == b.mpCurrent;
+        return a._current == b._current;
     }
 
 
@@ -1026,7 +1010,7 @@ namespace fermat {
         kDequeSubarraySize>
     inline bool operator!=(const DequeIterator<T, PointerA, ReferenceA, kDequeSubarraySize> &a,
                            const DequeIterator<T, PointerB, ReferenceB, kDequeSubarraySize> &b) {
-        return a.mpCurrent != b.mpCurrent;
+        return a._current != b._current;
     }
 
 
@@ -1035,7 +1019,7 @@ namespace fermat {
     template<typename T, typename Pointer, typename Reference, unsigned kDequeSubarraySize>
     inline bool operator!=(const DequeIterator<T, Pointer, Reference, kDequeSubarraySize> &a,
                            const DequeIterator<T, Pointer, Reference, kDequeSubarraySize> &b) {
-        return a.mpCurrent != b.mpCurrent;
+        return a._current != b._current;
     }
 
 
@@ -1043,9 +1027,9 @@ namespace fermat {
         kDequeSubarraySize>
     inline bool operator<(const DequeIterator<T, PointerA, ReferenceA, kDequeSubarraySize> &a,
                           const DequeIterator<T, PointerB, ReferenceB, kDequeSubarraySize> &b) {
-        return (a.mpCurrentArrayPtr == b.mpCurrentArrayPtr)
-                   ? (a.mpCurrent < b.mpCurrent)
-                   : (a.mpCurrentArrayPtr < b.mpCurrentArrayPtr);
+        return (a._current_array_ptr == b._current_array_ptr)
+                   ? (a._current < b._current)
+                   : (a._current_array_ptr < b._current_array_ptr);
     }
 
 
@@ -1053,9 +1037,9 @@ namespace fermat {
         kDequeSubarraySize>
     inline bool operator>(const DequeIterator<T, PointerA, ReferenceA, kDequeSubarraySize> &a,
                           const DequeIterator<T, PointerB, ReferenceB, kDequeSubarraySize> &b) {
-        return (a.mpCurrentArrayPtr == b.mpCurrentArrayPtr)
-                   ? (a.mpCurrent > b.mpCurrent)
-                   : (a.mpCurrentArrayPtr > b.mpCurrentArrayPtr);
+        return (a._current_array_ptr == b._current_array_ptr)
+                   ? (a._current > b._current)
+                   : (a._current_array_ptr > b._current_array_ptr);
     }
 
 
@@ -1063,9 +1047,9 @@ namespace fermat {
         kDequeSubarraySize>
     inline bool operator<=(const DequeIterator<T, PointerA, ReferenceA, kDequeSubarraySize> &a,
                            const DequeIterator<T, PointerB, ReferenceB, kDequeSubarraySize> &b) {
-        return (a.mpCurrentArrayPtr == b.mpCurrentArrayPtr)
-                   ? (a.mpCurrent <= b.mpCurrent)
-                   : (a.mpCurrentArrayPtr <= b.mpCurrentArrayPtr);
+        return (a._current_array_ptr == b._current_array_ptr)
+                   ? (a._current <= b._current)
+                   : (a._current_array_ptr <= b._current_array_ptr);
     }
 
 
@@ -1073,9 +1057,9 @@ namespace fermat {
         kDequeSubarraySize>
     inline bool operator>=(const DequeIterator<T, PointerA, ReferenceA, kDequeSubarraySize> &a,
                            const DequeIterator<T, PointerB, ReferenceB, kDequeSubarraySize> &b) {
-        return (a.mpCurrentArrayPtr == b.mpCurrentArrayPtr)
-                   ? (a.mpCurrent >= b.mpCurrent)
-                   : (a.mpCurrentArrayPtr >= b.mpCurrentArrayPtr);
+        return (a._current_array_ptr == b._current_array_ptr)
+                   ? (a._current >= b._current)
+                   : (a._current_array_ptr >= b._current_array_ptr);
     }
 
 
@@ -1099,8 +1083,8 @@ namespace fermat {
         // This is a fairly clever algorithm that has been used in STL Deque implementations since the original HP STL:
         typedef typename DequeIterator<T, PointerA, ReferenceA, kDequeSubarraySize>::difference_type difference_type;
 
-        return ((difference_type) kDequeSubarraySize * ((a.mpCurrentArrayPtr - b.mpCurrentArrayPtr) - 1)) + (
-                   a.mpCurrent - a.mpBegin) + (b.mpEnd - b.mpCurrent);
+        return ((difference_type) kDequeSubarraySize * ((a._current_array_ptr - b._current_array_ptr) - 1)) + (
+                   a._current - a._begin) + (b._begin + kDequeSubarraySize - b._current);
     }
 
 
@@ -1125,7 +1109,7 @@ namespace fermat {
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     inline Deque<T, Allocator, kDequeSubarraySize>::Deque(size_type n, const allocator_type &allocator)
         : base_type(n, allocator) {
-        DoFillInit(value_type());
+        do_fill_init(value_type());
     }
 
 
@@ -1133,20 +1117,20 @@ namespace fermat {
     inline Deque<T, Allocator, kDequeSubarraySize>::Deque(size_type n, const value_type &value,
                                                           const allocator_type &allocator)
         : base_type(n, allocator) {
-        DoFillInit(value);
+        do_fill_init(value);
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     inline Deque<T, Allocator, kDequeSubarraySize>::Deque(const this_type &x)
-        : base_type(x.size(), x.mAllocator) {
-        std::uninitialized_copy(x.mItBegin, x.mItEnd, mItBegin);
+        : base_type(x.size(), x._allocator) {
+        std::uninitialized_copy(x._it_begin, x._it_end, _it_begin);
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline Deque<T, Allocator, kDequeSubarraySize>::Deque(this_type &&x)
-        : base_type((size_type) 0, x.mAllocator) {
+    inline Deque<T, Allocator, kDequeSubarraySize>::Deque(this_type &&x) noexcept
+        : base_type((size_type) 0, x._allocator) {
         swap(x);
     }
 
@@ -1162,7 +1146,7 @@ namespace fermat {
     inline Deque<T, Allocator, kDequeSubarraySize>::Deque(std::initializer_list<value_type> ilist,
                                                           const allocator_type &allocator)
         : base_type(allocator) {
-        DoInit(ilist.begin(), ilist.end(), std::false_type());
+        do_init(ilist.begin(), ilist.end(), std::false_type());
     }
 
 
@@ -1170,47 +1154,25 @@ namespace fermat {
     template<typename InputIterator>
     inline Deque<T, Allocator, kDequeSubarraySize>::Deque(InputIterator first, InputIterator last)
         : base_type(allocator_type{})
-    // Call the empty base constructor, which does nothing. We need to do all the work in our own DoInit.
+    // Call the empty base constructor, which does nothing. We need to do all the work in our own do_init.
     {
-        DoInit(first, last, std::is_integral<InputIterator>());
+        do_init(first, last, std::is_integral<InputIterator>());
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     inline Deque<T, Allocator, kDequeSubarraySize>::~Deque() {
         // Call destructors. Parent class will free the memory.
-        for (iterator itCurrent(mItBegin); itCurrent != mItEnd; ++itCurrent)
-            itCurrent.mpCurrent->~value_type();
+        fermat::destroy(_it_begin, _it_end);
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     typename Deque<T, Allocator, kDequeSubarraySize>::this_type &
     Deque<T, Allocator, kDequeSubarraySize>::operator=(const this_type &x) {
-        if (&x != this) // If not assigning to ourselves...
-        {
-            // If (EASTL_ALLOCATOR_COPY_ENABLED == 1) and the current contents are allocated by an
-            // allocator that's unequal to x's allocator, we need to reallocate our elements with
-            // our current allocator and reallocate it with x's allocator. If the allocators are
-            // equal then we can use a more optimal algorithm that doesn't reallocate our elements
-            // but instead can copy them in place.
-
-#if EASTL_ALLOCATOR_COPY_ENABLED
-            bool bSlowerPathwayRequired = (mAllocator != x.mAllocator);
-#else
-            bool bSlowerPathwayRequired = false;
-#endif
-
-            if (bSlowerPathwayRequired) {
-                // We can't currently use set_capacity(0) or shrink_to_fit, because they
-                // leave a remaining allocation with our old allocator. So we do a similar
-                // thing but set our allocator to x.mAllocator while doing so.
-                this_type temp(x.mAllocator);
-                DoSwap(temp);
-                // Now we have an empty container with an allocator equal to x.mAllocator, ready to assign from x.
-            }
-
-            DoAssign(x.begin(), x.end(), std::false_type());
+        // If not assigning to ourselves...
+        if (&x != this) {
+            do_assign(x.begin(), x.end(), std::false_type());
         }
 
         return *this;
@@ -1219,9 +1181,9 @@ namespace fermat {
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     inline typename Deque<T, Allocator, kDequeSubarraySize>::this_type &
-    Deque<T, Allocator, kDequeSubarraySize>::operator=(this_type &&x) {
+    Deque<T, Allocator, kDequeSubarraySize>::operator=(this_type &&x) noexcept {
         if (this != &x) {
-            this_type temp(mAllocator);
+            this_type temp(_allocator);
             swap(temp);
             swap(x);
             // member swap handles the case that x has a different allocator than our allocator by doing a copy.
@@ -1233,20 +1195,20 @@ namespace fermat {
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     inline typename Deque<T, Allocator, kDequeSubarraySize>::this_type &
     Deque<T, Allocator, kDequeSubarraySize>::operator=(std::initializer_list<value_type> ilist) {
-        DoAssign(ilist.begin(), ilist.end(), std::false_type());
+        do_assign(ilist.begin(), ilist.end(), std::false_type());
         return *this;
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     inline void Deque<T, Allocator, kDequeSubarraySize>::assign(size_type n, const value_type &value) {
-        DoAssignValues(n, value);
+        do_assign_values(n, value);
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     inline void Deque<T, Allocator, kDequeSubarraySize>::assign(std::initializer_list<value_type> ilist) {
-        DoAssign(ilist.begin(), ilist.end(), std::false_type());
+        do_assign(ilist.begin(), ilist.end(), std::false_type());
     }
 
 
@@ -1256,104 +1218,104 @@ namespace fermat {
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     template<typename InputIterator>
     inline void Deque<T, Allocator, kDequeSubarraySize>::assign(InputIterator first, InputIterator last) {
-        DoAssign(first, last, std::is_integral<InputIterator>());
+        do_assign(first, last, std::is_integral<InputIterator>());
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     inline typename Deque<T, Allocator, kDequeSubarraySize>::iterator
     Deque<T, Allocator, kDequeSubarraySize>::begin() noexcept {
-        return mItBegin;
+        return _it_begin;
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     inline typename Deque<T, Allocator, kDequeSubarraySize>::const_iterator
     Deque<T, Allocator, kDequeSubarraySize>::begin() const noexcept {
-        return mItBegin;
+        return _it_begin;
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     inline typename Deque<T, Allocator, kDequeSubarraySize>::const_iterator
     Deque<T, Allocator, kDequeSubarraySize>::cbegin() const noexcept {
-        return mItBegin;
+        return _it_begin;
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     inline typename Deque<T, Allocator, kDequeSubarraySize>::iterator
     Deque<T, Allocator, kDequeSubarraySize>::end() noexcept {
-        return mItEnd;
+        return _it_end;
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     typename Deque<T, Allocator, kDequeSubarraySize>::const_iterator
     Deque<T, Allocator, kDequeSubarraySize>::end() const noexcept {
-        return mItEnd;
+        return _it_end;
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     inline typename Deque<T, Allocator, kDequeSubarraySize>::const_iterator
     Deque<T, Allocator, kDequeSubarraySize>::cend() const noexcept {
-        return mItEnd;
+        return _it_end;
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     inline typename Deque<T, Allocator, kDequeSubarraySize>::reverse_iterator
     Deque<T, Allocator, kDequeSubarraySize>::rbegin() noexcept {
-        return reverse_iterator(mItEnd);
+        return reverse_iterator(_it_end);
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     inline typename Deque<T, Allocator, kDequeSubarraySize>::const_reverse_iterator
     Deque<T, Allocator, kDequeSubarraySize>::rbegin() const noexcept {
-        return const_reverse_iterator(mItEnd);
+        return const_reverse_iterator(_it_end);
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     inline typename Deque<T, Allocator, kDequeSubarraySize>::const_reverse_iterator
     Deque<T, Allocator, kDequeSubarraySize>::crbegin() const noexcept {
-        return const_reverse_iterator(mItEnd);
+        return const_reverse_iterator(_it_end);
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     inline typename Deque<T, Allocator, kDequeSubarraySize>::reverse_iterator
     Deque<T, Allocator, kDequeSubarraySize>::rend() noexcept {
-        return reverse_iterator(mItBegin);
+        return reverse_iterator(_it_begin);
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     inline typename Deque<T, Allocator, kDequeSubarraySize>::const_reverse_iterator
     Deque<T, Allocator, kDequeSubarraySize>::rend() const noexcept {
-        return const_reverse_iterator(mItBegin);
+        return const_reverse_iterator(_it_begin);
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     inline typename Deque<T, Allocator, kDequeSubarraySize>::const_reverse_iterator
     Deque<T, Allocator, kDequeSubarraySize>::crend() const noexcept {
-        return const_reverse_iterator(mItBegin);
+        return const_reverse_iterator(_it_begin);
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     inline bool Deque<T, Allocator, kDequeSubarraySize>::empty() const noexcept {
-        return mItBegin.mpCurrent == mItEnd.mpCurrent;
+        return _it_begin._current == _it_end._current;
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     typename Deque<T, Allocator, kDequeSubarraySize>::size_type
     inline Deque<T, Allocator, kDequeSubarraySize>::size() const noexcept {
-        return (size_type) (mItEnd - mItBegin);
+        return (size_type) (_it_end - _it_begin);
     }
 
 
@@ -1362,9 +1324,9 @@ namespace fermat {
         const size_type nSizeCurrent = size();
 
         if (n > nSizeCurrent) // We expect that more often than not, resizes will be upsizes.
-            insert(mItEnd, n - nSizeCurrent, value);
+            insert(_it_end, n - nSizeCurrent, value);
         else
-            erase(mItBegin + (difference_type) n, mItEnd);
+            erase(_it_begin + (difference_type) n, _it_end);
     }
 
 
@@ -1389,8 +1351,8 @@ namespace fermat {
         // implementing set_capacity() is to do what we do below.
 
         if (n == 0) {
-            this_type temp(mAllocator);
-            DoSwap(temp);
+            this_type temp(_allocator);
+            do_swap(temp);
         } else if (n < size()) {
             // We currently ignore the request to reduce capacity. To do: Implement this
             // and do it in a way that doesn't result in temporarily ~doubling our memory usage.
@@ -1404,23 +1366,13 @@ namespace fermat {
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     typename Deque<T, Allocator, kDequeSubarraySize>::reference
     Deque<T, Allocator, kDequeSubarraySize>::operator[](size_type n) {
-#if EASTL_ASSERT_ENABLED && EASTL_EMPTY_REFERENCE_ASSERT_ENABLED
-        if (TURBO_UNLIKELY(n >= (size_type)(mItEnd - mItBegin)))
-            EASTL_FAIL_MSG("Deque::operator[] -- out of range");
-#elif EASTL_ASSERT_ENABLED
-        // We allow taking a reference to Deque[0]
-        if (TURBO_UNLIKELY((n != 0) && n >= (size_type)(mItEnd - mItBegin)))
-            EASTL_FAIL_MSG("Deque::operator[] -- out of range");
-#endif
-
         // See DequeIterator::operator+=() for an explanation of the code below.
-        iterator it(mItBegin);
+        iterator it(_it_begin);
 
-        const difference_type subarrayPosition = (difference_type) ((it.mpCurrent - it.mpBegin) + (difference_type) n);
-        const difference_type subarrayIndex = (((16777216 + subarrayPosition) / (difference_type) kDequeSubarraySize)) -
-                                              (16777216 / (difference_type) kDequeSubarraySize);
+        const difference_type subarrayPosition = (difference_type) ((it._current - it._begin) + (difference_type) n);
+        const difference_type subarrayIndex = subarrayPosition / (difference_type) kDequeSubarraySize;
 
-        return *(*(it.mpCurrentArrayPtr + subarrayIndex) + (
+        return *(*(it._current_array_ptr + subarrayIndex) + (
                      subarrayPosition - (subarrayIndex * (difference_type) kDequeSubarraySize)));
     }
 
@@ -1428,23 +1380,13 @@ namespace fermat {
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     typename Deque<T, Allocator, kDequeSubarraySize>::const_reference
     Deque<T, Allocator, kDequeSubarraySize>::operator[](size_type n) const {
-#if EASTL_ASSERT_ENABLED && EASTL_EMPTY_REFERENCE_ASSERT_ENABLED
-        if (TURBO_UNLIKELY(n >= (size_type)(mItEnd - mItBegin)))
-            EASTL_FAIL_MSG("Deque::operator[] -- out of range");
-#elif EASTL_ASSERT_ENABLED
-        // We allow the user to use a reference to Deque[0] of an empty container.
-        if (TURBO_UNLIKELY((n != 0) && n >= (size_type)(mItEnd - mItBegin)))
-            EASTL_FAIL_MSG("Deque::operator[] -- out of range");
-#endif
-
         // See DequeIterator::operator+=() for an explanation of the code below.
-        iterator it(mItBegin);
+        iterator it(_it_begin);
 
-        const difference_type subarrayPosition = (it.mpCurrent - it.mpBegin) + (difference_type) n;
-        const difference_type subarrayIndex = (((16777216 + subarrayPosition) / (difference_type) kDequeSubarraySize)) -
-                                              (16777216 / (difference_type) kDequeSubarraySize);
+        const difference_type subarrayPosition = (it._current - it._begin) + (difference_type) n;
+        const difference_type subarrayIndex = subarrayPosition / (difference_type) kDequeSubarraySize;
 
-        return *(*(it.mpCurrentArrayPtr + subarrayIndex) + (
+        return *(*(it._current_array_ptr + subarrayIndex) + (
                      subarrayPosition - (subarrayIndex * (difference_type) kDequeSubarraySize)));
     }
 
@@ -1452,57 +1394,42 @@ namespace fermat {
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     typename Deque<T, Allocator, kDequeSubarraySize>::reference
     Deque<T, Allocator, kDequeSubarraySize>::at(size_type n) {
-        return *(mItBegin.operator+((difference_type) n));
+        return *(_it_begin.operator+((difference_type) n));
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     typename Deque<T, Allocator, kDequeSubarraySize>::const_reference
     Deque<T, Allocator, kDequeSubarraySize>::at(size_type n) const {
-        return *(mItBegin.operator+((difference_type) n));
+        return *(_it_begin.operator+((difference_type) n));
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     typename Deque<T, Allocator, kDequeSubarraySize>::reference
     Deque<T, Allocator, kDequeSubarraySize>::front() {
-#if EASTL_ASSERT_ENABLED && EASTL_EMPTY_REFERENCE_ASSERT_ENABLED
-        if (TURBO_UNLIKELY((size_type)(mItEnd == mItBegin)))
-            EASTL_FAIL_MSG("Deque::front -- empty Deque");
-#else
-        // We allow the user to reference an empty container.
-#endif
-
-        return *mItBegin;
+        return *_it_begin;
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     typename Deque<T, Allocator, kDequeSubarraySize>::const_reference
     Deque<T, Allocator, kDequeSubarraySize>::front() const {
-        return *mItBegin;
+        return *_it_begin;
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     typename Deque<T, Allocator, kDequeSubarraySize>::reference
     Deque<T, Allocator, kDequeSubarraySize>::back() {
-#if EASTL_ASSERT_ENABLED
-        // Decrementing an iterator with an empty container will result in undefined behaviour.
-        // specifically: the iterator decrement will apply pointer arithmetic to a nullptr (depending on the situation either mpCurrentArrayPtr or mpBegin).
-        if (TURBO_UNLIKELY((size_type)(mItEnd == mItBegin)))
-            EASTL_FAIL_MSG("Deque::back -- empty Deque");
-#endif
-
-        return *iterator(mItEnd, typename iterator::Decrement());
+        return *iterator(_it_end, typename iterator::Decrement());
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     typename Deque<T, Allocator, kDequeSubarraySize>::const_reference
     Deque<T, Allocator, kDequeSubarraySize>::back() const {
-
-        return *iterator(mItEnd, typename iterator::Decrement());
+        return *iterator(_it_end, typename iterator::Decrement());
     }
 
 
@@ -1522,7 +1449,7 @@ namespace fermat {
     typename Deque<T, Allocator, kDequeSubarraySize>::reference
     Deque<T, Allocator, kDequeSubarraySize>::push_front() {
         emplace_front(value_type());
-        return *mItBegin; // Same as return front();
+        return *_it_begin; // Same as return front();
     }
 
 
@@ -1542,29 +1469,28 @@ namespace fermat {
     typename Deque<T, Allocator, kDequeSubarraySize>::reference
     Deque<T, Allocator, kDequeSubarraySize>::push_back() {
         emplace_back(value_type());
-        return *iterator(mItEnd, typename iterator::Decrement()); // Same thing as return back();
+        return *iterator(_it_end, typename iterator::Decrement()); // Same thing as return back();
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     void Deque<T, Allocator, kDequeSubarraySize>::pop_front() {
-
-        if ((mItBegin.mpCurrent + 1) != mItBegin.mpEnd) // If the operation is very simple...
-            (mItBegin.mpCurrent++)->~value_type();
+        if ((_it_begin._current + 1) != _it_begin._begin + kDequeSubarraySize) // If the operation is very simple...
+            fermat::destroy_at(_it_begin._current++);
         else {
             // This is executed only when we are popping the end (last) item off the front-most subarray.
-            // In this case we need to free the subarray and point mItBegin to the next subarray.
-#ifdef EA_DEBUG
-            value_type **pp = mItBegin.mpCurrentArrayPtr;
+            // In this case we need to free the subarray and point _it_begin to the next subarray.
+#ifdef FERMAT_DEBUG
+            value_type **pp = _it_begin._current_array_ptr;
 #endif
 
-            mItBegin.mpCurrent->~value_type(); // mpCurrent == mpEnd - 1
-            DoFreeSubarray(mItBegin.mpBegin);
-            mItBegin.SetSubarray(mItBegin.mpCurrentArrayPtr + 1);
-            mItBegin.mpCurrent = mItBegin.mpBegin;
+            fermat::destroy_at(_it_begin._current); // _current == _begin + kDequeSubarraySize - 1
+            DoFreeSubarray(_it_begin._begin);
+            _it_begin.set_subarray(_it_begin._current_array_ptr + 1);
+            _it_begin._current = _it_begin._begin;
 
-#ifdef EA_DEBUG
-            *pp = NULL;
+#ifdef FERMAT_DEBUG
+            *pp = nullptr;
 #endif
         }
     }
@@ -1572,24 +1498,24 @@ namespace fermat {
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     void Deque<T, Allocator, kDequeSubarraySize>::pop_back() {
-
-        if (mItEnd.mpCurrent != mItEnd.mpBegin) // If the operation is very simple...
-            (--mItEnd.mpCurrent)->~value_type();
+        if (_it_end._current != _it_end._begin) // If the operation is very simple...
+            fermat::destroy_at(--_it_end._current);
         else {
             // This is executed only when we are popping the first item off the last subarray.
-            // In this case we need to free the subarray and point mItEnd to the previous subarray.
-#ifdef EA_DEBUG
-            value_type **pp = mItEnd.mpCurrentArrayPtr;
+            // In this case we need to free the subarray and point _it_end to the previous subarray.
+#ifdef FERMAT_DEBUG
+            value_type **pp = _it_end._current_array_ptr;
 #endif
 
-            DoFreeSubarray(mItEnd.mpBegin);
-            mItEnd.SetSubarray(mItEnd.mpCurrentArrayPtr - 1);
-            mItEnd.mpCurrent = mItEnd.mpEnd - 1;
-            // Recall that mItEnd points to one-past the last item in the container.
-            mItEnd.mpCurrent->~value_type(); // Thus we need to call the destructor on the item *before* that last item.
+            DoFreeSubarray(_it_end._begin);
+            _it_end.set_subarray(_it_end._current_array_ptr - 1);
+            _it_end._current = _it_end._begin + kDequeSubarraySize - 1;
+            // Recall that _it_end points to one-past the last item in the container.
+            fermat::destroy_at(_it_end._current);
+            // Thus we need to call the destructor on the item *before* that last item.
 
-#ifdef EA_DEBUG
-            *pp = NULL;
+#ifdef FERMAT_DEBUG
+            *pp = nullptr;
 #endif
         }
     }
@@ -1599,43 +1525,43 @@ namespace fermat {
     template<class... Args>
     typename Deque<T, Allocator, kDequeSubarraySize>::iterator
     Deque<T, Allocator, kDequeSubarraySize>::emplace(const_iterator position, Args &&... args) {
-        if (TURBO_UNLIKELY(position.mpCurrent == mItEnd.mpCurrent)) // If we are doing the same thing as push_back...
+        if (TURBO_UNLIKELY(position._current == _it_end._current)) // If we are doing the same thing as push_back...
         {
             emplace_back(std::forward<Args>(args)...);
-            return iterator(mItEnd, typename iterator::Decrement());
+            return iterator(_it_end, typename iterator::Decrement());
             // Unfortunately, we need to make an iterator here, as the above push_back is an operation that can invalidate existing iterators.
-        } else if (TURBO_UNLIKELY(position.mpCurrent == mItBegin.mpCurrent))
+        } else if (TURBO_UNLIKELY(position._current == _it_begin._current))
         // If we are doing the same thing as push_front...
         {
             emplace_front(std::forward<Args>(args)...);
-            return mItBegin;
+            return _it_begin;
         }
 
         iterator itPosition(position, typename iterator::FromConst());
         value_type valueSaved(std::forward<Args>(args)...);
         // We need to save this because value may come from within our container. It would be somewhat tedious to make a workaround that could avoid this.
-        const difference_type i(itPosition - mItBegin);
+        const difference_type i(itPosition - _it_begin);
 
 
         if (i < (difference_type) (size() / 2))
         // Should we insert at the front or at the back? We divide the range in half.
         {
-            emplace_front(std::move(*mItBegin));
-            // This operation potentially invalidates all existing iterators and so we need to assign them anew relative to mItBegin below.
+            emplace_front(std::move(*_it_begin));
+            // This operation potentially invalidates all existing iterators and so we need to assign them anew relative to _it_begin below.
 
-            itPosition = mItBegin + i;
+            itPosition = _it_begin + i;
 
             const iterator newPosition(itPosition, typename iterator::Increment());
-            iterator oldBegin(mItBegin, typename iterator::Increment());
+            iterator oldBegin(_it_begin, typename iterator::Increment());
             const iterator oldBeginPlus1(oldBegin, typename iterator::Increment());
 
             oldBegin.move(oldBeginPlus1, newPosition, std::is_trivially_copyable<value_type>());
         } else {
-            emplace_back(std::move(*iterator(mItEnd, typename iterator::Decrement())));
+            emplace_back(std::move(*iterator(_it_end, typename iterator::Decrement())));
 
-            itPosition = mItBegin + i;
+            itPosition = _it_begin + i;
 
-            iterator oldBack(mItEnd, typename iterator::Decrement());
+            iterator oldBack(_it_end, typename iterator::Decrement());
             const iterator oldBackMinus1(oldBack, typename iterator::Decrement());
 
             oldBack.move_backward(itPosition, oldBackMinus1, std::is_trivially_copyable<value_type>());
@@ -1650,53 +1576,53 @@ namespace fermat {
     template<class... Args>
     typename Deque<T, Allocator, kDequeSubarraySize>::reference Deque<T, Allocator, kDequeSubarraySize>::emplace_front(
         Args &&... args) {
-        if (mItBegin.mpCurrent != mItBegin.mpBegin)
+        if (_it_begin._current != _it_begin._begin)
         // If we have room in the first subarray... we hope that usually this 'new' pathway gets executed, as it is slightly faster.
-            construct_at(--mItBegin.mpCurrent, std::forward<Args>(args)...);
+            construct_at(--_it_begin._current, std::forward<Args>(args)...);
         else {
             // To consider: Detect if value isn't coming from within this container and handle that efficiently.
             value_type valueSaved(std::forward<Args>(args)...);
             // We need to make a temporary, because args may be a value_type that comes from within our container and the operations below may change the container. But we can use move instead of copy.
 
-            if (mItBegin.mpCurrentArrayPtr == mpPtrArray)
+            if (_it_begin._current_array_ptr == _ptr_array)
                 // If there are no more pointers in front of the current (first) one...
                 DoReallocPtrArray(1, kSideFront);
 
-            mItBegin.mpCurrentArrayPtr[-1] = do_allocate_subarray();
+            _it_begin._current_array_ptr[-1] = do_allocate_subarray();
 
-            mItBegin.SetSubarray(mItBegin.mpCurrentArrayPtr - 1);
-            mItBegin.mpCurrent = mItBegin.mpEnd - 1;
-            construct_at(mItBegin.mpCurrent, std::move(valueSaved));
+            _it_begin.set_subarray(_it_begin._current_array_ptr - 1);
+            _it_begin._current = _it_begin._begin + kDequeSubarraySize - 1;
+            construct_at(_it_begin._current, std::move(valueSaved));
         }
 
-        return *mItBegin; // Same as return front();
+        return *_it_begin; // Same as return front();
     }
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     template<class... Args>
     typename Deque<T, Allocator, kDequeSubarraySize>::reference Deque<T, Allocator, kDequeSubarraySize>::emplace_back(
         Args &&... args) {
-        if ((mItEnd.mpCurrent + 1) != mItEnd.mpEnd)
+        if ((_it_end._current + 1) != _it_end._begin + kDequeSubarraySize)
         // If we have room in the last subarray... we hope that usually this 'new' pathway gets executed, as it is slightly faster.
         {
-            reference back = *mItEnd.mpCurrent;
-            construct_at(mItEnd.mpCurrent++, std::forward<Args>(args)...);
+            reference back = *_it_end._current;
+            construct_at(_it_end._current++, std::forward<Args>(args)...);
             return back;
         } else {
             // To consider: Detect if value isn't coming from within this container and handle that efficiently.
             value_type valueSaved(std::forward<Args>(args)...);
             // We need to make a temporary, because args may be a value_type that comes from within our container and the operations below may change the container. But we can use move instead of copy.
-            if (((mItEnd.mpCurrentArrayPtr - mpPtrArray) + 1) >= (difference_type) mnPtrArraySize)
+            if (((_it_end._current_array_ptr - _ptr_array) + 1) >= (difference_type) _ptr_array_size)
                 // If there are no more pointers after the current (last) one.
                 DoReallocPtrArray(1, kSideBack);
 
-            mItEnd.mpCurrentArrayPtr[1] = do_allocate_subarray();
+            _it_end._current_array_ptr[1] = do_allocate_subarray();
 
-            construct_at(mItEnd.mpCurrent, std::move(valueSaved));
-            mItEnd.SetSubarray(mItEnd.mpCurrentArrayPtr + 1);
-            mItEnd.mpCurrent = mItEnd.mpBegin;
+            construct_at(_it_end._current, std::move(valueSaved));
+            _it_end.set_subarray(_it_end._current_array_ptr + 1);
+            _it_end._current = _it_end._begin;
 
-            return *iterator(mItEnd, typename iterator::Decrement()); // Same as return back();
+            return *iterator(_it_end, typename iterator::Decrement()); // Same as return back();
         }
     }
 
@@ -1718,7 +1644,7 @@ namespace fermat {
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     typename Deque<T, Allocator, kDequeSubarraySize>::iterator
     Deque<T, Allocator, kDequeSubarraySize>::insert(const_iterator position, size_type n, const value_type &value) {
-        return DoInsertValues(position, n, value);
+        return do_insert_values(position, n, value);
     }
 
 
@@ -1726,7 +1652,7 @@ namespace fermat {
     template<typename InputIterator>
     typename Deque<T, Allocator, kDequeSubarraySize>::iterator
     Deque<T, Allocator, kDequeSubarraySize>::insert(const_iterator position, InputIterator first, InputIterator last) {
-        return DoInsert(position, first, last, std::is_integral<InputIterator>());
+        return do_insert(position, first, last, std::is_integral<InputIterator>());
         // The C++ standard requires this sort of behaviour, as InputIterator might actually be Integer and 'first' is really 'count' and 'last' is really 'value'.
     }
 
@@ -1734,9 +1660,9 @@ namespace fermat {
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     typename Deque<T, Allocator, kDequeSubarraySize>::iterator
     Deque<T, Allocator, kDequeSubarraySize>::insert(const_iterator position, std::initializer_list<value_type> ilist) {
-        const difference_type i(position - mItBegin);
-        DoInsert(position, ilist.begin(), ilist.end(), std::false_type());
-        return (mItBegin + i);
+        const difference_type i(position - _it_begin);
+        do_insert(position, ilist.begin(), ilist.end(), std::false_type());
+        return (_it_begin + i);
     }
 
 
@@ -1745,19 +1671,19 @@ namespace fermat {
     Deque<T, Allocator, kDequeSubarraySize>::erase(const_iterator position) {
         iterator itPosition(position, typename iterator::FromConst());
         iterator itNext(itPosition, typename iterator::Increment());
-        const difference_type i(itPosition - mItBegin);
+        const difference_type i(itPosition - _it_begin);
 
         if (i < (difference_type) (size() / 2))
         // Should we move the front entries forward or the back entries backward? We divide the range in half.
         {
-            itNext.move_backward(mItBegin, itPosition, std::is_trivially_copyable<value_type>());
+            itNext.move_backward(_it_begin, itPosition, std::is_trivially_copyable<value_type>());
             pop_front();
         } else {
-            itPosition.move(itNext, mItEnd, std::is_trivially_copyable<value_type>());
+            itPosition.move(itNext, _it_end, std::is_trivially_copyable<value_type>());
             pop_back();
         }
 
-        return mItBegin + i;
+        return _it_begin + i;
     }
 
 
@@ -1767,48 +1693,41 @@ namespace fermat {
         iterator itFirst(first, typename iterator::FromConst());
         iterator itLast(last, typename iterator::FromConst());
 
-        if ((itFirst != mItBegin) || (itLast != mItEnd))
+        if ((itFirst != _it_begin) || (itLast != _it_end))
         // If not erasing everything... (We expect that the user won't call erase(begin, end) because instead the user would just call clear.)
         {
             const difference_type n(itLast - itFirst);
-            const difference_type i(itFirst - mItBegin);
+            const difference_type i(itFirst - _it_begin);
 
-            if (i < (difference_type) ((size() - n) / 2))
-            // Should we move the front entries forward or the back entries backward? We divide the range in half.
-            {
-                const iterator itNewBegin(mItBegin + n);
-                value_type **const pPtrArrayBegin = mItBegin.mpCurrentArrayPtr;
+            if (i < (difference_type) ((size() - n) / 2)) {
+                // Should we move the front entries forward or the back entries backward? We divide the range in half.
+                const iterator itNewBegin(_it_begin + n);
+                value_type **const pPtrArrayBegin = _it_begin._current_array_ptr;
 
-                itLast.move_backward(mItBegin, itFirst, std::is_trivially_copyable<value_type>());
+                itLast.move_backward(_it_begin, itFirst, std::is_trivially_copyable<value_type>());
+                fermat::destroy(_it_begin, itNewBegin);
 
-                for (; mItBegin != itNewBegin; ++mItBegin)
-                    // Question: If value_type is a POD type, will the compiler generate this loop at all?
-                    mItBegin.mpCurrent->~value_type();
-                //           If so, then we need to make a specialization for destructing PODs.
+                DoFreeSubarrays(pPtrArrayBegin, itNewBegin._current_array_ptr);
 
-                DoFreeSubarrays(pPtrArrayBegin, itNewBegin.mpCurrentArrayPtr);
+                // _it_begin = itNewBegin; <-- Not necessary, as the above loop makes it so already.
+            } else {
+                // Else we will be moving back entries backward.
+                iterator itNewEnd(_it_end - n);
+                value_type **const pPtrArrayEnd = itNewEnd._current_array_ptr + 1;
 
-                // mItBegin = itNewBegin; <-- Not necessary, as the above loop makes it so already.
-            } else // Else we will be moving back entries backward.
-            {
-                iterator itNewEnd(mItEnd - n);
-                value_type **const pPtrArrayEnd = itNewEnd.mpCurrentArrayPtr + 1;
+                itFirst.move(itLast, _it_end, std::is_trivially_copyable<value_type>());
+                fermat::destroy(itNewEnd, _it_end);
 
-                itFirst.move(itLast, mItEnd, std::is_trivially_copyable<value_type>());
+                DoFreeSubarrays(pPtrArrayEnd, _it_end._current_array_ptr + 1);
 
-                for (iterator itTemp(itNewEnd); itTemp != mItEnd; ++itTemp)
-                    itTemp.mpCurrent->~value_type();
-
-                DoFreeSubarrays(pPtrArrayEnd, mItEnd.mpCurrentArrayPtr + 1);
-
-                mItEnd = itNewEnd;
+                _it_end = itNewEnd;
             }
 
-            return mItBegin + i;
+            return _it_begin + i;
         }
 
         clear();
-        return mItEnd;
+        return _it_end;
     }
 
 
@@ -1836,29 +1755,23 @@ namespace fermat {
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     void Deque<T, Allocator, kDequeSubarraySize>::clear() {
         // Destroy all values and all subarrays they belong to, except for the first one,
-        // as we need to reserve some space for a valid mItBegin/mItEnd.
-        if (mItBegin.mpCurrentArrayPtr != mItEnd.mpCurrentArrayPtr)
-        // If there are multiple subarrays (more often than not, this will be so)...
-        {
-            for (value_type *p1 = mItBegin.mpCurrent; p1 < mItBegin.mpEnd; ++p1)
-                p1->~value_type();
-            for (value_type *p2 = mItEnd.mpBegin; p2 < mItEnd.mpCurrent; ++p2)
-                p2->~value_type();
-            DoFreeSubarray(mItEnd.mpBegin); // Leave mItBegin with a valid subarray.
+        // as we need to reserve some space for a valid _it_begin/_it_end.
+        if (_it_begin._current_array_ptr != _it_end._current_array_ptr) {
+            // If there are multiple subarrays (more often than not, this will be so)...
+            fermat::destroy(_it_begin._current, _it_begin._begin + kDequeSubarraySize);
+            fermat::destroy(_it_end._begin, _it_end._current);
+            DoFreeSubarray(_it_end._begin); // Leave _it_begin with a valid subarray.
         } else {
-            for (value_type *p = mItBegin.mpCurrent; p < mItEnd.mpCurrent; ++p)
-                p->~value_type();
-            // Don't free the one existing subarray, as we need it for mItBegin/mItEnd.
+            fermat::destroy(_it_begin._current, _it_end._current);
         }
 
-        for (value_type **pPtrArray = mItBegin.mpCurrentArrayPtr + 1; pPtrArray < mItEnd.mpCurrentArrayPtr; ++
+        for (value_type **pPtrArray = _it_begin._current_array_ptr + 1; pPtrArray < _it_end._current_array_ptr; ++
              pPtrArray) {
-            for (value_type *p = *pPtrArray, *pEnd = *pPtrArray + kDequeSubarraySize; p < pEnd; ++p)
-                p->~value_type();
+            fermat::destroy(*pPtrArray, *pPtrArray + kDequeSubarraySize);
             DoFreeSubarray(*pPtrArray);
         }
 
-        mItEnd = mItBegin; // mItBegin/mItEnd will not be dereferencable.
+        _it_end = _it_begin; // _it_begin/_it_end will not be dereferencable.
     }
 
 
@@ -1872,62 +1785,41 @@ namespace fermat {
     //
     //    // Currently we are unable to get this reset_lose_memory operation to work correctly
     //    // as we haven't been able to find a good way to have a Deque initialize
-    //    // without allocating memory. We can lose the old memory, but DoInit
+    //    // without allocating memory. We can lose the old memory, but do_init
     //    // would necessarily do a ptrArray allocation. And this is not within
     //    // our definition of how reset_lose_memory works.
-    //    base_type::DoInit(0);
+    //    base_type::do_init(0);
     //
     //}
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    void Deque<T, Allocator, kDequeSubarraySize>::swap(Deque &x) {
-#if defined(EASTL_DEQUE_LEGACY_SWAP_BEHAVIOUR_REQUIRES_COPY_CTOR) && EASTL_DEQUE_LEGACY_SWAP_BEHAVIOUR_REQUIRES_COPY_CTOR
-        if (mAllocator == x.mAllocator) // If allocators are equivalent...
-            DoSwap(x);
-        else // else swap the contents.
-        {
-            const this_type temp(*this); // Can't call std::swap because that would
-            *this = x; // itself call this member swap function.
-            x = temp;
-        }
-#else
-        // NOTE(rparolin): The previous implementation required T to be copy-constructible in the fall-back case where
-        // allocators with unique instances copied elements.  This was an unnecessary restriction and prevented the common
-        // usage of Deque with non-copyable types (eg. std::Deque<non_copyable> or std::Deque<unique_ptr>).
-        //
-        // The previous implementation violated the following requirements of Deque::swap so the fall-back code has
-        // been removed.  EASTL implicitly defines 'propagate_on_container_swap = true' therefore the fall-back case is
-        // not required.  We simply swap the contents and the allocator as that is the common expectation of
-        // users and does not put the container into an invalid state since it can not free its memory via its current
-        // allocator instance.
-        //
-        DoSwap(x);
-#endif
+    void Deque<T, Allocator, kDequeSubarraySize>::swap(Deque &x) noexcept {
+        do_swap(x);
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     template<typename Integer>
-    void Deque<T, Allocator, kDequeSubarraySize>::DoInit(Integer n, Integer value, std::true_type) {
-        base_type::DoInit(n); // Call the base uninitialized init function.
-        DoFillInit(value);
+    void Deque<T, Allocator, kDequeSubarraySize>::do_init(Integer n, Integer value, std::true_type) {
+        base_type::do_init(n); // Call the base uninitialized init function.
+        do_fill_init(value);
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     template<typename InputIterator>
-    void Deque<T, Allocator, kDequeSubarraySize>::DoInit(InputIterator first, InputIterator last, std::false_type) {
+    void Deque<T, Allocator, kDequeSubarraySize>::do_init(InputIterator first, InputIterator last, std::false_type) {
         typedef typename std::iterator_traits<InputIterator>::iterator_category IC;
-        DoInitFromIterator(first, last, IC());
+        do_init_from_iterator(first, last, IC());
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     template<typename InputIterator>
-    void Deque<T, Allocator, kDequeSubarraySize>::DoInitFromIterator(InputIterator first, InputIterator last,
-                                                                     std::input_iterator_tag) {
-        base_type::DoInit(0); // Call the base uninitialized init function, but don't actually allocate any values.
+    void Deque<T, Allocator, kDequeSubarraySize>::do_init_from_iterator(InputIterator first, InputIterator last,
+                                                                        std::input_iterator_tag) {
+        base_type::do_init(0); // Call the base uninitialized init function, but don't actually allocate any values.
 
         // We have little choice but to iterate through the source iterator and call
         // push_back for each item. It can be slow because it will keep reallocating the
@@ -1939,24 +1831,23 @@ namespace fermat {
             push_back(*first);
             // Luckily, InputIterators are in practice almost never used, so this code will likely never get executed.
         }
-
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     template<typename ForwardIterator>
-    void Deque<T, Allocator, kDequeSubarraySize>::DoInitFromIterator(ForwardIterator first, ForwardIterator last,
-                                                                     std::forward_iterator_tag) {
+    void Deque<T, Allocator, kDequeSubarraySize>::do_init_from_iterator(ForwardIterator first, ForwardIterator last,
+                                                                        std::forward_iterator_tag) {
         typedef typename std::remove_const<ForwardIterator>::type non_const_iterator_type;
         // If T is a const type (e.g. const int) then we need to initialize it as if it were non-const.
         typedef typename std::remove_const<value_type>::type non_const_value_type;
 
-        const size_type n = (size_type) std::distance(first, last);
+        auto const n = (size_type) std::distance(first, last);
         value_type **pPtrArrayCurrent;
 
-        base_type::DoInit(n); // Call the base uninitialized init function.
+        base_type::do_init(n); // Call the base uninitialized init function.
 
-        for (pPtrArrayCurrent = mItBegin.mpCurrentArrayPtr; pPtrArrayCurrent < mItEnd.mpCurrentArrayPtr; ++
+        for (pPtrArrayCurrent = _it_begin._current_array_ptr; pPtrArrayCurrent < _it_end._current_array_ptr; ++
              pPtrArrayCurrent) // Copy to the known-to-be-completely-used subarrays.
         {
             // We implment an algorithm here whereby we use uninitialized_copy() and advance() instead of just iterating from first to last and constructing as we go.
@@ -1971,41 +1862,39 @@ namespace fermat {
         }
 
         std::uninitialized_copy((non_const_iterator_type) first, (non_const_iterator_type) last,
-                                (non_const_value_type *) mItEnd.mpBegin);
-
+                                (non_const_value_type *) _it_end._begin);
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    void Deque<T, Allocator, kDequeSubarraySize>::DoFillInit(const value_type &value) {
-        value_type **pPtrArrayCurrent = mItBegin.mpCurrentArrayPtr;
+    void Deque<T, Allocator, kDequeSubarraySize>::do_fill_init(const value_type &value) {
+        value_type **pPtrArrayCurrent = _it_begin._current_array_ptr;
 
-        while (pPtrArrayCurrent < mItEnd.mpCurrentArrayPtr) {
-            std::uninitialized_fill(*pPtrArrayCurrent, *pPtrArrayCurrent + kDequeSubarraySize, value);
+        while (pPtrArrayCurrent < _it_end._current_array_ptr) {
+            fermat::uninitialized_fill(*pPtrArrayCurrent, *pPtrArrayCurrent + kDequeSubarraySize, value);
             ++pPtrArrayCurrent;
         }
-        std::uninitialized_fill(mItEnd.mpBegin, mItEnd.mpCurrent, value);
-
+        fermat::uninitialized_fill(_it_end._begin, _it_end._current, value);
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     template<typename Integer>
-    void Deque<T, Allocator, kDequeSubarraySize>::DoAssign(Integer n, Integer value, std::true_type)
+    void Deque<T, Allocator, kDequeSubarraySize>::do_assign(Integer n, Integer value, std::true_type)
     // std::false_type means this is the integer version instead of iterator version.
     {
-        DoAssignValues(static_cast<size_type>(n), static_cast<value_type>(value));
+        do_assign_values(static_cast<size_type>(n), static_cast<value_type>(value));
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     template<typename InputIterator>
-    void Deque<T, Allocator, kDequeSubarraySize>::DoAssign(InputIterator first, InputIterator last, std::false_type)
-    // std::false_type means this is the iterator version instead of integer version.
-    {
+    void Deque<T, Allocator, kDequeSubarraySize>::do_assign(InputIterator first, InputIterator last, std::false_type) {
+        // std::false_type means this is the iterator version instead of integer version.
+
         // Actually, the implementation below requires first/last to be a ForwardIterator and not just an InputIterator.
         // But Paul Pedriana if you somehow need to work with an InputIterator and we can deal with it.
-        const size_type n = (size_type) std::distance(first, last);
+        auto const n = (size_type) std::distance(first, last);
         const size_type nSize = size();
 
         if (n > nSize) // If we are increasing the size...
@@ -2013,29 +1902,29 @@ namespace fermat {
             InputIterator atEnd(first);
 
             std::advance(atEnd, (difference_type) nSize);
-            std::copy(first, atEnd, mItBegin);
-            insert(mItEnd, atEnd, last);
+            std::copy(first, atEnd, _it_begin);
+            insert(_it_end, atEnd, last);
         } else // n is <= size.
         {
-            iterator itEnd(std::copy(first, last, mItBegin));
+            iterator itEnd(std::copy(first, last, _it_begin));
 
             if (n < nSize) // If we need to erase any trailing elements...
-                erase(itEnd, mItEnd);
+                erase(itEnd, _it_end);
         }
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    void Deque<T, Allocator, kDequeSubarraySize>::DoAssignValues(size_type n, const value_type &value) {
+    void Deque<T, Allocator, kDequeSubarraySize>::do_assign_values(size_type n, const value_type &value) {
         const size_type nSize = size();
 
         if (n > nSize) // If we are increasing the size...
         {
-            std::fill(mItBegin, mItEnd, value);
-            insert(mItEnd, n - nSize, value);
+            std::fill(_it_begin, _it_end, value);
+            insert(_it_end, n - nSize, value);
         } else {
-            erase(mItBegin + (difference_type) n, mItEnd);
-            std::fill(mItBegin, mItEnd, value);
+            erase(_it_begin + (difference_type) n, _it_end);
+            std::fill(_it_begin, _it_end, value);
         }
     }
 
@@ -2043,26 +1932,28 @@ namespace fermat {
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     template<typename Integer>
     typename Deque<T, Allocator, kDequeSubarraySize>::iterator
-    Deque<T, Allocator, kDequeSubarraySize>::DoInsert(const const_iterator &position, Integer n, Integer value,
-                                                      std::true_type) {
-        return DoInsertValues(position, (size_type) n, (value_type) value);
+    Deque<T, Allocator, kDequeSubarraySize>::do_insert(const const_iterator &position, Integer n, Integer value,
+                                                       std::true_type) {
+        return do_insert_values(position, (size_type) n, (value_type) value);
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     template<typename InputIterator>
     typename Deque<T, Allocator, kDequeSubarraySize>::iterator
-    Deque<T, Allocator, kDequeSubarraySize>::DoInsert(const const_iterator &position, const InputIterator &first,
-                                                      const InputIterator &last, std::false_type) {
+    Deque<T, Allocator, kDequeSubarraySize>::do_insert(const const_iterator &position, const InputIterator &first,
+                                                       const InputIterator &last, std::false_type) {
         typedef typename std::iterator_traits<InputIterator>::iterator_category IC;
-        return DoInsertFromIterator(position, first, last, IC());
+        return do_insert_from_iterator(position, first, last, IC());
     }
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     template<typename InputIterator>
     typename Deque<T, Allocator, kDequeSubarraySize>::iterator
-    Deque<T, Allocator, kDequeSubarraySize>::DoInsertFromIterator(const_iterator position, const InputIterator &first,
-                                                                  const InputIterator &last, std::input_iterator_tag) {
+    Deque<T, Allocator, kDequeSubarraySize>::do_insert_from_iterator(const_iterator position,
+                                                                     const InputIterator &first,
+                                                                     const InputIterator &last,
+                                                                     std::input_iterator_tag) {
         const difference_type index = std::distance(cbegin(), position);
         // We have little choice but to iterate through the source iterator and call
         // insert for each item. It can be slow because it will keep reallocating the
@@ -2082,130 +1973,129 @@ namespace fermat {
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     template<typename ForwardIterator>
     typename Deque<T, Allocator, kDequeSubarraySize>::iterator
-    Deque<T, Allocator, kDequeSubarraySize>::DoInsertFromIterator(const_iterator position, const ForwardIterator &first,
-                                                                  const ForwardIterator &last,
-                                                                  std::forward_iterator_tag) {
+    Deque<T, Allocator, kDequeSubarraySize>::do_insert_from_iterator(const_iterator position,
+                                                                     const ForwardIterator &first,
+                                                                     const ForwardIterator &last,
+                                                                     std::forward_iterator_tag) {
         const size_type n = (size_type) std::distance(first, last);
 
-        // This implementation is nearly identical to DoInsertValues below.
+        // This implementation is nearly identical to do_insert_values below.
         // If you make a bug fix to one, you will likely want to fix the other.
-        if (position.mpCurrent == mItBegin.mpCurrent) // If inserting at the beginning or into an empty container...
-        {
-            iterator itNewBegin(DoReallocSubarray(n, kSideFront));
-            // itNewBegin to mItBegin refers to memory that isn't initialized yet; so it's not truly a valid iterator. Or at least not a dereferencable one.
+        if (position._current == _it_begin._current) {
+            // If inserting at the beginning or into an empty container...
+            iterator itNewBegin(do_realloc_subarray(n, kSideFront));
+            // itNewBegin to _it_begin refers to memory that isn't initialized yet; so it's not truly a valid iterator. Or at least not a dereferencable one.
             // We would like to use move here instead of copy when possible, which would be useful for
             // when inserting from a std::initializer_list, for example.
             // To do: solve this by having a template or runtime parameter which specifies move vs copy.
             std::uninitialized_copy(first, last, itNewBegin);
-            mItBegin = itNewBegin;
+            _it_begin = itNewBegin;
 
-            return mItBegin;
-        } else if (TURBO_UNLIKELY(position.mpCurrent == mItEnd.mpCurrent))
-        // If inserting at the end (i.e. appending)...
-        {
-            const iterator itNewEnd(DoReallocSubarray(n, kSideBack));
-            // mItEnd to itNewEnd refers to memory that isn't initialized yet; so it's not truly a valid iterator. Or at least not a dereferencable one.
-            const iterator itFirstInserted(mItEnd);
+            return _it_begin;
+        } else if (TURBO_UNLIKELY(position._current == _it_end._current)) {
+            // If inserting at the end (i.e. appending)...
+
+            const iterator itNewEnd(do_realloc_subarray(n, kSideBack));
+            // _it_end to itNewEnd refers to memory that isn't initialized yet; so it's not truly a valid iterator. Or at least not a dereferencable one.
+            const iterator itFirstInserted(_it_end);
             // We would like to use move here instead of copy when possible, which would be useful for
             // when inserting from a std::initializer_list, for example.
             // To do: solve this by having a template or runtime parameter which specifies move vs copy.
-            std::uninitialized_copy(first, last, mItEnd);
-            mItEnd = itNewEnd;
+            std::uninitialized_copy(first, last, _it_end);
+            _it_end = itNewEnd;
 
             return itFirstInserted;
         } else {
-            const difference_type nInsertionIndex = position - mItBegin;
+            const difference_type nInsertionIndex = position - _it_begin;
             const size_type nSize = size();
 
-            if (nInsertionIndex < (difference_type) (nSize / 2))
-            // If the insertion index is in the front half of the Deque... grow the Deque at the front.
-            {
-                const iterator itNewBegin(DoReallocSubarray(n, kSideFront));
-                // itNewBegin to mItBegin refers to memory that isn't initialized yet; so it's not truly a valid iterator. Or at least not a dereferencable one.
-                const iterator itOldBegin(mItBegin);
-                const iterator itPosition(mItBegin + nInsertionIndex);
+            if (nInsertionIndex < (difference_type) (nSize / 2)) {
+                // If the insertion index is in the front half of the Deque... grow the Deque at the front.
+
+                const iterator itNewBegin(do_realloc_subarray(n, kSideFront));
+                // itNewBegin to _it_begin refers to memory that isn't initialized yet; so it's not truly a valid iterator. Or at least not a dereferencable one.
+                const iterator itOldBegin(_it_begin);
+                const iterator itPosition(_it_begin + nInsertionIndex);
                 // We need to reset this value because the reallocation above can invalidate iterators.
 
                 // We have a problem here: we would like to use move instead of copy, but it may be that the range to be inserted comes from
                 // this container and comes from the segment we need to move. So we can't use move operations unless we are careful to handle
                 // that situation. The newly inserted contents must be contents that were moved to and not moved from. To do: solve this.
-                if (nInsertionIndex >= (difference_type) n)
-                // If the newly inserted items will be entirely within the old area...
-                {
-                    iterator itUCopyEnd(mItBegin + (difference_type) n);
+                if (nInsertionIndex >= (difference_type) n) {
+                    // If the newly inserted items will be entirely within the old area...
+                    iterator itUCopyEnd(_it_begin + (difference_type) n);
 
-                    std::uninitialized_copy(mItBegin, itUCopyEnd, itNewBegin); // This can throw.
+                    std::uninitialized_copy(_it_begin, itUCopyEnd, itNewBegin); // This can throw.
                     itUCopyEnd = std::copy(itUCopyEnd, itPosition, itOldBegin);
                     // Recycle 'itUCopyEnd' to mean something else.
                     std::copy(first, last, itUCopyEnd);
-                } else // Else the newly inserted items are going within the newly allocated area at the front.
-                {
+                } else {
+                    // Else the newly inserted items are going within the newly allocated area at the front.
                     ForwardIterator mid(first);
 
                     std::advance(mid, (difference_type) n - nInsertionIndex);
-                    uninitialized_copy_copy(mItBegin, itPosition, first, mid, itNewBegin); // This can throw.
+                    uninitialized_copy_copy(_it_begin, itPosition, first, mid, itNewBegin); // This can throw.
                     std::copy(mid, last, itOldBegin);
                 }
-                mItBegin = itNewBegin;
+                _it_begin = itNewBegin;
             } else {
-                const iterator itNewEnd(DoReallocSubarray(n, kSideBack));
-                const iterator itOldEnd(mItEnd);
+                const iterator itNewEnd(do_realloc_subarray(n, kSideBack));
+                const iterator itOldEnd(_it_end);
                 const difference_type nPushedCount = (difference_type) nSize - nInsertionIndex;
-                const iterator itPosition(mItEnd - nPushedCount);
+                const iterator itPosition(_it_end - nPushedCount);
                 // We need to reset this value because the reallocation above can invalidate iterators.
 
                 // We have a problem here: we would like to use move instead of copy, but it may be that the range to be inserted comes from
                 // this container and comes from the segment we need to move. So we can't use move operations unless we are careful to handle
                 // that situation. The newly inserted contents must be contents that were moved to and not moved from. To do: solve this.
                 if (nPushedCount > (difference_type) n) {
-                    const iterator itUCopyEnd(mItEnd - (difference_type) n);
+                    const iterator itUCopyEnd(_it_end - (difference_type) n);
 
-                    std::uninitialized_copy(itUCopyEnd, mItEnd, mItEnd);
+                    std::uninitialized_copy(itUCopyEnd, _it_end, _it_end);
                     std::copy_backward(itPosition, itUCopyEnd, itOldEnd);
                     std::copy(first, last, itPosition);
                 } else {
                     ForwardIterator mid(first);
 
                     std::advance(mid, nPushedCount);
-                    uninitialized_copy_copy(mid, last, itPosition, mItEnd, mItEnd);
+                    uninitialized_copy_copy(mid, last, itPosition, _it_end, _it_end);
                     std::copy(first, mid, itPosition);
                 }
-                mItEnd = itNewEnd;
+                _it_end = itNewEnd;
             }
 
-            return iterator(mItBegin + nInsertionIndex);
+            return iterator(_it_begin + nInsertionIndex);
         }
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     typename Deque<T, Allocator, kDequeSubarraySize>::iterator
-    Deque<T, Allocator, kDequeSubarraySize>::DoInsertValues(const_iterator position, size_type n,
-                                                            const value_type &value) {
-        // This implementation is nearly identical to DoInsertFromIterator above.
+    Deque<T, Allocator, kDequeSubarraySize>::do_insert_values(const_iterator position, size_type n,
+                                                              const value_type &value) {
+        // This implementation is nearly identical to do_insert_from_iterator above.
         // If you make a bug fix to one, you will likely want to fix the other.
-        if (position.mpCurrent == mItBegin.mpCurrent) // If inserting at the beginning...
-        {
-            const iterator itNewBegin(DoReallocSubarray(n, kSideFront));
+        if (position._current == _it_begin._current) {
+            // If inserting at the beginning...
+            const iterator itNewBegin(do_realloc_subarray(n, kSideFront));
 
             // Note that we don't make a temp copy of 'value' here. This is because in a
             // Deque, insertion at either the front or back doesn't cause a reallocation
             // or move of data in the middle. That's a key feature of deques, in fact.
-            std::uninitialized_fill(itNewBegin, mItBegin, value);
-            mItBegin = itNewBegin;
+            fermat::uninitialized_fill(itNewBegin, _it_begin, value);
+            _it_begin = itNewBegin;
 
-            return mItBegin;
-        } else if (TURBO_UNLIKELY(position.mpCurrent == mItEnd.mpCurrent))
-        // If inserting at the end (i.e. appending)...
-        {
-            const iterator itNewEnd(DoReallocSubarray(n, kSideBack));
-            const iterator itFirstInserted(mItEnd);
+            return _it_begin;
+        } else if (TURBO_UNLIKELY(position._current == _it_end._current)) {
+            // If inserting at the end (i.e. appending)...
+            const iterator itNewEnd(do_realloc_subarray(n, kSideBack));
+            const iterator itFirstInserted(_it_end);
 
             // Note that we don't make a temp copy of 'value' here. This is because in a
             // Deque, insertion at either the front or back doesn't cause a reallocation
             // or move of data in the middle. That's a key feature of deques, in fact.
-            std::uninitialized_fill(mItEnd, itNewEnd, value);
-            mItEnd = itNewEnd;
+            fermat::uninitialized_fill(_it_end, itNewEnd, value);
+            _it_end = itNewEnd;
 
             return itFirstInserted;
         } else {
@@ -2215,73 +2105,71 @@ namespace fermat {
             // all values in the middle upward like you would do with a vector. Instead we implement
             // the minimum amount of reallocations needed but may need to do some value moving,
             // as the subarray sizes need to remain constant and can have no holes in them.
-            const difference_type nInsertionIndex = position - mItBegin;
+            const difference_type nInsertionIndex = position - _it_begin;
             const size_type nSize = size();
             const value_type valueSaved(value);
 
-            if (nInsertionIndex < (difference_type) (nSize / 2))
-            // If the insertion index is in the front half of the Deque... grow the Deque at the front.
-            {
-                const iterator itNewBegin(DoReallocSubarray(n, kSideFront));
-                const iterator itOldBegin(mItBegin);
-                const iterator itPosition(mItBegin + nInsertionIndex);
+            if (nInsertionIndex < (difference_type) (nSize / 2)) {
+                // If the insertion index is in the front half of the Deque... grow the Deque at the front.
+                const iterator itNewBegin(do_realloc_subarray(n, kSideFront));
+                const iterator itOldBegin(_it_begin);
+                const iterator itPosition(_it_begin + nInsertionIndex);
                 // We need to reset this value because the reallocation above can invalidate iterators.
 
-                if (nInsertionIndex >= (difference_type) n)
-                // If the newly inserted items will be entirely within the old area...
-                {
-                    iterator itUCopyEnd(mItBegin + (difference_type) n);
+                if (nInsertionIndex >= (difference_type) n) {
+                    // If the newly inserted items will be entirely within the old area...
+                    iterator itUCopyEnd(_it_begin + (difference_type) n);
 
-                    std::uninitialized_move(mItBegin, itUCopyEnd, itNewBegin); // This can throw.
+                    std::uninitialized_move(_it_begin, itUCopyEnd, itNewBegin); // This can throw.
                     itUCopyEnd = std::move(itUCopyEnd, itPosition, itOldBegin);
                     // Recycle 'itUCopyEnd' to mean something else.
                     std::fill(itUCopyEnd, itPosition, valueSaved);
-                } else // Else the newly inserted items are going within the newly allocated area at the front.
-                {
-                    std::uninitialized_fill(mItBegin, itPosition, itNewBegin, mItBegin, valueSaved); // This can throw.
+                } else {
+                    // Else the newly inserted items are going within the newly allocated area at the front.
+                    fermat::uninitialized_fill(_it_begin, itPosition, itNewBegin, _it_begin, valueSaved);
+                    // This can throw.
                     std::fill(itOldBegin, itPosition, valueSaved);
                 }
-                mItBegin = itNewBegin;
+                _it_begin = itNewBegin;
 
-                return iterator(mItBegin + nInsertionIndex);
-            } else // Else the insertion index is in the back half of the Deque, so grow the Deque at the back.
-            {
-                const iterator itNewEnd(DoReallocSubarray(n, kSideBack));
-                const iterator itOldEnd(mItEnd);
+                return iterator(_it_begin + nInsertionIndex);
+            } else {
+                // Else the insertion index is in the back half of the Deque, so grow the Deque at the back.
+                const iterator itNewEnd(do_realloc_subarray(n, kSideBack));
+                const iterator itOldEnd(_it_end);
                 const difference_type nPushedCount = (difference_type) nSize - nInsertionIndex;
-                const iterator itPosition(mItEnd - nPushedCount);
+                const iterator itPosition(_it_end - nPushedCount);
                 // We need to reset this value because the reallocation above can invalidate iterators.
 
-                if (nPushedCount > (difference_type) n)
-                // If the newly inserted items will be entirely within the old area...
-                {
-                    iterator itUCopyEnd(mItEnd - (difference_type) n);
+                if (nPushedCount > (difference_type) n) {
+                    // If the newly inserted items will be entirely within the old area...
+                    iterator itUCopyEnd(_it_end - (difference_type) n);
 
-                    std::uninitialized_move(itUCopyEnd, mItEnd, mItEnd); // This can throw.
+                    std::uninitialized_move(itUCopyEnd, _it_end, _it_end); // This can throw.
                     itUCopyEnd = std::move_backward(itPosition, itUCopyEnd, itOldEnd);
                     // Recycle 'itUCopyEnd' to mean something else.
                     std::fill(itPosition, itUCopyEnd, valueSaved);
-                } else // Else the newly inserted items are going within the newly allocated area at the back.
-                {
-                    std::uninitialized_move(mItEnd, itPosition + (difference_type) n, valueSaved, itPosition, mItEnd);
+                } else {
+                    // Else the newly inserted items are going within the newly allocated area at the back.
+                    std::uninitialized_move(_it_end, itPosition + (difference_type) n, valueSaved, itPosition, _it_end);
                     // This can throw.
                     std::fill(itPosition, itOldEnd, valueSaved);
                 }
-                mItEnd = itNewEnd;
+                _it_end = itNewEnd;
 
-                return iterator(mItBegin + nInsertionIndex);
+                return iterator(_it_begin + nInsertionIndex);
             }
         }
     }
 
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline void Deque<T, Allocator, kDequeSubarraySize>::DoSwap(this_type &x) {
-        std::swap(mpPtrArray, x.mpPtrArray);
-        std::swap(mnPtrArraySize, x.mnPtrArraySize);
-        std::swap(mItBegin, x.mItBegin);
-        std::swap(mItEnd, x.mItEnd);
-        std::swap(mAllocator, x.mAllocator); // We do this even if EASTL_ALLOCATOR_COPY_ENABLED is 0.
+    inline void Deque<T, Allocator, kDequeSubarraySize>::do_swap(this_type &x) {
+        std::swap(_ptr_array, x._ptr_array);
+        std::swap(_ptr_array_size, x._ptr_array_size);
+        std::swap(_it_begin, x._it_begin);
+        std::swap(_it_end, x._it_end);
+        std::swap(_allocator, x._allocator);
     }
 
 
@@ -2305,15 +2193,6 @@ namespace fermat {
         return ((a.size() == b.size()) && std::equal(a.begin(), a.end(), b.begin()));
     }
 
-#if defined(EA_COMPILER_HAS_THREE_WAY_COMPARISON)
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline synth_three_way_result<T> operator<=>(const Deque<T, Allocator, kDequeSubarraySize> &a, const Deque<T,
-        Allocator, kDequeSubarraySize> &b)
-	{
-	    return std::lexicographical_compare_three_way(a.begin(), a.end(), b.begin(), b.end(), synth_three_way{});
-	}
-
-#else
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     inline bool operator!=(const Deque<T, Allocator, kDequeSubarraySize> &a,
                            const Deque<T, Allocator, kDequeSubarraySize> &b) {
@@ -2343,7 +2222,6 @@ namespace fermat {
                            const Deque<T, Allocator, kDequeSubarraySize> &b) {
         return !(a < b);
     }
-#endif
 
     template<typename T, typename Allocator, unsigned kDequeSubarraySize>
     inline void swap(Deque<T, Allocator, kDequeSubarraySize> &a, Deque<T, Allocator, kDequeSubarraySize> &b) {
@@ -2363,12 +2241,6 @@ namespace fermat {
         auto numRemoved = std::distance(newEnd, origEnd);
         c.erase(newEnd, origEnd);
 
-        // Note: This is technically a lossy conversion when size_type
-        // is 32bits and ptrdiff_t is 64bits (could happen on 64bit
-        // systems when EASTL_SIZE_T_32BIT is set). In practice this
-        // is fine because if EASTL_SIZE_T_32BIT is set then the Deque
-        // should not have more elements than fit in a uint32_t and so
-        // the distance here should fit in a size_type.
         return static_cast<typename Deque<T, Allocator>::size_type>(numRemoved);
     }
 
@@ -2380,12 +2252,6 @@ namespace fermat {
         auto numRemoved = std::distance(newEnd, origEnd);
         c.erase(newEnd, origEnd);
 
-        // Note: This is technically a lossy conversion when size_type
-        // is 32bits and ptrdiff_t is 64bits (could happen on 64bit
-        // systems when EASTL_SIZE_T_32BIT is set). In practice this
-        // is fine because if EASTL_SIZE_T_32BIT is set then the Deque
-        // should not have more elements than fit in a uint32_t and so
-        // the distance here should fit in a size_type.
         return static_cast<typename Deque<T, Allocator>::size_type>(numRemoved);
     }
 
@@ -2431,12 +2297,7 @@ namespace fermat {
         auto numRemoved = distance(itRemove, origEnd);
         c.erase(itRemove, origEnd);
 
-        // Note: This is technically a lossy conversion when size_type
-        // is 32bits and ptrdiff_t is 64bits (could happen on 64bit
-        // systems when EASTL_SIZE_T_32BIT is set). In practice this
-        // is fine because if EASTL_SIZE_T_32BIT is set then the Deque
-        // should not have more elements than fit in a uint32_t and so
-        // the distance here should fit in a size_type.
+
         return static_cast<typename Deque<T, Allocator>::size_type>(numRemoved);
     }
 
@@ -2481,12 +2342,6 @@ namespace fermat {
         auto numRemoved = distance(itRemove, origEnd);
         c.erase(itRemove, origEnd);
 
-        // Note: This is technically a lossy conversion when size_type
-        // is 32bits and ptrdiff_t is 64bits (could happen on 64bit
-        // systems when EASTL_SIZE_T_32BIT is set). In practice this
-        // is fine because if EASTL_SIZE_T_32BIT is set then the Deque
-        // should not have more elements than fit in a uint32_t and so
-        // the distance here should fit in a size_type.
         return static_cast<typename Deque<T, Allocator>::size_type>(numRemoved);
     }
 } // namespace fermat

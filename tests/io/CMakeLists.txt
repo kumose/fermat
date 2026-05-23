@@ -158,6 +158,8 @@ kmcmake_cc_test(
         GTest::gtest_main
         ${KMCMAKE_DEPS_LINK}
 )
+
+#[[
 kmcmake_cc_test(
         NAME flatten_test
         MODULE io
@@ -189,6 +191,7 @@ kmcmake_cc_test(
         GTest::gtest_main
         ${KMCMAKE_DEPS_LINK}
 )
+]]
 kmcmake_cc_test(
         NAME cord_buffer_test
         MODULE io

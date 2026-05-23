@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <fermat/io/peeker.h>
+#include <fermat/container/peeker.h>
 #include <fermat/io/iobuf.h>
 #include <fermat/container/buffer.h>
 #include <fermat/container/vector.h>
@@ -22,7 +22,7 @@
 #include <vector>
 
 namespace fermat {
-    using TestIOBuf = IOBuf<64, 4096>;
+    using TestIOBuf = CordBufferBase<64, 4096>;
     using TestPeeker = Peeker<TestIOBuf>;
     using StringViewPeeker = Peeker<std::string_view>;
     using StringPeeker = Peeker<std::string>;

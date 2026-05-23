@@ -1605,7 +1605,7 @@ namespace fermat {
             std::move_backward(destPosition, _end - 1, _end);
 
             /// Destroy the original element at destPosition
-            destroy_at(destPosition);
+            fermat::destroy_at(destPosition);
 
             /// Move-construct the new value into place
             construct_at(destPosition, std::move(value));

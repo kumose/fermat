@@ -3,7 +3,7 @@
 
 #include <benchmark/benchmark.h>
 #include <deque>
-#include <../examples/deque.h>
+#include <fermat/container/deque.h>
 
 constexpr int64_t kSize = 100000;    // Number of elements for bulk tests
 constexpr int64_t kSmallSize = 1000; // For insert/erase overhead

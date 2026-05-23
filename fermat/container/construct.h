@@ -28,10 +28,6 @@ namespace fermat {
     using std::uninitialized_default_construct_n;
     using std::uninitialized_value_construct;
     using std::uninitialized_value_construct_n;
-    using std::destroy_at;
-    using std::destroy;
-    using std::destroy_n;
-    using std::uninitialized_fill;
     using std::uninitialized_fill_n;
 
 
@@ -60,5 +56,31 @@ namespace fermat {
         const ForwardIterator mid(std::uninitialized_copy(first1, last1, result));
 
         return std::uninitialized_copy(first2, last2, mid);
+    }
+
+    template <typename T>
+    constexpr void destroy_at(T * p) {
+        if constexpr (!std::is_trivially_destructible<T>::value) {
+            ::std::destroy_at(p);
+        }
+    }
+
+    template <typename ForwardIterator>
+    constexpr void destroy(ForwardIterator first, ForwardIterator last) {
+        if constexpr (!std::is_trivially_destructible<typename std::iterator_traits<ForwardIterator>::value_type>::value) {
+            ::std::destroy(first, last);
+        }
+    }
+
+    template<typename ForwardIterator, typename T>
+    inline void uninitialized_fill(ForwardIterator first, ForwardIterator last,
+               const T& x) {
+        if constexpr (std::is_trivial_v<T>) {
+            for (; first != last; ++first) {
+                *first = x;
+            }
+        } else {
+            std::uninitialized_fill(first, last, x);
+        }
     }
 }  // namespace fermat

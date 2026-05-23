@@ -422,4 +422,5 @@ namespace fermat {
     public:
         Container storage;
     };
+
 } // namespace fermat

@@ -227,7 +227,7 @@ kmcmake_cc_bm(
 
 
 kmcmake_cc_bm(
-        NAME LruCache
+        NAME lru_cache
         MODULE mem
         SOURCES
         lru_cache.cc
@@ -274,7 +274,7 @@ kmcmake_cc_bm(
         benchmark::benchmark
         ${KMCMAKE_DEPS_LINK}
 )
-#[[
+
 kmcmake_cc_bm(
         NAME deque_bench.cc
         MODULE mem
@@ -290,7 +290,41 @@ kmcmake_cc_bm(
         benchmark::benchmark
         ${KMCMAKE_DEPS_LINK}
 )
-]]
+
+
+kmcmake_cc_bm(
+        NAME list_bench
+        MODULE mem
+        SOURCES
+        list_bench.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        benchmark::benchmark_main
+        benchmark::benchmark
+        ${KMCMAKE_DEPS_LINK}
+)
+
+
+kmcmake_cc_bm(
+        NAME bitset_bench
+        MODULE mem
+        SOURCES
+        bitset_bench.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        benchmark::benchmark_main
+        benchmark::benchmark
+        ${KMCMAKE_DEPS_LINK}
+)
+
 
 
 #[[

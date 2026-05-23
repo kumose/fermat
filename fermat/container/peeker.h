@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include <fermat/io/iobuf.h>
+#include <fermat/container/cord_buffer.h>
 #include <fermat/container/string.h>
 #include <fermat/container/vector.h>
 #include <turbo/log/logging.h>
@@ -58,8 +58,8 @@ namespace fermat {
         size_t offset;
     };
 
-    std::ostream &operator<<(std::ostream &os, const Position &pos) {
-        os<<"index:"<<pos.index<<", offset:"<<pos.offset;
+    inline std::ostream &operator<<(std::ostream &os, const Position &pos) {
+        os << "index:" << pos.index << ", offset:" << pos.offset;
         return os;
     }
 
@@ -68,13 +68,13 @@ namespace fermat {
 
 
     template<typename Source>
-    class Peeker<Source, std::enable_if_t<is_iobuf_v<Source> > > {
+    class Peeker<Source, std::enable_if_t<is_cord_buffer_v<Source> > > {
     public:
         static constexpr size_t kNPos = std::numeric_limits<size_t>::max();
         static constexpr Position npos = Position(kNPos, kNPos);
 
-        static constexpr size_t kAlignment = is_iobuf<Source>::alignment;
-        static constexpr size_t kBlockSize = is_iobuf<Source>::block_size;
+        static constexpr size_t kAlignment = is_cord_buffer<Source>::alignment;
+        static constexpr size_t kBlockSize = is_cord_buffer<Source>::block_size;
 
     public:
         Peeker() {
@@ -97,11 +97,11 @@ namespace fermat {
             return *this;
         }
 
-        Position end() const {
+        [[nodiscard]] Position end() const {
             return npos;
         }
 
-        Position tellg() const {
+        [[nodiscard]] Position tellg() const {
             return _positions;
         }
 
@@ -326,7 +326,7 @@ namespace fermat {
             return result;
         }
 
-        bool eof() const {
+        [[nodiscard]] bool eof() const {
             return _positions == npos;
         }
 
@@ -334,7 +334,7 @@ namespace fermat {
             return _positions != npos;
         }
 
-        size_t has_read() const {
+        [[nodiscard]] size_t has_read() const {
             return _has_read;
         }
 
@@ -360,7 +360,7 @@ namespace fermat {
     };
 
     template<typename Source>
-    Position Peeker<Source, std::enable_if_t<is_iobuf_v<Source> > >::find_first_position(std::string_view chars) {
+    Position Peeker<Source, std::enable_if_t<is_cord_buffer_v<Source> > >::find_first_position(std::string_view chars) {
         if (_buffer == nullptr || _positions == npos || chars.empty()) return npos;
         size_t idx = _positions.index;
         size_t off = _positions.offset;
@@ -379,7 +379,7 @@ namespace fermat {
     }
 
     template<typename Source>
-    Position Peeker<Source, std::enable_if_t<is_iobuf_v<Source> > >::find_first_position(char chars) {
+    Position Peeker<Source, std::enable_if_t<is_cord_buffer_v<Source> > >::find_first_position(char chars) {
         if (_buffer == nullptr || _positions == npos) return npos;
         size_t idx = _positions.index;
         size_t off = _positions.offset;
@@ -398,7 +398,7 @@ namespace fermat {
     }
 
     template<typename Source>
-    size_t Peeker<Source, std::enable_if_t<is_iobuf_v<Source> > >::find_first_offset(std::string_view chars) {
+    size_t Peeker<Source, std::enable_if_t<is_cord_buffer_v<Source> > >::find_first_offset(std::string_view chars) {
         if (_buffer == nullptr || _positions == npos || chars.empty()) return kNPos;
         size_t idx = _positions.index;
         size_t off = _positions.offset;
@@ -411,13 +411,13 @@ namespace fermat {
                 return offset + pos - off + _has_read;
             }
             ++idx;
-            offset += (seg.size()- off);
+            offset += (seg.size() - off);
         }
         return kNPos;
     }
 
     template<typename Source>
-    size_t Peeker<Source, std::enable_if_t<is_iobuf_v<Source> > >::find_first_offset(char chars) {
+    size_t Peeker<Source, std::enable_if_t<is_cord_buffer_v<Source> > >::find_first_offset(char chars) {
         if (_buffer == nullptr || _positions == npos) return kNPos;
         size_t idx = _positions.index;
         size_t off = _positions.offset;
@@ -430,13 +430,13 @@ namespace fermat {
                 return offset + pos - off + _has_read;
             }
             ++idx;
-            offset += (seg.size()- off);
+            offset += (seg.size() - off);
         }
         return kNPos;
     }
 
     template<typename Source>
-    void Peeker<Source, std::enable_if_t<is_iobuf_v<Source> > >::init_buffer() {
+    void Peeker<Source, std::enable_if_t<is_cord_buffer_v<Source> > >::init_buffer() {
         _has_read = 0;
         _positions = {kNPos, kNPos};
         _view = nullptr;
@@ -527,7 +527,7 @@ namespace fermat {
             return *this;
         }
 
-        Position find_first_position(std::string_view chars) const {
+        [[nodiscard]] Position find_first_position(std::string_view chars) const {
             if (_pos == npos) return npos;
             auto sv = std::string_view(_buffer.data(), _buffer.size());
             size_t found = sv.find_first_of(chars, _pos.offset);
@@ -535,7 +535,7 @@ namespace fermat {
             return Position(0, found);
         }
 
-        Position find_first_position(char chars) const {
+        [[nodiscard]] Position find_first_position(char chars) const {
             if (_pos == npos) return npos;
             auto sv = std::string_view(_buffer.data(), _buffer.size());
             size_t found = sv.find_first_of(chars, _pos.offset);
@@ -543,12 +543,12 @@ namespace fermat {
             return Position(0, found);
         }
 
-        size_t find_first_offset(char chars) const {
+        [[nodiscard]] size_t find_first_offset(char chars) const {
             Position p = find_first_position(chars);
             return (p == npos) ? kNPos : p.offset;
         }
 
-        size_t find_first_offset(std::string_view chars) const {
+        [[nodiscard]] size_t find_first_offset(std::string_view chars) const {
             Position p = find_first_position(chars);
             return (p == npos) ? kNPos : p.offset;
         }
@@ -603,9 +603,9 @@ namespace fermat {
             return result;
         }
 
-        bool eof() const { return _pos == npos; }
+        [[nodiscard]] bool eof() const { return _pos == npos; }
         explicit operator bool() const { return _pos != npos; }
-        size_t has_read() const { return _has_read; }
+        [[nodiscard]] size_t has_read() const { return _has_read; }
 
     private:
         void init_buffer() {

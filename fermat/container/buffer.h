@@ -25,6 +25,8 @@
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
+#include <memory>
+#include <optional>
 #include <turbo/strings/str_format.h>
 #include <fermat/memory/object_pool.h>
 #include <fermat/container/utility.h>
@@ -379,13 +381,14 @@ namespace fermat {
     // BufferBase
     ///////////////////////////////////////////////////////////////////////
     template<typename T, size_t Alignment, typename Allocator>
-    inline BufferBase<T, Alignment, Allocator>::BufferBase(const allocator_type &allocator) : _capacity_end(nullptr,allocator) {
+    inline BufferBase<T, Alignment, Allocator>::BufferBase(const allocator_type &allocator) : _capacity_end(
+        nullptr, allocator) {
     }
 
 
     template<typename T, size_t Alignment, typename Allocator>
     inline BufferBase<T, Alignment,
-        Allocator>::BufferBase(size_type n, const allocator_type &allocator) : _capacity_end(nullptr,allocator) {
+        Allocator>::BufferBase(size_type n, const allocator_type &allocator) : _capacity_end(nullptr, allocator) {
         uninitialized_n(n);
     }
 
@@ -760,7 +763,6 @@ namespace fermat {
             // If n > capacity ...
             DoGrow(n);
         }
-
     }
 
 
@@ -989,7 +991,6 @@ namespace fermat {
 
 
         --_end;
-        _end->~value_type();
     }
 
 
@@ -1674,14 +1675,12 @@ namespace fermat {
             _begin = pNewData;
             _end = pNewData + nPrevSize + n;
             _capacity_end.first() = pNewData + nNewCapacity;
-
         } else {
             // --- In-place Path ---
             // Efficiently zero-initialize trailing memory
             std::memset(static_cast<void *>(_end), 0, n * sizeof(T));
             _end += n;
         }
-
     }
 
     template<typename T, size_t Alignment, typename Allocator>
@@ -1998,4 +1997,87 @@ namespace fermat {
         static constexpr size_t kAlignment = Alignment;
     };
 
+
+    template<typename T, size_t Alignment, typename SizeType>
+    struct BufferReference {
+        struct Range {
+            SizeType offset{0};
+            SizeType length{0};
+        };
+
+        /// non nullptr, must setting
+        std::shared_ptr<Buffer<T, Alignment> > buffer;
+        Range view;
+
+        [[nodiscard]] bool is_full_view() const {
+            return view.offset == 0 && view.length == buffer->size();
+        }
+
+        [[nodiscard]] SizeType offset() const {
+            return view.offset;
+        }
+
+        [[nodiscard]] SizeType size() const {
+            return view.length;
+        }
+
+        [[nodiscard]] SizeType capacity() const {
+            return buffer->size();
+        }
+
+        [[nodiscard]] bool is_unique() const {
+            return buffer.use_count() == 1;
+        }
+
+        [[nodiscard]] bool is_mutable() const {
+            return buffer.use_count() == 1;
+        }
+
+        [[nodiscard]] bool next(void **out, int64_t *size) {
+            DKCHECK(buffer.use_count() == 1);
+            if (view.length == buffer->size()) {
+                return false;
+            }
+            auto bs = buffer->size();
+            *out = buffer->data() + view.length;
+            *size = bs - view.length;
+            view.length = bs;
+            return true;
+        }
+
+       [[nodiscard]] int64_t backup(int64_t n) {
+            DKCHECK(buffer.use_count() == 1);
+            if (n >= view.length) {
+                auto r = n - view.length;
+                view.length = 0;
+                return r;
+            }
+            view.length -= n;
+            return 0;
+        }
+
+        [[nodiscard]] std::pair<size_t, size_t> append(const void *data, size_t size) {
+            DKCHECK(buffer.use_count() == 1);
+            auto bs = buffer->size();
+
+            auto av = bs - view.length;
+            if (size < av) {
+                std::memcpy(view.data() + view.length, data, size);
+                view.length += size;
+                return {size, av - size};
+            }
+            std::memcpy(view.data() + view.length, data, av);
+            view.length += av;
+            return {av, 0};
+        }
+
+        void tidy_write_able() {
+            DKCHECK(buffer.use_count() == 1);
+            auto bs = buffer->size();
+            if (view.offset != 0) {
+                std::memcpy(view.data(), buffer->data() + view.offset, view.length);
+                view.offset = 0;
+            }
+        }
+    };
 } // namespace fermat

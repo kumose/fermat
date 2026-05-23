@@ -24,10 +24,8 @@
 #include <turbo/log/check.h>
 #include <turbo/log/logging.h>
 #include <turbo/utility/status.h>
-#include <fermat/io/iobuf.h>
-#include <fermat/io/peeker.h>
-
-#include "iobuf.h"
+#include <fermat/container/cord_buffer.h>
+#include <fermat/container/peeker.h>
 
 namespace fermat {
 
@@ -55,7 +53,7 @@ namespace fermat {
             if (!status.ok()) return status;
 
             // Use Peeker for zero‑copy, cross‑block reading
-            Peeker<IOBuf<Alignment, BlockSize>> peeker(&source);
+            Peeker<CordBufferBase<Alignment, BlockSize>> peeker(&source);
             size_t remaining = readable;
             while (remaining > 0) {
                 auto chunk = peeker.readn(remaining);
@@ -75,13 +73,13 @@ namespace fermat {
         }
 
         template<size_t Alignment, size_t BlockSize>
-        static turbo::Status custom_until(IOBuf<Alignment, BlockSize> &source, Receiver &target, char c) {
+        static turbo::Status custom_until(CordBufferBase<Alignment, BlockSize> &source, Receiver &target, char c) {
             // Use Peeker for zero‑copy, cross‑block reading
-            Peeker<IOBuf<Alignment, BlockSize>> peeker(&source);
+            Peeker<CordBufferBase<Alignment, BlockSize>> peeker(&source);
             auto offset = peeker.find_first_offset(c);
             auto n = source.size();
             auto cus_n = 0;
-            if (offset != Peeker<IOBuf<Alignment, BlockSize>>::kNPos) {
+            if (offset != Peeker<CordBufferBase<Alignment, BlockSize>>::kNPos) {
                 n = offset;
                 cus_n = 1;
             }

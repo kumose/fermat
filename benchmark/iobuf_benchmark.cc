@@ -13,7 +13,6 @@
 /// limitations under the License.
 
 #include <benchmark/benchmark.h>
-#include <fermat/io/iobuf.h>
 #include <fermat/container/cord_buffer.h>
 #include <fermat/container/string.h>
 #include <fermat/container/buffer.h>
@@ -55,17 +54,7 @@ namespace {
         }
     }
 
-    static void BM_IOBuf_RandomChunked(benchmark::State &st) {
-        const size_t total = st.range(0);
-        for (auto _: st) {
-            fermat::IOBuf<64, 16 * 1024> buf;
-            AppendRandomChunked(buf, total);
-            benchmark::DoNotOptimize(buf);
-        }
-        st.SetBytesProcessed(st.iterations() * total);
-    }
-
-    static void BM_CordBufferRaw_RandomChunked(benchmark::State &st) {
+    static void BM_CordBuffer_RandomChunked(benchmark::State &st) {
         const size_t total = st.range(0);
         for (auto _: st) {
             fermat::CordBufferBase<0, 16 * 1024> buf;
@@ -115,6 +104,37 @@ namespace {
         st.SetBytesProcessed(st.iterations() * total);
     }
 
+    static void BM_AbseilCord_RandomChunked(benchmark::State &st) {
+        const size_t total = st.range(0);
+        const auto &data = GetRandomData();
+        for (auto _: st) {
+            absl::Cord cord;
+            size_t remain = total;
+            while (remain) {
+                size_t n = std::min(RandomChunkSize(), remain);
+                cord.Append(std::string_view(data.data(), n));
+                remain -= n;
+            }
+            benchmark::DoNotOptimize(cord);
+        }
+        st.SetBytesProcessed(st.iterations() * total);
+    }
+
+    static void BM_TurboCord_RandomChunked(benchmark::State &st) {
+        const size_t total = st.range(0);
+        const auto &data = GetRandomData();
+        for (auto _: st) {
+            turbo::Cord cord;
+            size_t remain = total;
+            while (remain) {
+                size_t n = std::min(RandomChunkSize(), remain);
+                cord.append(std::string_view(data.data(), n));
+                remain -= n;
+            }
+            benchmark::DoNotOptimize(cord);
+        }
+        st.SetBytesProcessed(st.iterations() * total);
+    }
 
 #define BENCH_ARGS \
     ->Args({1 << 10}) \
@@ -123,14 +143,16 @@ namespace {
     ->Args({1 << 20}) \
     ->Args({10 << 20}) \
     ->Args({20 << 20}) \
-    ->Args({50 << 20})
+    ->Args({50 << 20}) \
+    ->Args({100 << 20})
 
-    BENCHMARK(BM_IOBuf_RandomChunked) BENCH_ARGS;
-    BENCHMARK(BM_CordBufferRaw_RandomChunked) BENCH_ARGS;
+    BENCHMARK(BM_CordBuffer_RandomChunked) BENCH_ARGS;
     BENCHMARK(BM_String_RandomChunked) BENCH_ARGS;
-    BENCHMARK(BM_FermatString_RandomChunked) BENCH_ARGS;
     BENCHMARK(BM_Buffer_RandomChunked) BENCH_ARGS;
     BENCHMARK(BM_BrpcIOBuf_RandomChunked) BENCH_ARGS;
+    BENCHMARK(BM_AbseilCord_RandomChunked) BENCH_ARGS;
+    BENCHMARK(BM_TurboCord_RandomChunked) BENCH_ARGS;
+
 } // namespace
 
 BENCHMARK_MAIN();

@@ -330,19 +330,19 @@ namespace fermat {
 
         ///< Inserts an element before the element pointed to by the iterator. O(1)
         iterator erase(const_iterator pos); ///< Erases the element pointed to by the iterator. O(1)
-        iterator erase(const_iterator pos, const_iterator last);
+        [[nodiscard]] iterator erase(const_iterator first, const_iterator last);
 
         ///< Erases elements within the iterator range [pos, last). O(1)
 
         reverse_iterator erase(const_reverse_iterator pos);
 
-        reverse_iterator erase(const_reverse_iterator pos, const_reverse_iterator last);
+        [[nodiscard]] reverse_iterator erase(const_reverse_iterator first, const_reverse_iterator last);
 
         static void remove(value_type &value);
 
         ///< Erases an element from a list; O(1). Note that this is static so you don't need to know which list the element, although it must be in some list.
 
-        void splice(const_iterator pos, value_type &x);
+        void splice(const_iterator first, value_type &x);
 
         ///< Moves the given element into this list before the element pointed to by pos; O(1).
 				///< Required: x must be in some list or have first/next pointers that point it itself.
