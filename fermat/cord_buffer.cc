@@ -31,7 +31,7 @@
 #include <cerrno>                         // errno
 #include <climits>                        // CHAR_BIT
 #include <stdexcept>                       // std::invalid_argument
-#include <fermat/io/cord_buffer.h>
+#include <fermat/cord_buffer.h>
 #include <fermat/io/fd_guard.h>
 #include <turbo/threading/platform_thread.h>
 #include <turbo/flags/flag.h>

@@ -20,32 +20,158 @@
 #include <fermat/container/reader_writer.h>
 #include <fermat/container/receiver.h>
 #include <fermat/container/deque.h>
-#include <deque>
-#include <list>
+#include <fermat/container/list.h>
+#include <turbo/log/logging.h>
 #include <memory>
 #include <new>
 
 namespace fermat {
+    template<size_t Alignment>
+    struct BufferRef {
+        struct Range {
+            uint32_t offset{0};
+            uint32_t length{0};
+        };
+
+        BufferRef() = default;
+
+        static BufferRef create_write_able(size_t n) {
+            BufferRef ref;
+            auto ptr = std::make_shared<Buffer<char, Alignment> >();
+            ptr->resize_uninitialized(n);
+            ref.buffer = std::move(ptr);
+            return ref;
+        }
+
+        static BufferRef setup_write_able(std::shared_ptr<Buffer<char, Alignment> > &&b) {
+            BufferRef ref;
+            ref.buffer = std::move(b);
+            KCHECK(ref.buffer.use_count() == 1);
+            return std::move(ref);
+        }
+
+        static BufferRef setup_write_able(std::shared_ptr<Buffer<char, Alignment> > &&b, uint32_t off, uint32_t len) {
+            BufferRef ref;
+            ref.buffer = std::move(b);
+            ref.range.length = len;
+            ref.range.offset = off;
+            KCHECK(ref.buffer.use_count() == 1);
+            return std::move(ref);
+        }
+
+
+        static BufferRef reference(const std::shared_ptr<Buffer<char, Alignment> > &b, uint32_t off, uint32_t len) {
+            BufferRef ref;
+            ref.buffer = b;
+            ref.range.length = len;
+            ref.range.offset = off;
+            return std::move(ref);
+        }
+
+
+        static BufferRef assign(std::shared_ptr<Buffer<char, Alignment> > &&b, uint32_t off, uint32_t len) {
+            BufferRef ref;
+            ref.buffer = std::move(b);
+            ref.range.length = len;
+            ref.range.offset = off;
+            return std::move(ref);
+        }
+
+        [[nodiscard]] size_t write_able() const {
+            if (TURBO_UNLIKELY(buffer.use_count() > 1)) {
+                return 0;
+            }
+            return buffer->size() - range.length - range.offset;
+        }
+
+        [[nodiscard]] size_t capacity() const {
+            return buffer->size() - range.offset;
+        }
+
+        [[nodiscard]] size_t size() const {
+            return range.length;
+        }
+
+        [[nodiscard]] size_t offset() const {
+            return range.offset;
+        }
+
+        size_t append(const void *data, size_t size) {
+            auto n = std::min(write_able(), size);
+            std::memcpy(buffer->data() + range.offset + range.length, data, n);
+            range.length += n;
+            return n;
+        }
+
+        bool borrow(void **out, int *size) {
+            if (TURBO_UNLIKELY(buffer.use_count() > 1)) {
+                return false;
+            }
+
+            *size = buffer->size() - range.length - range.offset;
+            if (TURBO_UNLIKELY(*size == 0)) {
+                return false;
+            }
+            *out = buffer->data() + range.offset + range.length;
+            range.length += *size;
+            return true;
+        }
+
+        size_t backup(size_t size) {
+            KCHECK(buffer.use_count() == 1);
+            if (size > range.length) {
+                auto ret = range.length;
+                range.length = 0;
+                return ret;
+            }
+            range.length -= size;
+            return size;
+        }
+
+        size_t pop_front(size_t n) {
+            if (range.length <= n) {
+                auto ret = range.length;
+                range.offset += range.length;
+                range.length = 0;
+                return ret;
+            }
+            range.length -= n;
+            range.offset += n;
+            return n;
+        }
+
+        size_t pop_back(size_t n) {
+            if (range.length <= n) {
+                auto ret = range.length;
+                range.length = 0;
+                return ret;
+            }
+            range.length -= n;
+            return n;
+        }
+
+        [[nodiscard]] bool is_unique() const {
+            return buffer.use_count() == 1;
+        }
+
+        std::shared_ptr<Buffer<char, Alignment> > buffer;
+        Range range;
+    };
+
     template<size_t Alignment = 64, size_t BlockSize = 4096>
     class CordBufferBase {
     public:
         static_assert(Alignment == 0 || ((Alignment & (Alignment - 1)) == 0), "Alignment must be zero or power of 2");
 
-        static constexpr bool is_iobuf = true;
         static constexpr size_t kBlockSize = BlockSize;
         static constexpr size_t kAlignment = Alignment;
         static constexpr size_t kMaxReadVSpans = 32;
-
-        struct BufferRef {
-            std::shared_ptr<Buffer<char, Alignment> > buffer;
-            std::optional<turbo::span<char> > view;
-        };
 
     public:
         using value_type = char;
         using buffer_type = Buffer<value_type, Alignment>;
 
-        using vector_type = Deque<BufferRef>;
+        using vector_type = Deque<BufferRef<Alignment> >;
         using const_pointer = const value_type *;
         using const_reference = const value_type &;
         using size_type = typename buffer_type::size_type;
@@ -70,7 +196,7 @@ namespace fermat {
                 } else {
                     ++_cur;
                     if (_cur != _cord->buffer_end()) {
-                        _view = turbo::span<value_type>(_cur->buffer->data(), _cur->buffer->size());
+                        _view = turbo::span<value_type>(_cur->buffer->data() + _cur->range.offset, _cur->range.length);
                         _view_begin = _view.begin();
                     } else {
                         _view = turbo::span<value_type>{};
@@ -102,7 +228,7 @@ namespace fermat {
 
             CordIterator(const CordBufferBase *cord) : _cord(cord), _cur(_cord->buffer_begin()) {
                 if (_cur != _cord->buffer_end()) {
-                    _view = turbo::span<char>(_cur->buffer->data(), _cur->buffer->size());
+                    _view = turbo::span<char>(_cur->buffer->data() + _cur->range.offset, _cur->range.length);
                     _view_begin = _view.begin();
                 }
             }
@@ -140,7 +266,7 @@ namespace fermat {
             }
 
             /// Obtains the next chunk of data.
-            /// The chunk corresponds to the current segment (respecting any view).
+            /// The chunk corresponds to the current segment (respecting any range).
             /// After a successful call, the caller may read up to *size bytes from *data.
             /// @param data  Output pointer to the beginning of the chunk.
             /// @param size  Output size of the chunk in bytes.
@@ -149,10 +275,8 @@ namespace fermat {
                 // Find a segment with remaining data.
                 while (_index < _cord->_views.size()) {
                     const auto &ref = _cord->_views[_index];
-                    // Obtain the effective span (view if present, otherwise full buffer)
-                    turbo::span<char> span = ref.view
-                                                 ? *ref.view
-                                                 : turbo::span<char>(ref.buffer->data(), ref.buffer->size());
+                    // Obtain the effective span (range if present, otherwise full buffer)
+                    turbo::span<char> span = turbo::span<char>(ref.buffer->data() + ref.range.offset, ref.range.length);
                     if (span.size() > _offset) {
                         // There is data to return.
                         *data = span.data() + _offset;
@@ -185,22 +309,18 @@ namespace fermat {
                 if (_index == 0) {
                     // Last chunk came from the first segment.
                     const auto &ref = _cord->_views[0];
-                    turbo::span<char> span = ref.view
-                                                 ? *ref.view
-                                                 : turbo::span<char>(ref.buffer->data(), ref.buffer->size());
+                    turbo::span<char> span = turbo::span<char>(ref.buffer->data() + ref.range.offset, ref.range.length);
                     _offset = span.size() - static_cast<size_t>(count);
                     _index = 0; // stay at the first segment
                 } else {
                     // Last chunk came from the segment at index (_index - 1).
                     --_index;
                     const auto &ref = _cord->_views[_index];
-                    turbo::span<char> span = ref.view
-                                                 ? *ref.view
-                                                 : turbo::span<char>(ref.buffer->data(), ref.buffer->size());
+                    turbo::span<char> span = turbo::span<char>(ref.buffer->data() + ref.range.offset, ref.range.length);
                     _offset = span.size() - static_cast<size_t>(count);
                 }
                 _byte_count -= count;
-                _last_chunk_size = 0; // After back_up, the "last chunk" is invalidated.
+                _last_chunk_size -= count; // After back_up, the "last chunk" is invalidated.
             }
 
             /// Skips up to `count` bytes. May cross multiple segments.
@@ -212,14 +332,12 @@ namespace fermat {
                 if (static_cast<size_t>(count) > _cord->size() - _byte_count)
                     return false;
                 // Perform the skip – guaranteed to succeed.
-                size_t remaining = static_cast<size_t>(count);
+                auto remaining = static_cast<size_t>(count);
                 size_t idx = _index;
                 size_t off = _offset;
                 while (remaining > 0) {
                     const auto &ref = _cord->_views[idx];
-                    turbo::span<char> span = ref.view
-                                                 ? *ref.view
-                                                 : turbo::span<char>(ref.buffer->data(), ref.buffer->size());
+                    turbo::span<char> span = turbo::span<char>(ref.buffer->data() + ref.range.offset, ref.range.length);
                     size_t avail = span.size() - off;
                     size_t take = std::min(remaining, avail);
                     remaining -= take;
@@ -251,9 +369,7 @@ namespace fermat {
             void _skip_empty() {
                 while (_index < _cord->_views.size()) {
                     const auto &ref = _cord->_views[_index];
-                    turbo::span<char> span = ref.view
-                                                 ? *ref.view
-                                                 : turbo::span<char>(ref.buffer->data(), ref.buffer->size());
+                    turbo::span<char> span = turbo::span<char>(ref.buffer->data() + ref.range.offset, ref.range.length);
                     if (!span.empty()) break;
                     ++_index;
                 }
@@ -276,7 +392,11 @@ namespace fermat {
         // Actually we just move the lease; after move, source will have an empty lease.
         CordBufferBase(CordBufferBase &&rhs) noexcept
             : _views(std::move(rhs._views)),
-              _total_size(std::exchange(rhs._total_size, 0)) {
+              _total_size(rhs._total_size),
+              _write_buffer(_views.empty() ? const_cast<BufferRef<Alignment> *>(&kZeroBuffer) : &_views.back()) {
+            rhs._views.clear();
+            rhs._total_size = 0;
+            rhs._write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
         }
 
         ~CordBufferBase() = default;
@@ -321,32 +441,45 @@ namespace fermat {
 
         [[nodiscard]] size_t blocks() const;
 
-        turbo::Status append(const std::shared_ptr<Buffer<value_type, Alignment> > &buf, size_t offset, size_t length);
+        turbo::Status append_reference(const BufferRef<Alignment> &ref);
 
-        turbo::Status append(std::shared_ptr<Buffer<value_type, Alignment> > &&buf);
+        turbo::Status append_reference(BufferRef<Alignment> &&ref);
 
-        turbo::Status append(std::vector<std::shared_ptr<Buffer<value_type, Alignment> > > &&bufs);
+        turbo::Status append_reference(const std::vector<BufferRef<Alignment> > &refs);
 
-        turbo::Status prepend(const std::shared_ptr<Buffer<value_type, Alignment> > &buf, size_t offset, size_t length);
+        turbo::Status append_reference(std::vector<BufferRef<Alignment> > &&refs);
 
-        /// Prepends a single buffer to the front of the cord by taking ownership (move semantics).
-        /// The writable buffer is updated only if the cord was empty before (so the new buffer
-        /// becomes both head and tail); otherwise the original tail remains the writable buffer.
-        /// @param buf The buffer to take ownership of (moved).
-        /// @return OkStatus on success.
-        turbo::Status prepend(std::shared_ptr<Buffer<value_type, Alignment> > &&buf);
+        turbo::Status prepend_reference(const BufferRef<Alignment> &ref);
 
-        /// Prepends multiple buffers to the front of the cord.
-        /// The buffers are prepended in the order they appear in the vector (the first element
-        /// becomes the new first segment). After insertion, the writable buffer is set to the
-        /// current tail (the last segment), which may be a newly added buffer if the cord was
-        /// empty, or the original tail if the cord was non‑empty.
-        turbo::Status prepend(std::vector<std::shared_ptr<Buffer<value_type, Alignment> > > &&bufs);
+        turbo::Status prepend_reference(BufferRef<Alignment> &&ref);
+
+        turbo::Status prepend_reference(const std::vector<BufferRef<Alignment> > &refs);
+
+        turbo::Status prepend_reference(std::vector<BufferRef<Alignment> > &&refs);
+
+        turbo::Status append_writeable(BufferRef<Alignment> &&ref);
+
+        turbo::Status append_writeable(std::vector<BufferRef<Alignment> > &&refs);
+
+        turbo::Status append_buffer(const std::shared_ptr<Buffer<value_type, Alignment> > &buf, size_t offset,
+                                    size_t length);
+
+        turbo::Status append_buffer(std::shared_ptr<Buffer<value_type, Alignment> > &&buf, size_t offset,
+                                    size_t length);
+
+        turbo::Status prepend_buffer(const std::shared_ptr<Buffer<value_type, Alignment> > &buf, size_t offset,
+                                     size_t length);
+
+        turbo::Status prepend_buffer(std::shared_ptr<Buffer<value_type, Alignment> > &&buf, size_t offset,
+                                     size_t length);
 
         /// Creates empty buffers whose total capacity is at least `bytes_needed`.
         /// New buffers use `BlockSize` as the default reserve granularity (recommended, not required
         /// for externally appended segments, which may use any aligned pool tier capacity).
-        static std::vector<std::shared_ptr<buffer_type> > create_buffers(size_t bytes_needed);
+        static std::vector<BufferRef<Alignment>> create_buffers(size_t bytes_needed);
+
+        /// merge blcoks in one
+        static BufferRef<Alignment> create_big_buffer(size_t bytes_needed);
 
         /// Returns a span of the current writable area (the entire remaining capacity of the tail buffer).
         /// The tail buffer's size is immediately advanced to its capacity, assuming the caller will
@@ -360,7 +493,7 @@ namespace fermat {
         /// The tail buffer's size is advanced to its capacity.
         /// @param out Output pointer to the beginning of the writable area.
         /// @param size Output size of the writable area in bytes.
-        bool output_next(void **out, size_t *size);
+        bool output_next(void **out, int *size);
 
         /// Rolls back the last `n` bytes that were claimed by output_next() but not actually written.
         /// The `n` can be as large as the total size of the cord. If it exceeds the size of the last
@@ -404,7 +537,8 @@ namespace fermat {
 
         CordBufferBase copy() const;
 
-        /// Copy assignment operator. Uses copy-and-swap idiom.
+        /// Assignment shares segment storage with @p rhs (same as share()), not a deep copy.
+        /// Uses copy-and-swap. For an independent copy of bytes, use copy().
         /// @param rhs The source cord.
         /// @return Reference to this object.
         CordBufferBase &operator=(const CordBufferBase &rhs);
@@ -444,20 +578,20 @@ namespace fermat {
 
         void pop_front_buffer() noexcept;
 
-        const BufferRef &front_buffer() const noexcept;
+        const BufferRef<Alignment> &front_buffer() const noexcept;
 
         void pop_back(size_t n) noexcept;
 
         void pop_back_buffer() noexcept;
 
-        const BufferRef &back_buffer() const noexcept;
+        const BufferRef<Alignment> &back_buffer() const noexcept;
 
     protected:
-        Buffer<char, Alignment> *get_write_able_buffer();
+        BufferRef<Alignment> *get_write_able_buffer();
 
     protected:
-        static const buffer_type kZeroBuffer;
-        buffer_type *_write_buffer{const_cast<buffer_type *>(&kZeroBuffer)};
+        static const BufferRef<Alignment> kZeroBuffer;
+        BufferRef<Alignment> *_write_buffer{const_cast<BufferRef<Alignment> *>(&kZeroBuffer)};
         ///< All block views (including Umount ones).
         vector_type _views;
         ///< Total logical bytes stored.
@@ -470,8 +604,12 @@ namespace fermat {
     ///////////////////////////////////////////////////////////////////////////
     ///
     template<size_t Alignment, size_t BlockSize>
-    const typename CordBufferBase<Alignment, BlockSize>::buffer_type CordBufferBase<Alignment,
-        BlockSize>::kZeroBuffer;
+    const BufferRef<Alignment> CordBufferBase<Alignment,
+                BlockSize>::kZeroBuffer = []() {
+                BufferRef<Alignment> r;
+                r.buffer = std::make_shared<Buffer<char, Alignment> >();
+                return r;
+            }();
 
 
     template<size_t Alignment, size_t BlockSize>
@@ -504,15 +642,13 @@ namespace fermat {
     }
 
     template<size_t Alignment, size_t BlockSize>
-    Buffer<char, Alignment> *CordBufferBase<Alignment, BlockSize>::get_write_able_buffer() {
-        if (_write_buffer->capacity() > _write_buffer->size()) {
+    BufferRef<Alignment> *CordBufferBase<Alignment, BlockSize>::get_write_able_buffer() {
+        if (_write_buffer->write_able()) {
             return _write_buffer;
         }
-        BufferRef ref;
-        ref.buffer = std::make_shared<buffer_type>();
-        ref.buffer->reserve(BlockSize);
-        _write_buffer = ref.buffer.get();
+        auto ref = BufferRef<Alignment>::create_write_able(BlockSize);
         _views.push_back(std::move(ref));
+        _write_buffer = &_views.back();
         return _write_buffer;
     }
 
@@ -526,79 +662,145 @@ namespace fermat {
     }
 
     template<size_t Alignment, size_t BlockSize>
-    turbo::Status CordBufferBase<Alignment, BlockSize>::append(std::shared_ptr<Buffer<value_type, Alignment> > &&buf) {
-        if (!buf || buf->empty()) return turbo::OkStatus();
-        _total_size += buf->size();
-        BufferRef ref;
-        ref.buffer = std::move(buf);
-        _views.push_back(std::move(ref));
-        // Always set _write_buffer to the newly appended buffer (the tail).
-        _write_buffer = _views.back().buffer.get();
+    turbo::Status CordBufferBase<Alignment, BlockSize>::append_reference(const BufferRef<Alignment> &ref) {
+        _views.push_back(ref);
+        _write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
+        _total_size += ref.size();
         return turbo::OkStatus();
     }
 
     template<size_t Alignment, size_t BlockSize>
-    turbo::Status CordBufferBase<Alignment, BlockSize>::append(
+    turbo::Status CordBufferBase<Alignment, BlockSize>::append_reference(BufferRef<Alignment> &&ref) {
+        _write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
+        _total_size += ref.size();
+        _views.push_back(std::move(ref));
+        return turbo::OkStatus();
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    turbo::Status CordBufferBase<Alignment,
+        BlockSize>::append_reference(const std::vector<BufferRef<Alignment> > &refs) {
+        for (auto &ref: refs) {
+            _views.push_back(ref);
+            _total_size += ref.size();
+        }
+        _write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
+        return turbo::OkStatus();
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    turbo::Status CordBufferBase<Alignment, BlockSize>::append_reference(std::vector<BufferRef<Alignment> > &&refs) {
+        for (auto &ref: refs) {
+            _total_size += ref.size();
+            _views.push_back(std::move(ref));
+        }
+        _write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
+        return turbo::OkStatus();
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    turbo::Status CordBufferBase<Alignment, BlockSize>::prepend_reference(const BufferRef<Alignment> &ref) {
+        _views.push_front(ref);
+        _total_size += ref.size();
+        return turbo::OkStatus();
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    turbo::Status CordBufferBase<Alignment, BlockSize>::prepend_reference(BufferRef<Alignment> &&ref) {
+        _total_size += ref.size();
+        _views.push_front(std::move(ref));
+        return turbo::OkStatus();
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    turbo::Status CordBufferBase<Alignment, BlockSize>::prepend_reference(
+        const std::vector<BufferRef<Alignment> > &refs) {
+        for (auto it = refs.rbegin(); it != refs.rend(); ++it) {
+            _views.push_front(*it);
+            _total_size += (*it).size();
+        }
+        return turbo::OkStatus();
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    turbo::Status CordBufferBase<Alignment, BlockSize>::prepend_reference(std::vector<BufferRef<Alignment> > &&refs) {
+        for (auto it = refs.rbegin(); it != refs.rend(); ++it) {
+            _total_size += (*it).size();
+            _views.push_front(std::move(*it));
+        }
+        return turbo::OkStatus();
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    turbo::Status CordBufferBase<Alignment, BlockSize>::append_writeable(BufferRef<Alignment> &&ref) {
+        DKCHECK(ref.is_unique());
+        if (ref.size() == 0) {
+            return turbo::OkStatus();
+        }
+        _total_size += ref.size();
+        _views.push_back(std::move(ref));
+        _write_buffer = &_views.back();
+        return turbo::OkStatus();
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    turbo::Status CordBufferBase<Alignment, BlockSize>::append_writeable(std::vector<BufferRef<Alignment> > &&refs) {
+        size_t added = 0;
+        for (auto &ref: refs) {
+            if (ref.size() == 0) {
+                break;
+            }
+            added += ref.size();
+            _views.push_back(std::move(ref));
+        }
+        if (added) {
+            _write_buffer = &_views.back();
+        }
+        _total_size += added;
+        return turbo::OkStatus();
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    turbo::Status CordBufferBase<Alignment, BlockSize>::append_buffer(
         const std::shared_ptr<Buffer<value_type, Alignment> > &buf, size_t offset, size_t length) {
         if (!buf || buf->empty()) return turbo::OkStatus();
         if (offset + length > buf->size()) {
             return turbo::invalid_argument_error("overflow buffer size");
         }
-        _total_size += buf->size();
-        BufferRef ref;
-        ref.buffer = buf;
-        ref.view = turbo::span<char>(buf->data() + offset, length);
+        _total_size += length;
+        BufferRef<Alignment> ref = BufferRef<Alignment>::reference(buf, offset, length);
         _views.push_back(std::move(ref));
-        // Always set _write_buffer to the newly appended buffer (the tail).
-        _write_buffer = _views.back().buffer.get();
+        _write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
         return turbo::OkStatus();
     }
+
 
     template<size_t Alignment, size_t BlockSize>
-    turbo::Status CordBufferBase<Alignment, BlockSize>::append(
-        std::vector<std::shared_ptr<Buffer<value_type, Alignment> > > &&bufs) {
-        if (bufs.empty()) {
-            return turbo::OkStatus();
+    turbo::Status CordBufferBase<Alignment, BlockSize>::append_buffer(
+        std::shared_ptr<Buffer<value_type, Alignment> > &&buf, size_t offset, size_t length) {
+        if (!buf || buf->empty()) return turbo::OkStatus();
+        if (offset + length > buf->size()) {
+            return turbo::invalid_argument_error("overflow buffer size");
         }
-
-        size_t added_size = 0;
-        for (auto &buf: bufs) {
-            if (!buf || buf->empty()) {
-                continue; // skip null or empty buffers
-            }
-            added_size += buf->size();
-            BufferRef ref;
-            ref.buffer = std::move(buf);
-            // owned buffer, no view needed
-            _views.push_back(std::move(ref));
-        }
-
-        if (added_size == 0) {
-            return turbo::OkStatus(); // nothing was appended
-        }
-
-        _total_size += added_size;
-        // Set writable buffer to the last appended segment (the new tail)
-
-        _write_buffer = _views.back().buffer.get();
-
+        _total_size += length;
+        BufferRef<Alignment> ref = BufferRef<Alignment>::assign(std::move(buf), offset, length);
+        _views.push_back(std::move(ref));
+        // Always set _write_buffer to the newly appended buffer (the tail).
+        _write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
         return turbo::OkStatus();
     }
+
 
     template<size_t Alignment, size_t BlockSize>
     void CordBufferBase<Alignment, BlockSize>::append(const CordBufferBase &rhs) {
         for (const auto &ref: rhs._views) {
-            BufferRef new_ref;
+            BufferRef<Alignment> new_ref;
             new_ref.buffer = ref.buffer;
-            if (ref.view) {
-                new_ref.view = *ref.view;
-            } else {
-                new_ref.view = turbo::span<char>(ref.buffer->data(), ref.buffer->size());
-            }
+            new_ref.range = ref.range;
             _views.push_back(std::move(new_ref));
         }
         _total_size += rhs._total_size;
-        _write_buffer = const_cast<buffer_type *>(&kZeroBuffer);
+        _write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
     }
 
     template<size_t Alignment, size_t BlockSize>
@@ -610,9 +812,13 @@ namespace fermat {
         _total_size += rhs._total_size;
         rhs._views.clear();
         rhs._total_size = 0;
-        rhs._write_buffer = const_cast<buffer_type *>(&kZeroBuffer);
+        rhs._write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
         const auto &last = _views.back();
-        _write_buffer = last.buffer.get();
+        if (_views.back().write_able()) {
+            _write_buffer = &_views.back();
+        } else {
+            _write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
+        }
     }
 
     template<size_t Alignment, size_t BlockSize>
@@ -621,13 +827,9 @@ namespace fermat {
         // Insert copies of rhs segments at the front in reverse order to preserve original order.
         for (auto it = rhs._views.rbegin(); it != rhs._views.rend(); ++it) {
             const auto &ref = *it;
-            BufferRef new_ref;
+            BufferRef<Alignment> new_ref;
             new_ref.buffer = ref.buffer;
-            if (ref.view) {
-                new_ref.view = *ref.view;
-            } else {
-                new_ref.view = turbo::span<char>(ref.buffer->data(), ref.buffer->size());
-            }
+            new_ref.range = ref.range;
             _views.push_front(std::move(new_ref));
         }
         _total_size += rhs._total_size;
@@ -637,6 +839,7 @@ namespace fermat {
     void CordBufferBase<Alignment, BlockSize>::prepend(CordBufferBase &&rhs) {
         if (rhs._views.empty()) return;
         // Insert segments at the front in reverse order to maintain the original order of rhs.
+        bool empty = _views.empty();
         for (auto it = rhs._views.rbegin(); it != rhs._views.rend(); ++it) {
             _views.push_front(std::move(*it));
         }
@@ -644,29 +847,25 @@ namespace fermat {
         // Clear rhs to a valid empty state.
         rhs._views.clear();
         rhs._total_size = 0;
-        rhs._write_buffer = const_cast<buffer_type *>(&kZeroBuffer);
-
-        _write_buffer = _views.back().buffer.get();
+        rhs._write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
+        if (empty && _views.back().write_able()) {
+            _write_buffer = &_views.back();
+        }
     }
 
     template<size_t Alignment, size_t BlockSize>
     CordBufferBase<Alignment, BlockSize> CordBufferBase<Alignment, BlockSize>::share() const {
         CordBufferBase result;
         for (const auto &ref: _views) {
-            BufferRef new_ref;
+            BufferRef<Alignment> new_ref;
             // Share the underlying buffer (increase reference count)
             new_ref.buffer = ref.buffer;
-            // Copy the view: if the original has a view, use it; otherwise create a full‑buffer view.
-            if (ref.view) {
-                new_ref.view = *ref.view;
-            } else {
-                new_ref.view = turbo::span<char>(ref.buffer->data(), ref.buffer->size());
-            }
+            new_ref.range = ref.range;
             result._views.push_back(std::move(new_ref));
         }
         result._total_size = _total_size;
         // Shared copy must not write into the original buffers; reset the writable pointer.
-        result._write_buffer = const_cast<buffer_type *>(&kZeroBuffer);
+        result._write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
         return result;
     }
 
@@ -674,9 +873,8 @@ namespace fermat {
     CordBufferBase<Alignment, BlockSize> CordBufferBase<Alignment, BlockSize>::copy() const {
         CordBufferBase result;
         for (const auto &ref: _views) {
-            const char *data = ref.view ? ref.view->data() : ref.buffer->data();
-            size_t len = ref.view ? ref.view->size() : ref.buffer->size();
-            result.append(data, len).ignore_error();
+            const char *data = ref.buffer->data() + ref.range.offset;
+            result.append(data, ref.range.length).ignore_error();
         }
         return result;
     }
@@ -685,7 +883,7 @@ namespace fermat {
     CordBufferBase<Alignment, BlockSize> &
     CordBufferBase<Alignment, BlockSize>::operator=(const CordBufferBase &rhs) {
         if (this != &rhs) {
-            CordBufferBase temp = rhs.share(); // deep copy (or shallow if copy is shallow? Actually copy() is deep)
+            CordBufferBase temp = rhs.share();
             swap(temp);
         }
         return *this;
@@ -700,14 +898,15 @@ namespace fermat {
             // Transfer total size and clear rhs.
             _total_size = rhs._total_size;
             rhs._total_size = 0;
+            rhs._views.clear();
             // Transfer writable buffer pointer and reset rhs to the sentinel.
             _write_buffer = rhs._write_buffer;
-            rhs._write_buffer = const_cast<buffer_type *>(&kZeroBuffer);
+            rhs._write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
         }
         return *this;
     }
 
-    /// Assigns the cord to a copy of the data from a string view.
+    /// Assigns the cord to a copy of the data from a string range.
     /// The cord is first cleared, then the data is appended.
     template<size_t Alignment, size_t BlockSize>
     CordBufferBase<Alignment, BlockSize> &
@@ -737,7 +936,7 @@ namespace fermat {
 
     /// Assigns the cord to a copy of the data from a Buffer.
     /// The entire buffer's content (from its beginning to its current size) is copied.
-    /// The buffer's view (if any) is ignored; only the actual data is copied.
+    /// The buffer's range (if any) is ignored; only the actual data is copied.
     template<size_t Alignment, size_t BlockSize>
     template<size_t BA>
     CordBufferBase<Alignment, BlockSize> &
@@ -747,7 +946,7 @@ namespace fermat {
         return *this;
     }
 
-    /// Appends a string view to the cord.
+    /// Appends a string range to the cord.
     template<size_t Alignment, size_t BlockSize>
     CordBufferBase<Alignment, BlockSize> &
     CordBufferBase<Alignment, BlockSize>::operator<<(std::string_view str) {
@@ -792,29 +991,28 @@ namespace fermat {
     void CordBufferBase<Alignment, BlockSize>::clear() noexcept {
         _views.clear();
         _total_size = 0;
-        _write_buffer = const_cast<buffer_type *>(&kZeroBuffer);
+        _write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
     }
 
+
     template<size_t Alignment, size_t BlockSize>
-    turbo::Status CordBufferBase<Alignment, BlockSize>::prepend(
+    turbo::Status CordBufferBase<Alignment, BlockSize>::prepend_buffer(
         const std::shared_ptr<Buffer<value_type, Alignment> > &buf, size_t offset, size_t length) {
         if (!buf || buf->empty()) {
             return turbo::OkStatus();
         }
 
-        if (offset + length > _total_size) {
+        if (offset + length > buf->size()) {
             return turbo::invalid_argument_error("overflow buffer");
         }
 
-        BufferRef ref;
-        ref.buffer = buf;
-        ref.view = turbo::span<char>(buf->data() + offset, length);
+        BufferRef<Alignment> ref = BufferRef<Alignment>::reference(buf, offset, length);
         _views.push_front(std::move(ref));
-        _total_size += _views.front().buffer->size();
+        _total_size += _views.front().size();
 
-        if (!_views.empty()) {
+        if (_views.back().is_unique()) {
             // The new buffer is the only segment, so it is also the tail.
-            _write_buffer = _views.back().buffer.get();
+            _write_buffer = &_views.back();
         }
         // Otherwise the existing tail remains the writable buffer; do nothing.
 
@@ -822,66 +1020,28 @@ namespace fermat {
     }
 
     template<size_t Alignment, size_t BlockSize>
-    turbo::Status CordBufferBase<Alignment, BlockSize>::prepend(std::shared_ptr<Buffer<value_type, Alignment> > &&buf) {
+    turbo::Status CordBufferBase<Alignment, BlockSize>::prepend_buffer(
+        std::shared_ptr<Buffer<value_type, Alignment> > &&buf, size_t offset, size_t length) {
         if (!buf || buf->empty()) {
             return turbo::OkStatus();
         }
-
-        BufferRef ref;
-        ref.buffer = std::move(buf);
+        BufferRef<Alignment> ref = BufferRef<Alignment>::assign(std::move(buf), offset, length);
         _views.push_front(std::move(ref));
-        _total_size += _views.front().buffer->size();
-
-        if (!_views.empty()) {
-            // The new buffer is the only segment, so it is also the tail.
-            _write_buffer = _views.back().buffer.get();
-        }
-        // Otherwise the existing tail remains the writable buffer; do nothing.
-
+        _total_size += _views.front().size();
         return turbo::OkStatus();
     }
 
-    template<size_t Alignment, size_t BlockSize>
-    turbo::Status CordBufferBase<Alignment, BlockSize>::prepend(
-        std::vector<std::shared_ptr<Buffer<value_type, Alignment> > > &&bufs) {
-        if (bufs.empty()) {
-            return turbo::OkStatus();
-        }
-
-        size_t added_size = 0;
-        // Insert in reverse order so that bufs[0] becomes the new front.
-        for (auto it = bufs.rbegin(); it != bufs.rend(); ++it) {
-            auto &buf = *it;
-            if (!buf || buf->empty()) {
-                continue;
-            }
-            added_size += buf->size();
-            BufferRef ref;
-            ref.buffer = std::move(buf);
-            _views.push_front(std::move(ref));
-        }
-
-        if (added_size == 0) {
-            return turbo::OkStatus();
-        }
-
-        _total_size += added_size;
-        // Set writable buffer to the tail (last segment) unconditionally.
-        _write_buffer = _views.back().buffer.get();
-        return turbo::OkStatus();
-    }
 
     template<size_t Alignment, size_t BlockSize>
-    std::vector<std::shared_ptr<typename CordBufferBase<Alignment, BlockSize>::buffer_type> >
+    std::vector<BufferRef<Alignment> >
     CordBufferBase<Alignment, BlockSize>::create_buffers(size_t bytes_needed) {
-        std::vector<std::shared_ptr<buffer_type> > result;
+        std::vector<BufferRef<Alignment>> result;
         if (bytes_needed == 0) {
             return result;
         }
         size_t remaining = bytes_needed;
         while (remaining > 0) {
-            auto buf = std::make_shared<buffer_type>();
-            buf->reserve(BlockSize);
+            auto buf = BufferRef<Alignment>::create_write_able(BlockSize);
             result.push_back(std::move(buf));
             if (remaining > BlockSize) {
                 remaining -= BlockSize;
@@ -889,7 +1049,20 @@ namespace fermat {
                 remaining = 0;
             }
         }
-        return result;
+        return std::move(result);
+    }
+
+
+    template<size_t Alignment, size_t BlockSize>
+    BufferRef<Alignment>
+    CordBufferBase<Alignment, BlockSize>::create_big_buffer(size_t bytes_needed) {
+        BufferRef<Alignment> result;
+        if (bytes_needed == 0) {
+            return result;
+        }
+        auto n = (bytes_needed + BlockSize -1) / BlockSize;
+        result = BufferRef<Alignment>::create_write_able(BlockSize * n);
+        return std::move(result);
     }
 
 
@@ -900,8 +1073,7 @@ namespace fermat {
         auto remain = size;
         do {
             auto *b = get_write_able_buffer();
-            auto app_len = std::min(remain, b->capacity() - b->size());
-            b->append_confident(src, app_len);
+            auto app_len = b->append(src, remain);
             remain -= app_len;
             src += app_len;
         } while (remain > 0);
@@ -911,25 +1083,23 @@ namespace fermat {
 
     template<size_t Alignment, size_t BlockSize>
     turbo::span<char> CordBufferBase<Alignment, BlockSize>::output_next() {
-        buffer_type *buf = get_write_able_buffer();
-        char *start = buf->data() + buf->size();
-        size_t available = _write_buffer->capacity() - buf->size();
-        // Pretend the whole remaining space is used immediately.
-        buf->resize(_write_buffer->capacity());
+        auto *buf = get_write_able_buffer();
+        void *out;
+        int available;
+        auto r = buf->borrow(&out, &available);
+        if (!r) {
+            return {};
+        }
         _total_size += available;
-        return turbo::span<char>{start, available};
+        return turbo::span<char>{reinterpret_cast<char *>(out), static_cast<size_t>(available)};
     }
 
     template<size_t Alignment, size_t BlockSize>
-    bool CordBufferBase<Alignment, BlockSize>::output_next(void **out, size_t *size) {
-        buffer_type *buf = get_write_able_buffer();
-        char *start = buf->data() + buf->size();
-        size_t available = _write_buffer->capacity() - buf->size();
-        // Pretend the whole remaining space is used immediately.
-        buf->resize(_write_buffer->capacity());
-        _total_size += available;
-        *out = start;
-        *size = available;
+    bool CordBufferBase<Alignment, BlockSize>::output_next(void **out, int *size) {
+        auto *buf = get_write_able_buffer();
+        auto r = buf->borrow(out, size);
+        if (!r) return false;
+        _total_size += *size;
         return true;
     }
 
@@ -945,18 +1115,18 @@ namespace fermat {
         }
         size_t remaining = to_remove;
         while (remaining > 0) {
-            BufferRef &ref = _views.back();
-            buffer_type *buf = ref.buffer.get();
-            size_t sz = buf->size();
-            size_t take = std::min(remaining, sz);
-            buf->resize(sz - take);
-            if (buf->size() == 0) {
+            BufferRef<Alignment> &ref = _views.back();
+            remaining -= ref.backup(remaining);
+            if (ref.size() == 0) {
                 _views.pop_back();
             }
-            remaining -= take;
         }
         _total_size -= to_remove;
-        _write_buffer = _views.back().buffer.get();
+        if (!_views.empty()) {
+            _write_buffer = &_views.back();
+        } else {
+            _write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
+        }
     }
 
     template<size_t Alignment, size_t BlockSize>
@@ -968,25 +1138,12 @@ namespace fermat {
         }
         size_t remaining = n;
         while (remaining > 0) {
-            BufferRef &front = _views.front();
-            // Determine the effective size of the front segment (view or full buffer)
-            size_t seg_size = front.view ? front.view->size() : front.buffer->size();
-            if (remaining >= seg_size) {
-                // Remove the entire segment
-                remaining -= seg_size;
+            BufferRef<Alignment> &front = _views.front();
+            // Determine the effective size of the front segment (range or full buffer)
+            remaining -= front.pop_front(remaining);
+            size_t seg_size = front.range.length;
+            if (front.size() == 0) {
                 _views.pop_front();
-            } else {
-                // Partially consume the front segment: adjust its view (or shrink buffer)
-                if (front.view) {
-                    // Create a new view that skips the consumed bytes
-                    front.view = front.view->subspan(remaining);
-                } else {
-                    // No view; we could either create a view or adjust buffer pointer?
-                    // Simplest: replace the buffer ref with a view subspan.
-                    front.view = turbo::span<char>(front.buffer->data() + remaining,
-                                                   front.buffer->size() - remaining);
-                }
-                remaining = 0;
             }
         }
         _total_size -= n;
@@ -998,16 +1155,15 @@ namespace fermat {
             return;
         }
         const auto &front = _views.front();
-        size_t seg_size = front.view ? front.view->size() : front.buffer->size();
-        _total_size -= seg_size;
+        _total_size -= front.range.length;
         _views.pop_front();
         if (_views.empty()) {
-            _write_buffer = const_cast<buffer_type *>(&kZeroBuffer);
+            _write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
         }
     }
 
     template<size_t Alignment, size_t BlockSize>
-    const typename CordBufferBase<Alignment, BlockSize>::BufferRef &
+    const BufferRef<Alignment> &
     CordBufferBase<Alignment, BlockSize>::front_buffer() const noexcept {
         KCHECK(!_views.empty()) << "CordBufferBase::front_buffer() called on empty cord";
         return _views.front();
@@ -1022,28 +1178,21 @@ namespace fermat {
         }
         size_t remaining = n;
         while (remaining > 0) {
-            BufferRef &back = _views.back();
-            size_t seg_size = back.view ? back.view->size() : back.buffer->size();
-            if (remaining >= seg_size) {
+            BufferRef<Alignment> &back = _views.back();
+            if (remaining >= back.range.length) {
                 // Remove the entire segment
-                remaining -= seg_size;
+                remaining -= back.range.length;
                 _views.pop_back();
             } else {
-                // Partially consume the back segment: truncate its view (or buffer) from the end
-                size_t new_size = seg_size - remaining;
-                if (back.view) {
-                    // Create a view that drops the last 'remaining' bytes
-                    back.view = back.view->subspan(0, new_size);
-                } else {
-                    // No view; create a view covering only the first new_size bytes of the buffer
-                    back.view = turbo::span<char>(back.buffer->data(), new_size);
-                }
+                back.range.length -= remaining;
                 remaining = 0;
             }
         }
         _total_size -= n;
-        if (_views.empty()) {
-            _write_buffer = const_cast<buffer_type *>(&kZeroBuffer);
+        if (_views.empty() || !_views.back().write_able()) {
+            _write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
+        } else {
+            _write_buffer = &_views.back();
         }
     }
 
@@ -1053,16 +1202,17 @@ namespace fermat {
             return;
         }
         const auto &back = _views.back();
-        size_t seg_size = back.view ? back.view->size() : back.buffer->size();
-        _total_size -= seg_size;
+        _total_size -= back.range.length;
         _views.pop_back();
-        if (_views.empty()) {
-            _write_buffer = const_cast<buffer_type *>(&kZeroBuffer);
+        if (_views.empty() || !_views.back().write_able()) {
+            _write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
+        } else {
+            _write_buffer = &_views.back();
         }
     }
 
     template<size_t Alignment, size_t BlockSize>
-    const typename CordBufferBase<Alignment, BlockSize>::BufferRef &
+    const BufferRef<Alignment> &
     CordBufferBase<Alignment, BlockSize>::back_buffer() const noexcept {
         KCHECK(!_views.empty()) << "back_buffer on empty cord";
         return _views.back();
@@ -1084,7 +1234,7 @@ namespace fermat {
             collect += span.size();
             vecs.emplace_back(span);
         }
-        std::vector<std::shared_ptr<Buffer<value_type, Alignment> > > buffers;
+        std::vector<BufferRef<Alignment> > buffers;
         if (collect < max_limited) {
             auto bsize = (max_limited - collect) / BlockSize + 1;
             size_t n;
@@ -1094,14 +1244,17 @@ namespace fermat {
                 n = std::min(bsize, kMaxReadVSpans);
             }
 
-            buffers = std::move(create_buffers(n * BlockSize));
-            for (size_t i = 0; i < buffers.size() - 1; i++) {
-                vecs.emplace_back(buffers[i]->data(), buffers[i]->capacity());
-                collect += buffers[i]->capacity();
+            for (size_t i = 0; i < n - 1; i++) {
+                auto ref = BufferRef<Alignment>::create_write_able(BlockSize);
+                vecs.emplace_back(ref.buffer->data(), ref.capacity());
+                collect += ref.capacity();
+                buffers.push_back(std::move(ref));
             }
-            auto last = std::min(max_limited - collect, buffers.back()->capacity());
+            auto ref = BufferRef<Alignment>::create_write_able(BlockSize);
+            auto last = std::min(max_limited - collect, ref.capacity());
             collect += last;
-            vecs.emplace_back(buffers.back()->data(), last);
+            vecs.emplace_back(ref.buffer->data(), last);
+            buffers.push_back(std::move(ref));
         }
 
         auto r = reader.readv(vecs, collect);
@@ -1122,12 +1275,13 @@ namespace fermat {
         }
         auto it = buffers.begin();
         while (span_size < rsize) {
-            size_t s = std::min(rsize - span_size, (*it)->capacity());
-            (*it++)->resize(s);
+            size_t s = std::min(rsize - span_size, it->capacity());
             span_size += s;
+            it->range.length = s;
+            ++it;
         }
 
-        append(buffers).ignore_error();
+        append_writeable(std::move(buffers)).ignore_error();
         return rsize;
     }
 
