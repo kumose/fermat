@@ -18,7 +18,9 @@
 ###kmcmake_example
 set(SRC
         fake.cc
+        io/reader.cc
         io/sysio.cc
+        io/writer.cc
         memory/arena.cc
         memory/resource_pool.cc
 )

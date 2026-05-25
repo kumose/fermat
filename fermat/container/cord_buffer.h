@@ -17,7 +17,7 @@
 
 #include <fermat/container/buffer.h>
 #include <fermat/container/vector.h>
-#include <fermat/container/reader_writer.h>
+#include <fermat/io/reader_writer.h>
 #include <fermat/container/receiver.h>
 #include <fermat/container/deque.h>
 #include <turbo/log/logging.h>
@@ -1285,13 +1285,16 @@ namespace fermat {
             return 0;
         }
 
-        std::vector<turbo::span<char> > vecs;
+        std::vector<IOVec> vecs;
         vecs.reserve(kMaxReadVSpans);
         size_t collect = 0;
         if (!restart_block) {
             auto span = output_next();
             collect += span.size();
-            vecs.emplace_back(span);
+            IOVec vec;
+            vec.iov_base = span.data();
+            vec.iov_len = span.size();
+            vecs.push_back(vec);
         }
         std::vector<BufferRef<Alignment> > buffers;
         if (collect < max_limited) {
@@ -1319,14 +1322,14 @@ namespace fermat {
         auto r = reader.readv(vecs, collect);
         if (!r.ok()) {
             if (!restart_block) {
-                output_backup(vecs.front().size());
+                output_backup(vecs.front().iov_len);
             }
             return r;
         }
         auto rsize = r.value_or_die();
         size_t span_size = 0;
         if (!restart_block) {
-            span_size = vecs.front().size();
+            span_size = vecs.front().iov_len;
             if (rsize <= span_size) {
                 output_backup(span_size - rsize);
                 return rsize;

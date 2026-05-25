@@ -677,15 +677,39 @@ namespace fermat {
             explicit MockReader(std::string data) : data_(std::move(data)), pos_(0) {
             }
 
-            turbo::Result<size_t>
-            readv(const std::vector<turbo::span<char> > &vecs, size_t total_bytes_reserved) override {
+            turbo::Result<size_t> readv(const std::vector<IOVec> &iov, size_t total_bytes_reserved) override {
+                (void) total_bytes_reserved; // ignore hint
                 size_t total = 0;
-                for (auto &span: vecs) {
-                    size_t to_copy = std::min(span.size(), data_.size() - pos_);
-                    std::memcpy(span.data(), data_.data() + pos_, to_copy);
-                    pos_ += to_copy;
-                    total += to_copy;
-                    if (to_copy < span.size()) break;
+                for (const auto &vec: iov) {
+                    char *buf = static_cast<char *>(vec.iov_base);
+                    size_t len = vec.iov_len;
+                    size_t to_copy = std::min(len, data_.size() - pos_);
+                    if (to_copy > 0) {
+                        std::memcpy(buf, data_.data() + pos_, to_copy);
+                        pos_ += to_copy;
+                        total += to_copy;
+                    }
+                    if (to_copy < len) break; // partial read
+                }
+                return total;
+            }
+
+            turbo::Result<size_t>
+            preadv(const std::vector<IOVec> &iov, size_t offset, size_t total_bytes_reserved) override {
+                (void) total_bytes_reserved;
+                size_t total = 0;
+                size_t cur_offset = offset;
+                for (const auto &vec: iov) {
+                    char *buf = static_cast<char *>(vec.iov_base);
+                    size_t len = vec.iov_len;
+                    if (cur_offset >= data_.size()) break;
+                    size_t to_copy = std::min(len, data_.size() - cur_offset);
+                    if (to_copy > 0) {
+                        std::memcpy(buf, data_.data() + cur_offset, to_copy);
+                        cur_offset += to_copy;
+                        total += to_copy;
+                    }
+                    if (to_copy < len) break;
                 }
                 return total;
             }
@@ -747,13 +771,18 @@ namespace fermat {
 
         TEST(CordBufferTest, append_by_readv_error) {
             // Mock that returns error
+
             class ErrorReader : public IOReader {
             public:
                 turbo::Result<size_t> read(turbo::span<char> &) override {
                     return turbo::unknown_error("fail");
                 }
 
-                turbo::Result<size_t> readv(const std::vector<turbo::span<char> > &, size_t) override {
+                turbo::Result<size_t> readv(const std::vector<IOVec> &, size_t) override {
+                    return turbo::unknown_error("fail");
+                }
+
+                turbo::Result<size_t> preadv(const std::vector<IOVec> &, size_t, size_t) override {
                     return turbo::unknown_error("fail");
                 }
 
@@ -761,6 +790,7 @@ namespace fermat {
                     return turbo::unknown_error("fail");
                 }
             };
+
             ErrorReader reader;
             CordBufferBase<64, 4096> cord;
             auto result = cord.append_by_readv(reader, 100, false);
@@ -796,7 +826,11 @@ namespace fermat {
                     return turbo::unknown_error("fail");
                 }
 
-                turbo::Result<size_t> readv(const std::vector<turbo::span<char> > &, size_t) override {
+                turbo::Result<size_t> readv(const std::vector<IOVec> &, size_t) override {
+                    return turbo::unknown_error("fail");
+                }
+
+                turbo::Result<size_t> preadv(const std::vector<IOVec> &, size_t, size_t) override {
                     return turbo::unknown_error("fail");
                 }
 
@@ -1074,13 +1108,23 @@ namespace fermat {
         TEST(CordBufferTest, append_by_readv_error_rollback) {
             class FaultyReader : public IOReader {
             public:
-                turbo::Result<size_t> readv(const std::vector<turbo::span<char> > &, size_t) override {
+                turbo::Result<size_t> readv(const std::vector<IOVec> &, size_t) override {
                     return turbo::unknown_error("fail");
                 }
 
-                turbo::Result<size_t> read(turbo::span<char> &) override { return 0; }
-                turbo::Result<size_t> pread(turbo::span<char> &, size_t) override { return 0; }
+                turbo::Result<size_t> preadv(const std::vector<IOVec> &, size_t, size_t) override {
+                    return turbo::unknown_error("fail");
+                }
+
+                turbo::Result<size_t> read(turbo::span<char> &) override {
+                    return 0;
+                }
+
+                turbo::Result<size_t> pread(turbo::span<char> &, size_t) override {
+                    return 0;
+                }
             };
+
             CordBufferBase<64, 4096> cord;
             // Pre‑fill with some data so rollback happens
             cord.append("initial", 7);
