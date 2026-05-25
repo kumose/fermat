@@ -13,21 +13,8 @@
 // limitations under the License.
 //
 
-#pragma once
-
-#include <gtest/gtest.h>
-#include <fermat/io/iobuf.h>
-#include <string_view>
+#include <fermat/io/sysio.h>
 
 namespace fermat {
-    using TestIOBuf = IOBuf<64, 4096>;
 
-    class IOBufTest : public ::testing::Test {
-    protected:
-        void SetUp() override {
-        }
-
-        void TearDown() override {
-        }
-    };
-}
+}  // namespace fermat

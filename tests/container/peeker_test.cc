@@ -14,7 +14,6 @@
 
 #include <gtest/gtest.h>
 #include <fermat/container/peeker.h>
-#include <fermat/io/iobuf.h>
 #include <fermat/container/buffer.h>
 #include <fermat/container/vector.h>
 #include <string>
@@ -22,8 +21,8 @@
 #include <vector>
 
 namespace fermat {
-    using TestIOBuf = CordBufferBase<64, 4096>;
-    using TestPeeker = Peeker<TestIOBuf>;
+    using TestCordBuffer = CordBufferBase<64, 4096>;
+    using TestPeeker = Peeker<TestCordBuffer>;
     using StringViewPeeker = Peeker<std::string_view>;
     using StringPeeker = Peeker<std::string>;
     using BufferPeeker = Peeker<Buffer<char, 64> >;
@@ -46,25 +45,18 @@ namespace fermat {
             // remaining is insufficient? Actually borrow(4000) will check write_able_size.
             // To force new blocks, we can write 4096 bytes to exactly fill each block.
             // Using exactly block size ensures a new block each time.
-            const size_t block_size = TestIOBuf::kBlockSize;
+            const size_t block_size = TestCordBuffer::kBlockSize;
             std::string data0(block_size, 'A');
             std::string data1(block_size, 'B');
             std::string data2(block_size, 'C');
 
-            auto l1 = _buf.borrow(block_size).value_or_die();
-            l1->write(data0.data(), block_size);
-            _buf.commit(l1);
+            _buf.append(data0.data(), block_size).ignore_error();
+            _buf.append(data1.data(), block_size).ignore_error();
+            _buf.append(data2.data(), block_size).ignore_error();
 
-            auto l2 = _buf.borrow(block_size).value_or_die();
-            l2->write(data1.data(), block_size);
-            _buf.commit(l2);
-
-            auto l3 = _buf.borrow(block_size).value_or_die();
-            l3->write(data2.data(), block_size);
-            _buf.commit(l3);
         }
 
-        TestIOBuf _buf;
+        TestCordBuffer _buf;
     };
 
     TEST_F(PeekerIOBufTest, ConstructionAndReset) {
@@ -89,7 +81,7 @@ namespace fermat {
     TEST_F(PeekerIOBufTest, SeekToByteOffset) {
         TestPeeker peeker(&_buf);
         // Seek to logical offset block_size + 1, which should be in second block, offset 1
-        size_t block_size = TestIOBuf::kBlockSize;
+        size_t block_size = TestCordBuffer::kBlockSize;
         auto pos = peeker.seek_to(block_size + 1);
         EXPECT_EQ(pos, Position(1, 1));
         EXPECT_EQ(peeker.tellg(), Position(1, 1));
@@ -108,7 +100,7 @@ namespace fermat {
 
     TEST_F(PeekerIOBufTest, SeekToPosition) {
         TestPeeker peeker(&_buf);
-        size_t block_size = TestIOBuf::kBlockSize;
+        size_t block_size = TestCordBuffer::kBlockSize;
         // Directly set to second block, offset 2
         peeker.seek_to(Position(1, 2));
         EXPECT_EQ(peeker.tellg(), Position(1, 2));
@@ -123,7 +115,7 @@ namespace fermat {
         EXPECT_TRUE(peeker.eof());
 
         // Empty buffer case
-        TestIOBuf empty;
+        TestCordBuffer empty;
         TestPeeker empty_peeker(&empty);
         empty_peeker.seek_to(Position(0, 0));
         EXPECT_TRUE(empty_peeker.eof());
@@ -131,7 +123,7 @@ namespace fermat {
 
     TEST_F(PeekerIOBufTest, SeekEndAndStart) {
         TestPeeker peeker(&_buf);
-        size_t block_size = TestIOBuf::kBlockSize;
+        size_t block_size = TestCordBuffer::kBlockSize;
         // Move 2 bytes forward from start
         peeker.seek_end(2);
         EXPECT_EQ(peeker.tellg(), Position(0, 2));
@@ -162,7 +154,7 @@ namespace fermat {
 
     TEST_F(PeekerIOBufTest, OperatorStarAndIncrementDecrement) {
         TestPeeker peeker(&_buf);
-        size_t block_size = TestIOBuf::kBlockSize;
+        size_t block_size = TestCordBuffer::kBlockSize;
         EXPECT_EQ(*peeker, 'A');
 
         ++peeker;
@@ -185,7 +177,7 @@ namespace fermat {
 
         auto p2 = peeker + block_size;
         EXPECT_EQ(p2.tellg(), Position(1, 0));
-        auto p3 = peeker - 1u; // negative move should clamp to 0
+        auto p3 = peeker - (size_t)1; // negative move should clamp to 0
         EXPECT_EQ(p3.tellg(), Position(0, 0));
     }
 
@@ -193,7 +185,7 @@ namespace fermat {
         TestPeeker peeker(&_buf);
         // Find first 'B' after start
         auto pos = peeker.find_first_position("B");
-        size_t block_size = TestIOBuf::kBlockSize;
+        size_t block_size = TestCordBuffer::kBlockSize;
         EXPECT_EQ(pos, Position(1, 0));
         size_t off = peeker.find_first_offset("B");
         EXPECT_EQ(off, block_size); // logical offset of first 'B'
@@ -214,7 +206,7 @@ namespace fermat {
 
     TEST_F(PeekerIOBufTest, Readn) {
         TestPeeker peeker(&_buf);
-        size_t block_size = TestIOBuf::kBlockSize;
+        size_t block_size = TestCordBuffer::kBlockSize;
 
         // Read 2 bytes from start
         auto chunk = peeker.readn(2);
@@ -260,7 +252,7 @@ namespace fermat {
 
     TEST_F(PeekerIOBufTest, ConversionToStringView) {
         TestPeeker peeker(&_buf);
-        size_t block_size = TestIOBuf::kBlockSize;
+        size_t block_size = TestCordBuffer::kBlockSize;
         peeker.seek_to(block_size + 2); // within second block
         std::string_view sv = peeker;
         EXPECT_EQ(sv.size(), block_size - 2); // from that offset to end
@@ -274,7 +266,7 @@ namespace fermat {
         TestPeeker peeker(&_buf);
         EXPECT_TRUE(peeker);
         EXPECT_FALSE(peeker.eof());
-        peeker.seek_to(3 * TestIOBuf::kBlockSize);
+        peeker.seek_to(3 * TestCordBuffer::kBlockSize);
         EXPECT_FALSE(peeker);
         EXPECT_TRUE(peeker.eof());
     }

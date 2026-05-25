@@ -33,14 +33,14 @@ namespace fermat {
     template<bool Custom>
     class FlattenCustomer {
     public:
-        /// @brief Consumes up to `n` bytes from the source IOBuf and appends them to the target container.
+        /// @brief Consumes up to `n` bytes from the source CordBuffer and appends them to the target container.
         ///        If `n` exceeds the available data, only the existing bytes are read (no error).
-        /// @param source The source IOBuf (data is read from its logical head).
+        /// @param source The source CordBuffer (data is read from its logical head).
         /// @param target The destination container (must satisfy ContainerTraits).
         /// @param n Maximum number of bytes to read.
         /// @return OkStatus on success (even if fewer than `n` bytes were read).
         template<size_t Alignment, size_t BlockSize>
-        static turbo::Status custom(IOBuf<Alignment, BlockSize> &source, Receiver &target, size_t n) {
+        static turbo::Status custom(CordBufferBase<Alignment, BlockSize> &source, Receiver &target, size_t n) {
             if (n == 0) return turbo::OkStatus();
 
             // Limit to what is actually available
@@ -66,7 +66,7 @@ namespace fermat {
             if constexpr (Custom) {
                 size_t consumed = readable - remaining;
                 if (consumed > 0) {
-                    TURBO_RETURN_NOT_OK(source.custom(consumed));
+                    source.pop_front(consumed);
                 }
             }
             return turbo::OkStatus();
@@ -109,7 +109,7 @@ namespace fermat {
             if constexpr (Custom) {
                 size_t consumed = readable - remaining + cus_n;
                 if (consumed > 0) {
-                    TURBO_RETURN_NOT_OK(source.custom(consumed));
+                    source.pop_front(consumed);
                 }
             }
             return turbo::OkStatus();

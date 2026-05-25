@@ -15,21 +15,17 @@
 
 
 #include <gtest/gtest.h>
-#include <fermat/io/iobuf.h>
 #include <fermat/container/receiver.h>
-#include <fermat/io/customer.h>   // provides Customer, Reader
+#include <fermat/container/customer.h>   // provides Customer, Reader
 #include <string_view>
-#include <tests/io/io_test.h>
+#include <tests/container/cord_test.h>
 #include <fermat/container/buffer.h>
 
 namespace fermat {
 
 // Helper to fill IOBuf with a string (using Lease write)
-static void FillIOBuf(TestIOBuf &buf, std::string_view data) {
-    auto *lease = buf.borrow(data.size(), std::nullopt).value_or_die();
-    auto status = lease->write(data.data(), data.size());
-    ASSERT_TRUE(status.ok());
-    buf.commit(lease);
+static void FillIOBuf(TestCordBuffer &buf, std::string_view data) {
+    buf.append(data.data(), data.size()).ignore_error();
 }
 
 
@@ -37,8 +33,8 @@ static void FillIOBuf(TestIOBuf &buf, std::string_view data) {
 // Tests using Customer (Custom=true) and Reader (Custom=false)
 // ============================================================================
 
-TEST_F(IOBufTest, CustomerToAlignedVector) {
-    TestIOBuf src;
+TEST_F(CordBufTest, CustomerToAlignedVector) {
+    TestCordBuffer src;
     std::string payload = "hello from IOBuf to AlignedVector";
     FillIOBuf(src, payload);
     EXPECT_EQ(src.size(), payload.size());
@@ -52,8 +48,8 @@ TEST_F(IOBufTest, CustomerToAlignedVector) {
     EXPECT_EQ(src.size(), 0);   // source fully consumed
 }
 
-TEST_F(IOBufTest, CustomerToAlignedString) {
-    TestIOBuf src;
+TEST_F(CordBufTest, CustomerToAlignedString) {
+    TestCordBuffer src;
     std::string payload = "AlignedString integration test";
     FillIOBuf(src, payload);
     EXPECT_EQ(src.size(), payload.size());
@@ -67,8 +63,8 @@ TEST_F(IOBufTest, CustomerToAlignedString) {
     EXPECT_EQ(src.size(), 0);
 }
 
-TEST_F(IOBufTest, CustomerToStdString) {
-    TestIOBuf src;
+TEST_F(CordBufTest, CustomerToStdString) {
+    TestCordBuffer src;
     std::string payload = "std::string test";
     FillIOBuf(src, payload);
     EXPECT_EQ(src.size(), payload.size());
@@ -81,8 +77,8 @@ TEST_F(IOBufTest, CustomerToStdString) {
     EXPECT_EQ(src.size(), 0);
 }
 
-TEST_F(IOBufTest, ReaderCopiesWithoutDrain) {
-    TestIOBuf src;
+TEST_F(CordBufTest, ReaderCopiesWithoutDrain) {
+    TestCordBuffer src;
     std::string payload = "copy without drain";
     FillIOBuf(src, payload);
     EXPECT_EQ(src.size(), payload.size());
@@ -100,17 +96,13 @@ TEST_F(IOBufTest, ReaderCopiesWithoutDrain) {
 // Tests for custom_until (reading until delimiter)
 // ============================================================================
 
-TEST_F(IOBufTest, CustomerUntilCrossBlock) {
-    TestIOBuf src;
+TEST_F(CordBufTest, CustomerUntilCrossBlock) {
+    TestCordBuffer src;
     // Force two blocks: first block ends with "hello,", second begins with "world"
     std::string part1 = "hello,";
     std::string part2 = "world";
-    auto *lease1 = src.borrow(part1.size(), std::nullopt).value_or_die();
-    lease1->write(part1.data(), part1.size());
-    src.commit(lease1);
-    auto *lease2 = src.borrow(part2.size(), std::nullopt).value_or_die();
-    lease2->write(part2.data(), part2.size());
-    src.commit(lease2);
+    src.append(part1.data(), part1.size()).ignore_error();
+    src.append(part2.data(), part2.size()).ignore_error();
 
     std::string target;
     ContainerAppender<std::string> receiver(target);
@@ -122,8 +114,8 @@ TEST_F(IOBufTest, CustomerUntilCrossBlock) {
     EXPECT_EQ(src.flatten(), "world");
 }
 
-TEST_F(IOBufTest, CustomerUntilNoDelimiter) {
-    TestIOBuf src;
+TEST_F(CordBufTest, CustomerUntilNoDelimiter) {
+    TestCordBuffer src;
     std::string payload = "no delimiter here";
     FillIOBuf(src, payload);
     std::string target;
@@ -137,8 +129,8 @@ TEST_F(IOBufTest, CustomerUntilNoDelimiter) {
 }
 
 
-TEST_F(IOBufTest, ReaderUntilDoesNotDrain) {
-    TestIOBuf src;
+TEST_F(CordBufTest, ReaderUntilDoesNotDrain) {
+    TestCordBuffer src;
     std::string payload = "test,data";
     FillIOBuf(src, payload);
     std::string target;
@@ -151,8 +143,8 @@ TEST_F(IOBufTest, ReaderUntilDoesNotDrain) {
     EXPECT_EQ(src.flatten(), payload);
 }
 
-    TEST_F(IOBufTest, CustomerToOldABuffer) {
-    TestIOBuf src;
+    TEST_F(CordBufTest, CustomerToOldABuffer) {
+    TestCordBuffer src;
     std::string payload = "Hello, OldABuffer!";
     FillIOBuf(src, payload);
     EXPECT_EQ(src.size(), payload.size());
@@ -166,8 +158,8 @@ TEST_F(IOBufTest, ReaderUntilDoesNotDrain) {
     EXPECT_EQ(src.size(), 0);  // source consumed
 }
 
-    TEST_F(IOBufTest, CustomerUntilToOldABuffer) {
-    TestIOBuf src;
+    TEST_F(CordBufTest, CustomerUntilToOldABuffer) {
+    TestCordBuffer src;
     std::string payload = "prefix,separator,data";
     FillIOBuf(src, payload);
     Buffer<char, 64> target;

@@ -1,9 +1,10 @@
 {
   "dependencies": [
     "benchmark",
+    "brpc",
     "gtest",
     "mimalloc",
     "turbo",
-    "brpc"
+    "fmt"
   ]
 }

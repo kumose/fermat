@@ -62,15 +62,15 @@ namespace fermat {
             return traits_type::to_int_type(*gptr());
         }
 
-        /// Called when a character is read and the buffer is advanced.
+        // Called when a character is read and the buffer needs to advance.
         int uflow() override {
             if (underflow() == traits_type::eof()) {
                 return traits_type::eof();
             }
-            // Advance the get pointer and return the character.
-            return traits_type::to_int_type(*gptr());
-            // Note: gptr() will be incremented by the caller? Actually underflow sets get area,
-            // and uflow should consume one character. We manually advance.
+            // Consume one character and advance the get pointer.
+            char c = *gptr();
+            gbump(1);
+            return traits_type::to_int_type(c);
         }
 
         /// Supports putback (unget) of a single character.
@@ -577,11 +577,11 @@ namespace fermat {
     }
 
     /// Reads data into the given span until delimiter char is found or span is filled.
-/// The delimiter is consumed but not stored.
-/// @param data Destination span.
-/// @param c Delimiter character.
-/// @param reach Set to true if delimiter was encountered (and consumed).
-/// @return Number of bytes written into data.
+    /// The delimiter is consumed but not stored.
+    /// @param data Destination span.
+    /// @param c Delimiter character.
+    /// @param reach Set to true if delimiter was encountered (and consumed).
+    /// @return Number of bytes written into data.
     template<size_t Alignment, size_t BlockSize>
     size_t CordInputBinaryStream<Alignment, BlockSize>::read_util(turbo::span<char> data, char c, bool &reach) {
         reach = false;

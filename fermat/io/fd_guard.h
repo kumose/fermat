@@ -1,77 +1,102 @@
-// Licensed to the Apache Software Foundation (ASF) under one
-// or more contributor license agreements.  See the NOTICE file
-// distributed with this work for additional information
-// regarding copyright ownership.  The ASF licenses this file
-// to you under the Apache License, Version 2.0 (the
-// "License"); you may not use this file except in compliance
-// with the License.  You may obtain a copy of the License at
+// Copyright (C) 2026 Kumo inc. and its affiliates. All Rights Reserved.
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-// Unless required by applicable law or agreed to in writing,
-// software distributed under the License is distributed on an
-// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-// KIND, either express or implied.  See the License for the
-// specific language governing permissions and limitations
-// under the License.
-
-// Date: Mon. Nov 7 14:47:36 CST 2011
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 #pragma once
 
-#include <unistd.h>                                  // close()
+#ifdef _WIN32
+    #ifndef WIN32_LEAN_AND_MEAN
+    #define WIN32_LEAN_AND_MEAN
+    #endif
+    #include <windows.h>
+#else
+    #include <unistd.h>
+#endif
 
 namespace fermat {
 
-// RAII file descriptor.
-//
-// Example:
-//    FDGuard fd1(open(...));
-//    if (fd1 < 0) {
-//        printf("Fail to open\n");
-//        return -1;
-//    }
-//    if (another-error-happened) {
-//        printf("Fail to do sth\n");
-//        return -1;   // *** closing fd1 automatically ***
-//    }
-class FDGuard {
-public:
-    FDGuard() : _fd(-1) {}
-    explicit FDGuard(int fd) : _fd(fd) {}
-    
-    ~FDGuard() {
-        if (_fd >= 0) {
-            ::close(_fd);
-            _fd = -1;
+    // Platform abstraction for handles
+#ifdef _WIN32
+    using PlatformHandle = HANDLE;
+    constexpr PlatformHandle kInvalidHandle = INVALID_HANDLE_VALUE;
+    inline void close_handle(PlatformHandle h) {
+        if (h != INVALID_HANDLE_VALUE && h != NULL) {
+            ::CloseHandle(h);
         }
     }
-
-    // Close current fd and replace with another fd
-    void reset(int fd) {
-        if (_fd >= 0) {
-            ::close(_fd);
-            _fd = -1;
+#else
+    using PlatformHandle = int;
+    constexpr PlatformHandle kInvalidHandle = -1;
+    inline void close_handle(PlatformHandle h) {
+        if (h >= 0) {
+            ::close(h);
         }
-        _fd = fd;
     }
+#endif
 
-    // Set internal fd to -1 and return the value before set.
-    int release() {
-        const int prev_fd = _fd;
-        _fd = -1;
-        return prev_fd;
-    }
-    
-    operator int() const { return _fd; }
-    
-private:
-    // Copying this makes no sense.
-    FDGuard(const FDGuard&);
-    void operator=(const FDGuard&);
-    
-    int _fd;
-};
+    // RAII guard for any platform handle
+    class HandleGuard {
+    public:
+        HandleGuard() : _handle(kInvalidHandle) {}
+        explicit HandleGuard(PlatformHandle h) : _handle(h) {}
 
-}  // namespace fermat
+        ~HandleGuard() {
+            reset();
+        }
 
+        // Move constructor
+        HandleGuard(HandleGuard&& other) noexcept
+            : _handle(other.release()) {}
+
+        // Move assignment
+        HandleGuard& operator=(HandleGuard&& other) noexcept {
+            if (this != &other) {
+                reset(other.release());
+            }
+            return *this;
+        }
+
+        // Disable copy
+        HandleGuard(const HandleGuard&) = delete;
+        HandleGuard& operator=(const HandleGuard&) = delete;
+
+        // Replace the current handle with a new one (closes existing if any)
+        void reset(PlatformHandle h = kInvalidHandle) {
+            if (_handle != kInvalidHandle) {
+                close_handle(_handle);
+                _handle = kInvalidHandle;
+            }
+            _handle = h;
+        }
+
+        // Release ownership of the handle, return it
+        PlatformHandle release() noexcept {
+            PlatformHandle h = _handle;
+            _handle = kInvalidHandle;
+            return h;
+        }
+
+        // Get the underlying handle
+       [[nodiscard]] PlatformHandle get() const noexcept { return _handle; }
+
+        // Check if the handle is valid
+       [[nodiscard]] bool is_valid() const noexcept { return _handle != kInvalidHandle; }
+
+        // Implicit conversion to the underlying handle for convenience
+        operator PlatformHandle() const { return _handle; }
+
+    private:
+        PlatformHandle _handle;
+    };
+} // namespace fermat

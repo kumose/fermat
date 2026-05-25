@@ -6,5 +6,4 @@
 #include <fermat/container/bitmap_view.h>
 #include <fermat/container/ring_buffer.h>
 #include <fermat/container/cord_output_stream.h>
-
 #include <fermat/container/cord_input_stream.h>

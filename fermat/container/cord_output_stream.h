@@ -23,6 +23,9 @@
 #include <cstring>
 
 namespace fermat {
+    template<size_t Alignment, size_t BlockSize>
+    class CordOutputStringStream;
+
     /// @brief Stream buffer adapter that writes data directly into a CordBufferBase.
     ///
     /// This streambuf uses the CordBufferBase's output_next() / output_backup() mechanism
@@ -37,6 +40,8 @@ namespace fermat {
             : _cord(cord) {
             // No initial buffer; the first write will allocate via overflow().
         }
+        CordBufferStreambuf(CordBufferStreambuf &&) noexcept= default;
+        CordBufferStreambuf &operator=(CordBufferStreambuf &&) noexcept= default;
 
         ~CordBufferStreambuf() override {
             sync(); // Commit any pending writes.
@@ -53,9 +58,8 @@ namespace fermat {
         /// commits the current buffer and acquires a new one.
         int overflow(int ch) override {
             if (ch == EOF) {
-                return sync(); // Flush and return success.
+                return sync() == 0 ? ch : traits_type::eof();
             }
-
             // If we have a current buffer and space remains, write directly.
             if (pptr() && pptr() < epptr()) {
                 *pptr() = static_cast<char>(ch);
@@ -102,6 +106,7 @@ namespace fermat {
         }
 
     private:
+        friend class CordOutputStringStream<Alignment, BlockSize>;
         /// Commits the current buffer (if any) to the cord by adjusting the cord's
         /// logical size to match the actually written bytes.
         /// @return true on success, false on failure (should not happen here).
@@ -409,8 +414,8 @@ namespace fermat {
 
         /// Writes the pointer value as raw bytes (size depends on platform).
         template<typename T>
-        CordOutputBinaryStream & operator<<(RawPointer<T> ptr) {
-            return  write(&ptr.get(), sizeof(T *));
+        CordOutputBinaryStream &operator<<(RawPointer<T> ptr) {
+            return write(&ptr.get(), sizeof(T *));
         }
 
         template<typename T>
@@ -504,7 +509,7 @@ namespace fermat {
     CordOutputBinaryStream<Alignment, BlockSize> &
     CordOutputBinaryStream<Alignment, BlockSize>::write(const void *data, size_t size) {
         if (_cord) {
-            _cord->append(data, size).IgnoreError();
+            _cord->append(data, size).ignore_error();
         }
         return *this;
     }

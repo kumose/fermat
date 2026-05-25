@@ -18,7 +18,7 @@
 ###kmcmake_example
 set(SRC
         fake.cc
-        io/buffer_lease.cc
+        io/sysio.cc
         memory/arena.cc
         memory/resource_pool.cc
 )

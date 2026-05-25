@@ -20,10 +20,14 @@
 #include <fermat/container/reader_writer.h>
 #include <fermat/container/receiver.h>
 #include <fermat/container/deque.h>
-#include <fermat/container/list.h>
 #include <turbo/log/logging.h>
 #include <memory>
 #include <new>
+
+/// 10g may enough for a single CordBuffer
+#ifndef MAX_SINGLE_CORD_SIZE
+#define MAX_SINGLE_CORD_SIZE (10UL * 1024UL * 1024UL * 1024UL)
+#endif
 
 namespace fermat {
     template<size_t Alignment>
@@ -90,6 +94,10 @@ namespace fermat {
 
         [[nodiscard]] size_t size() const {
             return range.length;
+        }
+
+        [[nodiscard]] const char *data() const {
+            return buffer->data() + range.offset;
         }
 
         [[nodiscard]] size_t offset() const {
@@ -166,6 +174,7 @@ namespace fermat {
         static constexpr size_t kBlockSize = BlockSize;
         static constexpr size_t kAlignment = Alignment;
         static constexpr size_t kMaxReadVSpans = 32;
+        static constexpr size_t kMaxSingleCordSize = MAX_SINGLE_CORD_SIZE;
 
     public:
         using value_type = char;
@@ -234,7 +243,7 @@ namespace fermat {
             }
 
             CordIterator(const CordBufferBase *cord, bool) : _cord(cord), _cur(_cord->buffer_end()), _view(),
-                                                             _view_begin(_view.end()) {
+                                                             _view_begin(_view.end()), _index_read(_cord->size()) {
             }
 
             size_type has_read() const {
@@ -350,8 +359,8 @@ namespace fermat {
                 _index = idx;
                 _offset = off;
                 _byte_count += count;
-                _last_chunk_size = 0; // After skip, the last chunk is no longer valid.
-                _skip_empty();
+                // After skip, the last chunk is no longer valid.
+                _last_chunk_size = 0;
                 return true;
             }
 
@@ -377,10 +386,14 @@ namespace fermat {
             }
 
             const CordBufferBase *_cord;
-            size_t _index{0}; ///< Current segment index.
-            size_t _offset{0}; ///< Offset within the current segment.
-            int64_t _byte_count{0}; ///< Total bytes consumed.
-            size_t _last_chunk_size{0}; ///< Size of the last chunk returned by next() (for back_up validation).
+            /// Current segment index.
+            size_t _index{0};
+            /// Offset within the current segment.
+            size_t _offset{0};
+            /// Total bytes consumed.
+            int64_t _byte_count{0};
+            /// Size of the last chunk returned by next() (for back_up validation).
+            size_t _last_chunk_size{0};
         };
 
     public:
@@ -403,6 +416,20 @@ namespace fermat {
 
         const_buffer_iterator buffer_begin() const {
             return _views.begin();
+        }
+
+        const BufferRef<Alignment> *buffer_at(size_t idx) const {
+            if (idx < _views.size()) {
+                return &_views.at(idx);
+            }
+            return nullptr;
+        }
+
+        BufferRef<Alignment> *buffer_at(size_t idx) {
+            if (idx < _views.size()) {
+                return &_views.at(idx);
+            }
+            return nullptr;
         }
 
         const_buffer_iterator buffer_end() const {
@@ -439,7 +466,7 @@ namespace fermat {
 
         [[nodiscard]] size_t size() const;
 
-        [[nodiscard]] size_t blocks() const;
+        [[nodiscard]] size_t buffer_count() const;
 
         turbo::Status append_reference(const BufferRef<Alignment> &ref);
 
@@ -476,7 +503,7 @@ namespace fermat {
         /// Creates empty buffers whose total capacity is at least `bytes_needed`.
         /// New buffers use `BlockSize` as the default reserve granularity (recommended, not required
         /// for externally appended segments, which may use any aligned pool tier capacity).
-        static std::vector<BufferRef<Alignment>> create_buffers(size_t bytes_needed);
+        static std::vector<BufferRef<Alignment> > create_buffers(size_t bytes_needed);
 
         /// merge blcoks in one
         static BufferRef<Alignment> create_big_buffer(size_t bytes_needed);
@@ -586,6 +613,11 @@ namespace fermat {
 
         const BufferRef<Alignment> &back_buffer() const noexcept;
 
+        turbo::Status flatten(Receiver &recv) const;
+
+        template<typename String = std::string, std::enable_if_t<is_contiguous_string_receiver<String>::value, int> = 0>
+        String flatten() const;
+
     protected:
         BufferRef<Alignment> *get_write_able_buffer();
 
@@ -603,6 +635,7 @@ namespace fermat {
     ///
     ///////////////////////////////////////////////////////////////////////////
     ///
+
     template<size_t Alignment, size_t BlockSize>
     const BufferRef<Alignment> CordBufferBase<Alignment,
                 BlockSize>::kZeroBuffer = []() {
@@ -625,7 +658,7 @@ namespace fermat {
     }
 
     template<size_t Alignment, size_t BlockSize>
-    inline size_t CordBufferBase<Alignment, BlockSize>::blocks() const {
+    inline size_t CordBufferBase<Alignment, BlockSize>::buffer_count() const {
         return _views.size();
     }
 
@@ -659,6 +692,27 @@ namespace fermat {
         swap(_views, other._views);
         swap(_total_size, other._total_size);
         swap(_write_buffer, other._write_buffer);
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    turbo::Status CordBufferBase<Alignment, BlockSize>::flatten(Receiver &recv) const {
+        TURBO_RETURN_NOT_OK(recv.reserve(_total_size));
+        for (auto &ref: _views) {
+            TURBO_RETURN_NOT_OK(recv.append(ref.data(), ref.size()));
+        }
+        return turbo::OkStatus();
+    }
+
+
+    template<size_t Alignment, size_t BlockSize>
+    template<typename String, std::enable_if_t<is_contiguous_string_receiver<String>::value, int>>
+    String CordBufferBase<Alignment, BlockSize>::flatten() const {
+        String result;
+        result.reserve(_total_size);
+        for (auto &ref: _views) {
+            result.append(ref.data(), ref.size());
+        }
+        return std::move(result);
     }
 
     template<size_t Alignment, size_t BlockSize>
@@ -733,7 +787,7 @@ namespace fermat {
 
     template<size_t Alignment, size_t BlockSize>
     turbo::Status CordBufferBase<Alignment, BlockSize>::append_writeable(BufferRef<Alignment> &&ref) {
-        DKCHECK(ref.is_unique());
+        KCHECK(ref.is_unique());
         if (ref.size() == 0) {
             return turbo::OkStatus();
         }
@@ -806,9 +860,9 @@ namespace fermat {
     template<size_t Alignment, size_t BlockSize>
     void CordBufferBase<Alignment, BlockSize>::append(CordBufferBase &&rhs) {
         if (rhs._views.empty()) return;
-        _views.insert(_views.end(),
-                      std::make_move_iterator(rhs._views.begin()),
-                      std::make_move_iterator(rhs._views.end()));
+        for (auto &it: rhs._views) {
+            _views.push_back(std::move(it));
+        }
         _total_size += rhs._total_size;
         rhs._views.clear();
         rhs._total_size = 0;
@@ -1035,7 +1089,10 @@ namespace fermat {
     template<size_t Alignment, size_t BlockSize>
     std::vector<BufferRef<Alignment> >
     CordBufferBase<Alignment, BlockSize>::create_buffers(size_t bytes_needed) {
-        std::vector<BufferRef<Alignment>> result;
+        if (bytes_needed >= kMaxSingleCordSize) {
+            throw std::out_of_range("CordBufferBase::create_buffers(size_t bytes_needed)");
+        }
+        std::vector<BufferRef<Alignment> > result;
         if (bytes_needed == 0) {
             return result;
         }
@@ -1056,11 +1113,14 @@ namespace fermat {
     template<size_t Alignment, size_t BlockSize>
     BufferRef<Alignment>
     CordBufferBase<Alignment, BlockSize>::create_big_buffer(size_t bytes_needed) {
+        if (bytes_needed >= kMaxSingleCordSize) {
+            throw std::out_of_range("CordBufferBase::create_buffers(size_t bytes_needed)");
+        }
         BufferRef<Alignment> result;
         if (bytes_needed == 0) {
             return result;
         }
-        auto n = (bytes_needed + BlockSize -1) / BlockSize;
+        auto n = (bytes_needed + BlockSize - 1) / BlockSize;
         result = BufferRef<Alignment>::create_write_able(BlockSize * n);
         return std::move(result);
     }
@@ -1141,7 +1201,6 @@ namespace fermat {
             BufferRef<Alignment> &front = _views.front();
             // Determine the effective size of the front segment (range or full buffer)
             remaining -= front.pop_front(remaining);
-            size_t seg_size = front.range.length;
             if (front.size() == 0) {
                 _views.pop_front();
             }
@@ -1307,9 +1366,9 @@ namespace fermat {
             size_t nread = r.value_or_die();
             total_read += nread;
             remaining -= nread;
-            if (nread < to_read) {
+            if (nread < span.size()) {
                 // Partial read: roll back the unused part of the span
-                output_backup(static_cast<int>(to_read - nread));
+                output_backup(static_cast<int>(span.size() - nread));
                 break;
             }
             // The span was completely filled; continue to next block.
@@ -1335,8 +1394,8 @@ namespace fermat {
             size_t got = r.value_or_die();
             total += got;
             cur_offset += got;
-            if (got < want) {
-                output_backup(want - got);
+            if (got < span.size()) {
+                output_backup(span.size() - got);
                 break;
             }
         }

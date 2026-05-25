@@ -15,9 +15,7 @@
 
 #include <fermat/container/string.h>
 #include <gtest/gtest.h>
-#include <fermat/io/iobuf.h>
 #include <string_view>
-#include <tests/io/io_test.h>
 #include <gtest/gtest.h>
 #include <string>
 #include <list>

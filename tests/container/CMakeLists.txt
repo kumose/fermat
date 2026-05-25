@@ -126,3 +126,68 @@ kmcmake_cc_test(
         ${KMCMAKE_DEPS_LINK}
 )
 
+kmcmake_cc_test(
+        NAME cord_buffer_test
+        MODULE con
+        SOURCES
+        cord_buffer_test.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        GTest::gtest
+        GTest::gtest_main
+        ${KMCMAKE_DEPS_LINK}
+)
+
+
+kmcmake_cc_test(
+        NAME cord_buffer_stream_test
+        MODULE con
+        SOURCES
+        cord_buffer_stream_test.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        GTest::gtest
+        GTest::gtest_main
+        ${KMCMAKE_DEPS_LINK}
+)
+
+kmcmake_cc_test(
+        NAME peeker_test
+        MODULE con
+        SOURCES
+        peeker_test.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        GTest::gtest
+        GTest::gtest_main
+        ${KMCMAKE_DEPS_LINK}
+)
+
+kmcmake_cc_test(
+        NAME customer_test
+        MODULE con
+        SOURCES
+        customer_test.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        GTest::gtest
+        GTest::gtest_main
+        ${KMCMAKE_DEPS_LINK}
+)
+

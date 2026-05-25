@@ -325,6 +325,25 @@ kmcmake_cc_bm(
         ${KMCMAKE_DEPS_LINK}
 )
 
+find_package(fmt REQUIRED)
+
+kmcmake_cc_bm(
+        NAME stream_bench
+        MODULE mem
+        SOURCES
+        stream_bench.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        fmt::fmt
+        benchmark::benchmark_main
+        benchmark::benchmark
+        ${KMCMAKE_DEPS_LINK}
+)
+
 
 
 #[[

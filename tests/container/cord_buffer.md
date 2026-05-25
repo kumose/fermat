@@ -323,3 +323,178 @@ You're right, the previous list missed several important test points. Below is a
 ```
 
 This list should cover **all** methods and critical edge cases present in the latest code. If anything specific is still missing, please point it out.
+
+## 19. `CordBufferStreambuf` (std::streambuf adapter)
+
+### 19.1 Construction and basic writing
+- Construct `CordBufferStreambuf` associated with a non‑empty cord, write a single character via `sputc`, verify it is appended to the cord.
+- Write multiple characters via repeated `sputc`, verify correct content.
+- Write a string via `sputn`, verify the whole string is written.
+
+### 19.2 Cross‑block writes
+- Write more than one block size (4096 bytes) of data, verify that the streambuf automatically acquires a new block and the concatenated content matches.
+- Fill a block exactly, then write one more character, verify a new block is allocated and the character is correctly placed.
+
+### 19.3 `overflow` and `sync`
+- When the current buffer is full, `overflow` should commit the buffer and obtain a fresh buffer.
+- Call `sync()` to commit the current buffer (if partially filled) and reset the internal pointers.
+- Upon destruction, the streambuf must call `sync()` automatically; verify no data loss.
+
+### 19.4 Partial write and rollback
+- Write fewer bytes than the reserved capacity (e.g., `output_next()` returns 4096 bytes but only 100 bytes are written). After `sync()`, the cord should reflect only the written bytes (the unused part is rolled back via `output_backup`).
+
+### 19.5 Edge cases
+- Write zero bytes: no change.
+- Construct with a nullptr cord? (implementation assumes valid pointer – test may expect crash or ignore).
+- Write after stream destruction: not applicable.
+
+---
+
+## 20. `CordOutputStringStream` (std::ostream adapter)
+
+### 20.1 Formatted output
+- Use `operator<<` to write strings, integers, floating‑point numbers, and manipulators (e.g., `std::endl`).
+- Verify that all data ends up in the underlying cord as a character sequence (text representation).
+
+### 20.2 Flush and state
+- Call `flush()` explicitly, verify that it does not break subsequent writes.
+- After multiple writes, `cord().size()` returns the total number of characters written.
+
+### 20.3 Move semantics
+- Construct a temporary `CordOutputStringStream`, move it to another variable. The original object must be destructible, the target must remain writable and contain the same data.
+
+---
+
+## 21. `CordInputBinaryStream` (binary deserialization)
+
+### 21.1 Construction and default endianness
+- Construct with `big_endian = true`, read a 16‑bit integer, verify big‑endian conversion.
+- Construct with `big_endian = false` (default), verify little‑endian conversion.
+- Construct with an empty cord; any read operation must return 0 (or false) and not advance.
+
+### 21.2 Raw byte reading
+- `read(void*, size_t)`: read exact number of bytes, return actual bytes read (may be less at EOF).
+- Partial block read and multi‑block read.
+- `read(uint8_t*)` and `read(int8_t*)`: return `true` on success.
+- `read(Receiver&, size_t)`: read data and append to a `Receiver`. If the receiver fails to append, the stream position must be correctly rolled back.
+
+### 21.3 Endianness manipulators
+- `operator<<(BigEndian)` switches the default endianness for all subsequent arithmetic reads until changed again.
+- `operator<<(LittleEndian)` switches back.
+- Mixed reads with multiple switches verify correct endianness per value.
+
+### 21.4 Integer reads
+- `read(uint16_t&)`, `int16_t`, `uint32_t`, `int32_t`, `uint64_t`, `int64_t`: return `true` when successful, perform endian conversion according to current flag.
+- Insufficient bytes cause `false`.
+- `read(turbo::uint128&)`, `turbo::int128`: read two 64‑bit parts, endian‑sensitive (big‑endian reads high part first, little‑endian reads low part first).
+
+### 21.5 Floating‑point reads
+- `read(float&)`, `read(double&)`: read the bit pattern, apply endian conversion, and store into the variable.
+- Special values (0.0, NaN, Inf) must round‑trip correctly.
+
+### 21.6 String and span reads
+- `read(turbo::span<char>)`: read up to the span size, return number of characters read.
+- `read(turbo::span<T>)` for trivially copyable `T` (not `char`): read raw bytes into the span, no endian conversion.
+
+### 21.7 Pointer read
+- `read(RawPointer<T>)`: read `sizeof(T*)` bytes and store into the pointer variable (useful for serialization of addresses).
+
+### 21.8 Container with size prefix
+- `read(WithContainerSize<T>&)`: first read a `uint64_t` length, then read that many elements using `read(elem)`. Verify:
+  - Original container is cleared.
+  - If any element read fails, the operation fails and the container may be partially filled (behaviour must be documented and tested).
+  - Nested containers (e.g., `vector<vector<int>>`) work correctly.
+
+### 21.9 User‑defined type deserialization
+- A type with `deserialize(CordInputBinaryStream&)` member: `read(T&)` must call it.
+- Types without such member should not compile (SFINAE) – test with a static assertion or disable the overload.
+
+### 21.10 `read_util` family
+- `read_util(data, char c, bool &reach)`: reads up to `data.size()` bytes until character `c` is encountered. The delimiter is consumed but not stored. `reach` is set to `true` iff delimiter was seen. Returns number of bytes written into `data`.
+- `read_util(data, std::string_view chars, bool &reach)`: stops at any character from `chars`.
+- `read_util(data, const VectorSet<char>&)`: same, using a set of delimiters.
+- Cross‑block delimiter search must work correctly.
+
+### 21.11 Utilities
+- `bytes_remaining()`: returns number of unread bytes, matches cord’s remaining size.
+- `cord()`: returns const reference to the underlying cord.
+- `good()`: currently always returns `true`; test for future extensions.
+
+### 21.12 Error and boundary cases
+- Read operations that hit EOF return fewer bytes (or `false`) without advancing beyond the end.
+- Partial read + `back_up` across block boundaries is handled correctly.
+- Reading while the cord is extended externally (not through the stream) is not required to work.
+
+---
+
+## 22. `CordInputStringStream` (std::istream adapter)
+
+### 22.1 Formatted input
+- Use `operator>>` to read integers, strings, floating‑point values from a cord.
+- Use `getline()` to read a line.
+- Use `read(char*, streamsize)` to read raw characters.
+
+### 22.2 Symmetry with output stream
+- Write data with `CordOutputStringStream`, then read it back with `CordInputStringStream`; verify equality.
+
+### 22.3 Stream state
+- After reading all data, `eof()` returns `true`, `fail()` may be `false` if the last read succeeded.
+- Type mismatch (e.g., trying to read an integer when the cord contains letters) sets `fail()`.
+- `clear()` resets the error state.
+
+### 22.4 Move semantics
+- Move‑construct or move‑assign a stream, the source is still destructible, the target reads correctly.
+
+---
+
+## 23. Integration and Round‑Trip Tests
+
+### 23.1 Binary round‑trip
+- Use `CordOutputBinaryStream` to write a mixture of integer, float, string, and container data (with endianness changes). Then read back with `CordInputBinaryStream` and verify all values match.
+
+### 23.2 Text round‑trip
+- Use `CordOutputStringStream` to write formatted text, read back with `CordInputStringStream` and compare line by line or token by token.
+
+### 23.3 Shared cord with multiple streams
+- Create a cord, share it via `share()`, create two separate input streams (one `CordInputBinaryStream`, one `CordInputStringStream`) and read concurrently – the streams must be independent and not interfere (no synchronization required, but they should not crash).
+
+### 23.4 Large data stress test
+- Generate 10 MiB of random binary data, write via `CordOutputBinaryStream`, then read back and verify byte‑for‑byte correctness.
+
+---
+
+## 24. Performance and Resource Leak Checks
+
+### 24.1 Memory leak detection (under ASan/Valgrind)
+- Create a cord, write data, share it, destroy the original, read from the copy, then destroy everything. No leaks.
+- `append_writeable` moving a `BufferRef` does not leak.
+- `create_buffers` / `create_big_buffer` properly release memory when the returned objects go out of scope.
+
+### 24.2 Block boundary stress
+- Write exactly `n * BlockSize` bytes, then one more byte; verify the number of blocks is `n+1`.
+- Repeatedly write small chunks (e.g., 1 byte at a time) causing many block allocations; no performance regression (functionality only, not benchmarking).
+
+### 24.3 COW independence
+- Share a cord, then modify the original (append). The shared copy must not be affected; the modification must allocate new buffers only for the original.
+- The shared copy’s `write_able()` should return `0` on its shared segments.
+
+---
+
+## 25. Compile‑time and Type Traits
+
+### 25.1 `is_cord_buffer` trait
+- `is_cord_buffer_v<CordBufferBase<64,4096>>` is `true`.
+- `is_cord_buffer_v<int>` is `false`.
+- The static members `alignment` and `block_size` have the correct values.
+
+### 25.2 Template alias and constexpr
+- `kBlockSize`, `kAlignment`, `kMaxReadVSpans` are `constexpr` and have the expected values.
+- `value_type`, `buffer_type`, `size_type` are defined and usable.
+
+---
+
+## 26. Documentation and API Consistency (optional)
+
+- Ensure that all public methods that can fail return a `turbo::Status` or a `bool` (for reads) and that the documentation matches the behaviour.
+- Test that moved‑from objects are left in a valid (but unspecified) state (e.g., they can be destroyed or assigned).
+- Verify that the `DKCHECK` macro (used in `append_writeable`) is defined and triggers a crash when a non‑unique buffer is passed; use death tests.

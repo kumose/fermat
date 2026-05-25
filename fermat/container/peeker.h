@@ -122,20 +122,20 @@ namespace fermat {
                 set_to_npos();
                 return *this;
             }
-            const size_t total_readable = _buffer->readable_blocks();
+            const size_t total_readable = _buffer->buffer_count();
             if (pos.index >= total_readable) {
                 set_to_npos();
                 return *this;
             }
-            const auto *view = _buffer->readable_peek(pos.index);
-            if (pos.offset > view->length) {
+            const auto *view = _buffer->buffer_at(pos.index);
+            if (pos.offset > view->size()) {
                 set_to_npos();
                 return *this;
             }
 
             size_t consumed = 0;
             for (size_t i = 0; i < pos.index; ++i) {
-                const auto *v = _buffer->readable_peek(i);
+                const auto *v = _buffer->buffer_at(i);
                 if (v) consumed += v->size();
             }
             consumed += pos.offset;
@@ -164,7 +164,7 @@ namespace fermat {
                 _has_read += available;
                 ++_positions.index;
                 _positions.offset = 0;
-                _view = _buffer->readable_peek(_positions.index);
+                _view = _buffer->buffer_at(_positions.index);
                 _current = std::string_view(_view->data(), _view->size());
             }
             return *this;
@@ -189,7 +189,7 @@ namespace fermat {
                 remaining -= _positions.offset;
                 _has_read -= _positions.offset;
                 --_positions.index;
-                _view = _buffer->readable_peek(_positions.index);
+                _view = _buffer->buffer_at(_positions.index);
                 _current = std::string_view(_view->data(), _view->size());
                 _positions.offset = _current.size();
             }
@@ -355,7 +355,7 @@ namespace fermat {
         const Source *_buffer{nullptr};
         size_t _has_read{0};
         Position _positions{kNPos, kNPos};
-        const typename Source::block_view_type *_view{nullptr};
+        const BufferRef<kAlignment> *_view{nullptr};
         std::string_view _current;
     };
 
@@ -364,8 +364,8 @@ namespace fermat {
         if (_buffer == nullptr || _positions == npos || chars.empty()) return npos;
         size_t idx = _positions.index;
         size_t off = _positions.offset;
-        while (idx < _buffer->readable_blocks()) {
-            const auto *view = _buffer->readable_peek(idx);
+        while (idx < _buffer->buffer_count()) {
+            const auto *view = _buffer->buffer_at(idx);
             if (view == nullptr) break;
             std::string_view seg(view->data(), view->size());
             size_t pos = seg.find_first_of(chars, off);
@@ -383,8 +383,8 @@ namespace fermat {
         if (_buffer == nullptr || _positions == npos) return npos;
         size_t idx = _positions.index;
         size_t off = _positions.offset;
-        while (idx < _buffer->readable_blocks()) {
-            const auto *view = _buffer->readable_peek(idx);
+        while (idx < _buffer->buffer_count()) {
+            const auto *view = _buffer->buffer_at(idx);
             if (view == nullptr) break;
             std::string_view seg(view->data(), view->size());
             size_t pos = seg.find_first_of(chars, off);
@@ -403,8 +403,8 @@ namespace fermat {
         size_t idx = _positions.index;
         size_t off = _positions.offset;
         size_t offset = 0;
-        while (idx < _buffer->readable_blocks()) {
-            const auto *view = _buffer->readable_peek(idx);
+        while (idx < _buffer->buffer_count()) {
+            const auto *view = _buffer->buffer_at(idx);
             std::string_view seg(view->data(), view->size());
             size_t pos = seg.find_first_of(chars, off);
             if (pos != std::string_view::npos) {
@@ -422,8 +422,8 @@ namespace fermat {
         size_t idx = _positions.index;
         size_t off = _positions.offset;
         size_t offset = 0;
-        while (idx < _buffer->readable_blocks()) {
-            const auto *view = _buffer->readable_peek(idx);
+        while (idx < _buffer->buffer_count()) {
+            const auto *view = _buffer->buffer_at(idx);
             std::string_view seg(view->data(), view->size());
             size_t pos = seg.find_first_of(chars, off);
             if (pos != std::string_view::npos) {
@@ -442,10 +442,10 @@ namespace fermat {
         _view = nullptr;
         _current = {};
         if (!_buffer) return;
-        if (_buffer->readable_blocks() > 0) {
+        if (_buffer->buffer_count() > 0) {
             _positions.index = 0;
             _positions.offset = 0;
-            _view = _buffer->readable_peek(0);
+            _view = _buffer->buffer_at(0);
             _current = std::string_view(_view->data(), _view->size());
         }
     }
