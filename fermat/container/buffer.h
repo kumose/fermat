@@ -857,8 +857,8 @@ namespace fermat {
         // the requested position is out of range by throwing an
         // out_of_range exception.
 
-        if (TURBO_UNLIKELY(n >= (static_cast<size_type>(_end - _begin))))
-            KCHECK(false) << "Buffer::at -- out of range";
+       // if (TURBO_UNLIKELY(n >= (static_cast<size_type>(_end - _begin))))
+        //    KCHECK(false) << "Buffer::at -- out of range";
         return *(_begin + n);
     }
 
@@ -866,8 +866,8 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     inline typename Buffer<T, Alignment, Allocator>::const_reference
     Buffer<T, Alignment, Allocator>::at(size_type n) const {
-        if (TURBO_UNLIKELY(n >= (static_cast<size_type>(_end - _begin))))
-            KCHECK(false) << "Buffer::at -- out of range";
+        //if (TURBO_UNLIKELY(n >= (static_cast<size_type>(_end - _begin))))
+        //    KCHECK(false) << "Buffer::at -- out of range";
 
         return *(_begin + n);
     }
@@ -876,9 +876,9 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     inline typename Buffer<T, Alignment, Allocator>::reference
     Buffer<T, Alignment, Allocator>::front() {
-        if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
+       // if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
             // We don't allow the user to reference an empty container.
-            KCHECK(false) << "Buffer::front -- empty Buffer";
+       //     KCHECK(false) << "Buffer::front -- empty Buffer";
 
         return *_begin;
     }
@@ -887,9 +887,9 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     inline typename Buffer<T, Alignment, Allocator>::const_reference
     Buffer<T, Alignment, Allocator>::front() const {
-        if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
+       // if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
             // We don't allow the user to reference an empty container.
-            KCHECK(false) << "Buffer::front -- empty Buffer";
+       //     KCHECK(false) << "Buffer::front -- empty Buffer";
 
         return *_begin;
     }
@@ -900,8 +900,8 @@ namespace fermat {
     Buffer<T, Alignment, Allocator>::back() {
         // if _end is nullptr the expression (_end - 1) is undefined behaviour.
         // any use of back() with an empty Buffer is thus conceptually wrong.
-        if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
-            KCHECK(false) << "Buffer::back -- empty Buffer";
+       // if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
+       //     KCHECK(false) << "Buffer::back -- empty Buffer";
 
         return *(_end - 1);
     }
@@ -912,8 +912,8 @@ namespace fermat {
     Buffer<T, Alignment, Allocator>::back() const {
         // if _end is nullptr the expression (_end - 1) is undefined behaviour.
         // any use of back() with an empty Buffer is thus conceptually wrong.
-        if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
-            KCHECK(false) << "Buffer::back -- empty Buffer";
+       // if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
+        //    KCHECK(false) << "Buffer::back -- empty Buffer";
 
         return *(_end - 1);
     }
@@ -994,8 +994,8 @@ namespace fermat {
 
     template<typename T, size_t Alignment, typename Allocator>
     inline void Buffer<T, Alignment, Allocator>::pop_back() {
-        if (TURBO_UNLIKELY(_end <= _begin))
-            KCHECK(false) << "Buffer::pop_back -- empty Buffer";
+        //if (TURBO_UNLIKELY(_end <= _begin))
+       //     KCHECK(false) << "Buffer::pop_back -- empty Buffer";
 
 
         --_end;
@@ -1060,8 +1060,8 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     inline typename Buffer<T, Alignment, Allocator>::iterator
     Buffer<T, Alignment, Allocator>::erase(const_iterator position) {
-        if (TURBO_UNLIKELY((position < _begin) || (position >= _end)))
-            KCHECK(false) << "Buffer::erase -- invalid position";
+        //if (TURBO_UNLIKELY((position < _begin) || (position >= _end)))
+         //   KCHECK(false) << "Buffer::erase -- invalid position";
 
         // C++11 stipulates that position is const_iterator, but the return value is iterator.
         auto destPosition = const_cast<value_type *>(position);
@@ -1077,8 +1077,8 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     inline typename Buffer<T, Alignment, Allocator>::iterator
     Buffer<T, Alignment, Allocator>::erase(const_iterator first, const_iterator last) {
-        if (TURBO_UNLIKELY((first < _begin) || (first > _end) || (last < _begin) || (last > _end) || (last < first)))
-            KCHECK(false) << "Buffer::erase -- invalid position";
+       // if (TURBO_UNLIKELY((first < _begin) || (first > _end) || (last < _begin) || (last > _end) || (last < first)))
+        //    KCHECK(false) << "Buffer::erase -- invalid position";
 
         if (first != last) {
             const auto dest = const_cast<value_type *>(first);
@@ -1102,8 +1102,8 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     inline typename Buffer<T, Alignment, Allocator>::iterator
     Buffer<T, Alignment, Allocator>::erase_unsorted(const_iterator position) {
-        if (TURBO_UNLIKELY((position < _begin) || (position >= _end)))
-            KCHECK(false) << "Buffer::erase -- invalid position";
+       // if (TURBO_UNLIKELY((position < _begin) || (position >= _end)))
+       //     KCHECK(false) << "Buffer::erase -- invalid position";
 
         // C++11 stipulates that position is const_iterator, but the return value is iterator.
         auto destPosition = const_cast<value_type *>(position);
@@ -1439,8 +1439,8 @@ namespace fermat {
     void Buffer<T, Alignment, Allocator>::DoInsertFromIterator(const_iterator position, BidirectionalIterator first,
                                                                BidirectionalIterator last,
                                                                std::bidirectional_iterator_tag) {
-        if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
-            KCHECK(false) << "Buffer::insert -- invalid position";
+       // if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
+       //     KCHECK(false) << "Buffer::insert -- invalid position";
 
         if (first == last) return;
 
@@ -1507,8 +1507,8 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     void Buffer<T, Alignment,
         Allocator>::DoInsertValues(const_iterator position, size_type n, const value_type &value) {
-        if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
-            KCHECK(false) << "Buffer::insert -- invalid position";
+        //if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
+        //    KCHECK(false) << "Buffer::insert -- invalid position";
 
         if (n == 0) return;
 
@@ -1694,8 +1694,8 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     template<typename... Args>
     void Buffer<T, Alignment, Allocator>::do_insert_value(const_iterator position, Args &&... args) {
-        if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
-            KCHECK(false) << "Buffer::insert/emplace -- invalid position";
+        //if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
+        //    KCHECK(false) << "Buffer::insert/emplace -- invalid position";
 
         auto destPosition = const_cast<value_type *>(position);
         const auto nPosIndex = static_cast<size_type>(destPosition - _begin);

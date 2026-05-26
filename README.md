@@ -23,10 +23,10 @@ fermat aims to provide **significant** performance gains (>20%) in its sweet spo
 | Component | Advantageous operations | Typical speedup |
 |-----------|-------------------------|------------------|
 | `KString` | construction, copy, move, append | 1.2x – 3x (>20%) |
-| `Buffer<T>` | construction (all sizes), small push_back (≤512) | 2x – 5x |
+| `Buffer<T>` | construction (all sizes), small push/iteration/middle insert‑erase, clear (Release) | 2x – 5x |
+| `Vector<T>` | same allocation path as `Buffer`; random access on par or faster than `std` in Release | 2x – 5x |
 | `Deque<T>` | construction, push_front/push_back, clear, destruct | 2x – 10x |
 | `List<T>` | all operations | 2x – 20x |
-| `Vector<T>` | construction, small push_back (≤512), iteration, clear | 1.5x – 10x |
 | `PriorityQueue<T>` | large push/pop (10k+), construction from iterators | 10% – 30% |
 | `Stack<T>` | all operations | 20% – 10x (construction) |
 | `Bitset` | construction, set/reset/flip, count, find series | 1.5x – 5x |
@@ -41,7 +41,6 @@ fermat aims to provide **significant** performance gains (>20%) in its sweet spo
 
 | Component | Weak operations | Slower than `std` | Reason |
 |-----------|-----------------|--------------------|--------|
-| `Vector<T>` | random access (small capacity gap larger; at 10k+ ~10–15%) | up to several times for tiny sizes; ~10–15% for large | internal bounds checking overhead |
 | `KString` | short‑string `find` | ~30% | different implementation path from `std::string` |
 | `Deque<T>` | random access | ~10% | need to compute block index |
 | `Deque<T>` | middle insert/erase | ~2× | block structure causes more data movement |
@@ -51,7 +50,11 @@ fermat aims to provide **significant** performance gains (>20%) in its sweet spo
 | `CordFormatter` | text formatting | ~6× | currently outputs char‑by‑char, no batch write |
 | `Bitset` | bitwise ops (`&`, `|`, `^`), shift | ~10–20% | `std::bitset` better compiler optimization |
 
-> **Note**: `FermatList` is faster than `std::list` in all operations – no disadvantage. `FermatStack` is faster than `std::stack` in all operations – no disadvantage. `KString` is significantly faster in construction, copy, move, append; short‑string `find` is slightly slower than `std::string`.
+> **Note**:
+> - `FermatList` is faster than `std::list` in all operations – no disadvantage.
+> - `FermatStack` is faster than `std::stack` in all operations – no disadvantage.
+> - `KString` is significantly faster in construction, copy, move, append; short‑string `find` is slightly slower than `std::string`.
+> - `Buffer<T>` (plain data such as `int`/`float`) and `Vector<T>` (general contiguous container) have no significant disadvantage vs `std::vector` in **Release** mode after recent optimizations; small‑size random access is now roughly on par with `std`.
 
 ## When to use which component
 
@@ -63,7 +66,7 @@ fermat aims to provide **significant** performance gains (>20%) in its sweet spo
 | Many string constructions / copies / moves | `KString` | 1.3–3× faster than `std::string`; short‑string `find` slightly slower |
 | Streaming large data (logs, network packets) | `CordBufferBase` | extremely high random‑chunk append throughput (best in 10 KiB–100 MiB) |
 | Filling chunked data from disk/network | `CordBufferBase` + `append_by_*` | seamless integration with `IOReader`, zero‑copy |
-| Performance‑sensitive small/medium contiguous arrays | `Buffer<T>` | construction, small push_back 2–5× faster; large push_back roughly on par or slightly slower |
+| Performance‑sensitive small/medium contiguous arrays | `Buffer<T>` / `Vector<T>` | use `Buffer` for plain POD; `Vector` for full `std::vector` semantics. Release: many ops ≥20% faster; large push_back roughly on par |
 | Ordered read‑only / bulk construction of maps/sets | `VectorMap` / `VectorSet` | ordered insert 3.8× faster, iteration 24× faster; random insert slower, not for frequent modification |
 | Frequent stack operations | `FermatStack` | construction from container ~11× faster, push/pop ~1.2× faster, no disadvantage |
 | Priority queue with priority change/remove | `FermatPriorityQueue` | supports `change`/`remove`, large push/pop 30% faster; for small (<1000) slower than `std`, trade‑off |
@@ -114,45 +117,125 @@ s.reserve(10 * 1024 * 1024);
 for (int i = 0; i < 1000000; ++i) s.append("a");
 ```
 
-### Chunked buffer CordBufferBase
+### Contiguous container `Buffer<T>`
 
-Random chunked append (`mem_iobuf_benchmark`, each chunk 16 KiB). fermat’s chunked container is **CordBufferBase**; brpc IOBuf, Abseil Cord, Turbo Cord are **reference implementations**. Data sizes are 1 KiB – 100 MiB (same as `benchmark/iobuf_benchmark.cc`). The highest throughput per row is **bolded**.
+`fermat::Buffer<T>` is a contiguous container specialized for plain data (e.g., `int`, `float`). Its interface is compatible with `std::vector`, but construction and clearing are faster. Release mode performance data (Intel 12‑core @ 4.4 GHz, L3 18 MiB). Better per row in **bold**.
 
-| Size | **CordBufferBase** | std::string | fermat::Buffer | brpc IOBuf | Abseil Cord | Turbo Cord |
-|------|---------------------|-------------|----------------|------------|-------------|------------|
-| 1 KiB | 17.9 GiB/s | **20.7 GiB/s** | 37.3 GiB/s | 19.8 GiB/s | 12.0 GiB/s | 12.6 GiB/s |
-| 10 KiB | **52.7 GiB/s** | 21.2 GiB/s | 46.3 GiB/s | 31.5 GiB/s | 13.2 GiB/s | 12.5 GiB/s |
-| 100 KiB | **46.8 GiB/s** | 20.6 GiB/s | 24.8 GiB/s | 29.7 GiB/s | 18.1 GiB/s | 16.4 GiB/s |
-| 1 MiB | **44.5 GiB/s** | 12.3 GiB/s | 18.1 GiB/s | 28.3 GiB/s | 18.9 GiB/s | 17.7 GiB/s |
-| 10 MiB | **31.1 GiB/s** | 8.01 GiB/s | 8.07 GiB/s | 22.1 GiB/s | 16.3 GiB/s | 15.6 GiB/s |
-| 20 MiB | **17.6 GiB/s** | 4.06 GiB/s | 6.34 GiB/s | 13.8 GiB/s | 10.9 GiB/s | 10.9 GiB/s |
-| 50 MiB | **12.96 GiB/s** | 2.07 GiB/s | 6.16 GiB/s | 11.1 GiB/s | 8.88 GiB/s | 8.40 GiB/s |
-| 100 MiB | **12.15 GiB/s** | 1.52 GiB/s | 6.00 GiB/s | 11.2 GiB/s | 8.61 GiB/s | 8.30 GiB/s |
-
-> CordBufferBase performs best or near‑best in the 10 KiB–100 MiB range, especially from 10 KiB to 10 MiB.
-
-CordBufferBase writes are immediately visible, no state machine, suitable for streaming append, logging, network packet assembly; can integrate with disk reads via `IOReader` (`append_by_read` / `append_by_pread`).
-
-```cpp
-fermat::CordBufferBase<64, 16 * 1024> cb;
-cb.append("data", 4);
-```
-
-### Contiguous container Buffer\<T\>
-
-Interface compatible with `std::vector`, faster construction and clearing. Better per row in **bold**.
-
-| Operation | fermat::Buffer\<int\> | std::vector\<int\> | Speedup |
-|-----------|----------------------|-------------------|---------|
-| Construct 1024 elements | **22.6 ns** | 50.1 ns | 2.2× |
-| append 1000 times | **471 ns** | 489 ns | 1.0× |
-| iterate 1000 elements | **246 ns** | 253 ns | comparable |
-| clear + shrink 10000 | **685 ns** | 715 ns | 1.0× |
+| Operation | Size | std::vector<int> (ns) | fermat::Buffer<int> (ns) | Winner |
+|-----------|------|----------------------|--------------------------|--------|
+| **Construct** | 4 | 14.2 | **4.77** | fermat |
+| | 8 | 14.1 | **4.71** | fermat |
+| | 16 | 13.6 | **4.71** | fermat |
+| | 32 | 13.9 | **4.91** | fermat |
+| | 64 | 14.0 | **5.86** | fermat |
+| | 128 | 14.5 | **6.97** | fermat |
+| | 256 | 15.7 | **8.84** | fermat |
+| | 512 | 39.1 | **12.7** | fermat |
+| | 1024 | 50.0 | **21.4** | fermat |
+| **PushBackSmall** | 4 | 14.5 | **5.61** | fermat |
+| | 8 | 15.3 | **7.81** | fermat |
+| | 16 | 17.4 | **14.0** | fermat |
+| | 32 | **20.7** | 23.5 | std |
+| | 64 | **39.9** | 39.6 | std |
+| | 128 | **65.0** | 69.3 | std |
+| | 256 | 143 | **138** | fermat |
+| | 512 | 286 | **268** | fermat |
+| | 1024 | 571 | **516** | fermat |
+| **IterationSmall** | 4 | 15.9 | **5.57** | fermat |
+| | 8 | 17.9 | **10.1** | fermat |
+| | 16 | 19.5 | **12.9** | fermat |
+| | 32 | **26.8** | 34.0 | std |
+| | 64 | 34.7 | **31.5** | fermat |
+| | 128 | 54.0 | **47.0** | fermat |
+| | 256 | 94.9 | **83.8** | fermat |
+| | 512 | 191 | **152** | fermat |
+| | 1024 | 340 | **305** | fermat |
+| **RandomAccessSmall** | 4 | 181 | **183** | std |
+| | 8 | 186 | **180** | fermat |
+| | 16 | 189 | **178** | fermat |
+| | 32 | 179 | **178** | std |
+| | 64 | 174 | **177** | std |
+| | 128 | 178 | **174** | fermat |
+| | 256 | 179 | **183** | std |
+| | 512 | 177 | **181** | std |
+| | 1024 | 177 | **178** | std |
+| **InsertMiddleSmall** | 4 | 73.5 | **42.9** | fermat |
+| | 8 | 66.3 | **43.9** | fermat |
+| | 16 | 55.1 | **52.7** | fermat |
+| | 32 | 59.4 | **57.2** | fermat |
+| | 64 | 77.3 | **73.2** | fermat |
+| | 128 | 102 | **73.6** | fermat |
+| | 256 | 135 | **110** | fermat |
+| | 512 | 188 | **148** | fermat |
+| | 1024 | 270 | **258** | fermat |
+| **EraseMiddleSmall** | 4 | 20.5 | **11.8** | fermat |
+| | 8 | 28.4 | **22.7** | fermat |
+| | 16 | 46.1 | **41.4** | fermat |
+| | 32 | **52.4** | 53.4 | std |
+| | 64 | 59.7 | **56.0** | fermat |
+| | 128 | 66.2 | **66.4** | std |
+| | 256 | 87.2 | **83.6** | fermat |
+| | 512 | 135 | **107** | fermat |
+| | 1024 | 180 | **165** | fermat |
+| **ClearShrinkSmall** | 4 | 14.5 | **10.2** | fermat |
+| | 8 | 14.5 | **9.83** | fermat |
+| | 16 | 14.3 | **10.1** | fermat |
+| | 32 | 14.9 | **10.9** | fermat |
+| | 64 | 15.1 | **10.7** | fermat |
+| | 128 | 17.4 | **12.8** | fermat |
+| | 256 | 18.6 | **14.6** | fermat |
+| | 512 | 39.4 | **18.3** | fermat |
+| | 1024 | 48.6 | **31.7** | fermat |
+| **PushBack** | 1000 | 489 | **469** | fermat |
+| | 10000 | **4725** | 4711 | std |
+| | 100000 | **54065** | 55949 | std |
+| **Iteration** | 1000 | **247** | 248 | std |
+| | 10000 | 2389 | **2355** | fermat |
+| | 100000 | 23770 | **23646** | fermat |
+| **RandomAccess** | 10000 | 1713 | **1710** | fermat |
+| | 100000 | **1730** | 1758 | std |
+| **InsertMiddle** | 1000 | 1505 | **1503** | fermat |
+| | 10000 | 13498 | **13017** | fermat |
+| **EraseMiddle** | 1000 | 1379 | **1362** | fermat |
+| | 10000 | **462606** | 463187 | std |
+| **Sort** | 10000 | 342928 | **342581** | fermat |
+| | 100000 | 4533225 | **4500183** | fermat |
+| **ClearAndShrink** | 10000 | **686** | 709 | std |
+| | 100000 | 6778 | **6694** | fermat |
 
 ```cpp
 fermat::Buffer<int> v;
 v.reserve(1000);
 v.push_back(42);
+```
+
+### Contiguous container `Vector<T>`
+
+`fermat::Vector<T>` is interface‑compatible with `std::vector` and supports non‑trivial types; it shares the optimized storage/allocation path with `Buffer`. **Release** data below (same machine as above). Full tables: [`benchmark/README.md`](benchmark/README.md) (Vector section).
+
+| Operation | Size | std::vector<int> (ns) | fermat::Vector<int> (ns) | Winner |
+|-----------|------|----------------------|--------------------------|--------|
+| **Construct** | 4 | 14.6 | **5.31** | fermat |
+| | 1024 | 43.5 | **23.9** | fermat |
+| **PushBackSmall** | 4 | 14.5 | **6.93** | fermat |
+| | 1024 | 488 | **481** | fermat |
+| **IterationSmall** | 4 | 15.4 | **5.70** | fermat |
+| | 1024 | 301 | **273** | fermat |
+| **RandomAccessSmall** | 4 | 174 | **174** | tie |
+| | 1024 | **172** | 180 | std |
+| **RandomAccess** | 10000 | 1739 | **1698** | fermat |
+| | 100000 | 1732 | **1725** | fermat |
+| **PushBack** | 1000 | 487 | **478** | fermat |
+| **EmplaceBack** | 100000 | 54018 | **53590** | fermat |
+| **Iteration** | 100000 | 23576 | **23511** | fermat |
+| **InsertMiddle** | 10000 | 13698 | **12917** | fermat |
+| **EraseMiddle** | 1000 | 1396 | **1367** | fermat |
+| **ClearShrinkSmall** | 1024 | 43.0 | **25.5** | fermat |
+
+```cpp
+fermat::Vector<int> v;
+v.reserve(1000);
+v.emplace_back(42);
 ```
 
 ### Ordered associative containers VectorMap / VectorSet

@@ -806,8 +806,8 @@ namespace fermat {
     inline typename Vector<T, Alignment, Allocator>::reference
     Vector<T, Alignment, Allocator>::operator[](size_type n) {
         // We allow the user to use a reference to v[0] of an empty container. But this was merely grandfathered in and ideally we shouldn't allow such access to [0].
-        if (TURBO_UNLIKELY((n != 0) && (n >= (static_cast<size_type>(_end - _begin)))))
-            KCHECK(false) << "Vector::operator[] -- out of range";
+        //if (TURBO_UNLIKELY((n != 0) && (n >= (static_cast<size_type>(_end - _begin)))))
+        //    KCHECK(false) << "Vector::operator[] -- out of range";
 
         return *(_begin + n);
     }
@@ -816,8 +816,8 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     inline typename Vector<T, Alignment, Allocator>::const_reference
     Vector<T, Alignment, Allocator>::operator[](size_type n) const {
-        if (TURBO_UNLIKELY(n >= (static_cast<size_type>(_end - _begin))))
-            KCHECK(false) << "Vector::operator[] -- out of range";
+        //if (TURBO_UNLIKELY(n >= (static_cast<size_type>(_end - _begin))))
+        //    KCHECK(false) << "Vector::operator[] -- out of range";
 
         return *(_begin + n);
     }
@@ -830,8 +830,8 @@ namespace fermat {
         // the requested position is out of range by throwing an
         // out_of_range exception.
 
-        if (TURBO_UNLIKELY(n >= (static_cast<size_type>(_end - _begin))))
-            KCHECK(false) << "Vector::at -- out of range";
+        //if (TURBO_UNLIKELY(n >= (static_cast<size_type>(_end - _begin))))
+        //    KCHECK(false) << "Vector::at -- out of range";
         return *(_begin + n);
     }
 
@@ -839,8 +839,8 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     inline typename Vector<T, Alignment, Allocator>::const_reference
     Vector<T, Alignment, Allocator>::at(size_type n) const {
-        if (TURBO_UNLIKELY(n >= (static_cast<size_type>(_end - _begin))))
-            KCHECK(false) << "Vector::at -- out of range";
+        //if (TURBO_UNLIKELY(n >= (static_cast<size_type>(_end - _begin))))
+        //    KCHECK(false) << "Vector::at -- out of range";
 
         return *(_begin + n);
     }
@@ -849,9 +849,9 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     inline typename Vector<T, Alignment, Allocator>::reference
     Vector<T, Alignment, Allocator>::front() {
-        if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
+        //if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
             // We don't allow the user to reference an empty container.
-            KCHECK(false) << "Vector::front -- empty Vector";
+        //    KCHECK(false) << "Vector::front -- empty Vector";
 
         return *_begin;
     }
@@ -860,9 +860,9 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     inline typename Vector<T, Alignment, Allocator>::const_reference
     Vector<T, Alignment, Allocator>::front() const {
-        if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
+        //if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
             // We don't allow the user to reference an empty container.
-            KCHECK(false) << "Vector::front -- empty Vector";
+       //     KCHECK(false) << "Vector::front -- empty Vector";
 
         return *_begin;
     }
@@ -873,8 +873,8 @@ namespace fermat {
     Vector<T, Alignment, Allocator>::back() {
         // if _end is nullptr the expression (_end - 1) is undefined behaviour.
         // any use of back() with an empty Vector is thus conceptually wrong.
-        if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
-            KCHECK(false) << "Vector::back -- empty Vector";
+        //if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
+       //     KCHECK(false) << "Vector::back -- empty Vector";
 
         return *(_end - 1);
     }
@@ -885,8 +885,8 @@ namespace fermat {
     Vector<T, Alignment, Allocator>::back() const {
         // if _end is nullptr the expression (_end - 1) is undefined behaviour.
         // any use of back() with an empty Vector is thus conceptually wrong.
-        if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
-            KCHECK(false) << "Vector::back -- empty Vector";
+        //if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
+        //    KCHECK(false) << "Vector::back -- empty Vector";
 
         return *(_end - 1);
     }
@@ -937,8 +937,8 @@ namespace fermat {
 
     template<typename T, size_t Alignment, typename Allocator>
     inline void Vector<T, Alignment, Allocator>::pop_back() {
-        if (TURBO_UNLIKELY(_end <= _begin))
-            KCHECK(false) << "Vector::pop_back -- empty Vector";
+        //if (TURBO_UNLIKELY(_end <= _begin))
+        //    KCHECK(false) << "Vector::pop_back -- empty Vector";
 
 
         --_end;
@@ -977,8 +977,8 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     inline typename Vector<T, Alignment, Allocator>::iterator
     Vector<T, Alignment, Allocator>::insert(const_iterator position, const value_type &value) {
-        if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
-            KCHECK(false) << "Vector::insert -- invalid position";
+        //if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
+        //    KCHECK(false) << "Vector::insert -- invalid position";
 
         // We implment a quick pathway for the case that the insertion position is at the end and we have free capacity for it.
         const ptrdiff_t n = position - _begin; // Save this because we might reallocate.
@@ -1032,8 +1032,8 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     inline typename Vector<T, Alignment, Allocator>::iterator
     Vector<T, Alignment, Allocator>::erase(const_iterator position) {
-        if (TURBO_UNLIKELY((position < _begin) || (position >= _end)))
-            KCHECK(false) << "Vector::erase -- invalid position";
+        //if (TURBO_UNLIKELY((position < _begin) || (position >= _end)))
+        //    KCHECK(false) << "Vector::erase -- invalid position";
 
         // C++11 stipulates that position is const_iterator, but the return value is iterator.
         iterator destPosition = const_cast<value_type *>(position);
@@ -1049,8 +1049,8 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     inline typename Vector<T, Alignment, Allocator>::iterator
     Vector<T, Alignment, Allocator>::erase(const_iterator first, const_iterator last) {
-        if (TURBO_UNLIKELY((first < _begin) || (first > _end) || (last < _begin) || (last > _end) || (last < first)))
-            KCHECK(false) << "Vector::erase -- invalid position";
+       // if (TURBO_UNLIKELY((first < _begin) || (first > _end) || (last < _begin) || (last > _end) || (last < first)))
+      //      KCHECK(false) << "Vector::erase -- invalid position";
         if (first != last) {
             const auto position = const_cast<value_type *>(std::move(
                 const_cast<value_type *>(last), const_cast<value_type *>(_end), const_cast<value_type *>(first)));
@@ -1065,8 +1065,8 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     inline typename Vector<T, Alignment, Allocator>::iterator
     Vector<T, Alignment, Allocator>::erase_unsorted(const_iterator position) {
-        if (TURBO_UNLIKELY((position < _begin) || (position >= _end)))
-            KCHECK(false) << "Vector::erase -- invalid position";
+        //if (TURBO_UNLIKELY((position < _begin) || (position >= _end)))
+        //    KCHECK(false) << "Vector::erase -- invalid position";
 
         // C++11 stipulates that position is const_iterator, but the return value is iterator.
         iterator destPosition = const_cast<value_type *>(position);
@@ -1380,8 +1380,8 @@ namespace fermat {
     void Vector<T, Alignment, Allocator>::DoInsertFromIterator(const_iterator position, BidirectionalIterator first,
                                                                BidirectionalIterator last,
                                                                std::bidirectional_iterator_tag) {
-        if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
-            KCHECK(false) << "Vector::insert -- invalid position";
+       // if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
+       //     KCHECK(false) << "Vector::insert -- invalid position";
 
         // C++11 stipulates that position is const_iterator, but the return value is iterator.
         iterator destPosition = const_cast<value_type *>(position);
@@ -1441,8 +1441,8 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     void Vector<T, Alignment,
         Allocator>::DoInsertValues(const_iterator position, size_type n, const value_type &value) {
-        if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
-            KCHECK(false) << "Vector::insert -- invalid position";
+        //if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
+         //   KCHECK(false) << "Vector::insert -- invalid position";
 
         // C++11 stipulates that position is const_iterator, but the return value is iterator.
         iterator destPosition = const_cast<value_type *>(position);
@@ -1586,8 +1586,8 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     template<typename... Args>
     void Vector<T, Alignment, Allocator>::DoInsertValue(const_iterator position, Args &&... args) {
-        if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
-            KCHECK(false) << "Vector::insert/emplace -- invalid position";
+       // if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
+       //     KCHECK(false) << "Vector::insert/emplace -- invalid position";
 
         iterator destPosition = const_cast<value_type *>(position);
 
