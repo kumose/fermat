@@ -2,9 +2,10 @@
   "dependencies": [
     "benchmark",
     "brpc",
+    "fmt",
     "gtest",
     "mimalloc",
     "turbo",
-    "fmt"
+    "xflow"
   ]
 }

@@ -26,7 +26,7 @@ kmcmake_cc_benchmark(
 configure_file(${PROJECT_SOURCE_DIR}/benchmark/config.h.in ${PROJECT_SOURCE_DIR}/benchmark/config.h @ONLY)
 
 find_package(benchmark REQUIRED)
-
+find_package(unofficial-brpc REQUIRED)
 kmcmake_cc_bm(
         NAME pool_bench
         MODULE mem
@@ -183,6 +183,7 @@ kmcmake_cc_bm(
         -fno-access-control
         -Wno-unused-result
         LINKS
+        unofficial::brpc::brpc
         fermat::fermat_static
         benchmark::benchmark_main
         benchmark::benchmark
@@ -276,7 +277,7 @@ kmcmake_cc_bm(
 )
 
 kmcmake_cc_bm(
-        NAME deque_bench.cc
+        NAME deque_bench
         MODULE mem
         SOURCES
         deque_bench.cc

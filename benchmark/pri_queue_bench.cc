@@ -1,5 +1,17 @@
-/// @file priority_queue_benchmark.cc
-/// @brief Benchmark comparing fermat::PriorityQueue with std::priority_queue.
+// Copyright (C) 2026 Kumo inc. and its affiliates. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 #include <benchmark/benchmark.h>
 #include <queue>
@@ -7,9 +19,8 @@
 #include <vector>
 #include <algorithm>
 
-#include "fermat/container/priority_queue.h"   ///< Assumed correct path.
+#include "fermat/container/priority_queue.h"
 
-/// Generate a vector of random integers.
 static std::vector<int> GenerateRandomData(size_t n) {
     std::vector<int> data(n);
     std::random_device rd;
@@ -19,15 +30,13 @@ static std::vector<int> GenerateRandomData(size_t n) {
     return data;
 }
 
-/// ---------------------------------------------------------------------------
-/// Benchmarks for std::priority_queue
-/// ---------------------------------------------------------------------------
+// ============================================================================
+// std::priority_queue benchmarks
+// ============================================================================
 
-/// BM_StdPriorityQueue_PushPop: Measure push and pop operations.
 static void BM_StdPriorityQueue_PushPop(benchmark::State& state) {
     const size_t n = state.range(0);
     auto data = GenerateRandomData(n);
-
     for (auto _ : state) {
         std::priority_queue<int> pq;
         for (int v : data) pq.push(v);
@@ -38,11 +47,9 @@ static void BM_StdPriorityQueue_PushPop(benchmark::State& state) {
 }
 BENCHMARK(BM_StdPriorityQueue_PushPop)->Arg(1000)->Arg(10000)->Arg(100000);
 
-/// BM_StdPriorityQueue_ConstructFromIterators: Construct queue from iterator range.
 static void BM_StdPriorityQueue_ConstructFromIterators(benchmark::State& state) {
     const size_t n = state.range(0);
     auto data = GenerateRandomData(n);
-
     for (auto _ : state) {
         std::priority_queue<int> pq(std::less<int>(), std::vector<int>(data.begin(), data.end()));
         benchmark::DoNotOptimize(pq);
@@ -51,17 +58,15 @@ static void BM_StdPriorityQueue_ConstructFromIterators(benchmark::State& state) 
 }
 BENCHMARK(BM_StdPriorityQueue_ConstructFromIterators)->Arg(1000)->Arg(10000)->Arg(100000);
 
-/// ---------------------------------------------------------------------------
-/// Benchmarks for fermat::PriorityQueue
-/// ---------------------------------------------------------------------------
+// ============================================================================
+// fermat::PriorityQueue benchmarks
+// ============================================================================
 
-/// BM_FermatPriorityQueue_PushPop: Measure push and pop operations.
 static void BM_FermatPriorityQueue_PushPop(benchmark::State& state) {
     const size_t n = state.range(0);
     auto data = GenerateRandomData(n);
-
     for (auto _ : state) {
-        fermat::PriorityQueue<int, 0> pq;   ///< Alignment = 0 (default).
+        fermat::PriorityQueue<int, 0> pq;
         for (int v : data) pq.push(v);
         for (size_t i = 0; i < n; ++i) pq.pop();
         benchmark::DoNotOptimize(pq);
@@ -70,11 +75,9 @@ static void BM_FermatPriorityQueue_PushPop(benchmark::State& state) {
 }
 BENCHMARK(BM_FermatPriorityQueue_PushPop)->Arg(1000)->Arg(10000)->Arg(100000);
 
-/// BM_FermatPriorityQueue_ConstructFromIterators: Construct queue from iterator range.
 static void BM_FermatPriorityQueue_ConstructFromIterators(benchmark::State& state) {
     const size_t n = state.range(0);
     auto data = GenerateRandomData(n);
-
     for (auto _ : state) {
         fermat::PriorityQueue<int, 0> pq(data.begin(), data.end());
         benchmark::DoNotOptimize(pq);
@@ -83,36 +86,29 @@ static void BM_FermatPriorityQueue_ConstructFromIterators(benchmark::State& stat
 }
 BENCHMARK(BM_FermatPriorityQueue_ConstructFromIterators)->Arg(1000)->Arg(10000)->Arg(100000);
 
-/// BM_FermatPriorityQueue_ChangeRemove: Measure change and remove extensions.
+// Additional fermat-specific features
 static void BM_FermatPriorityQueue_ChangeRemove(benchmark::State& state) {
     const size_t n = state.range(0);
     auto data = GenerateRandomData(n);
-    // Choose a random index to modify or remove.
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<size_t> idx_dist(0, n - 1);
-
     for (auto _ : state) {
         fermat::PriorityQueue<int, 0> pq(data.begin(), data.end());
         size_t idx = idx_dist(gen);
-        // For change: we need to modify the value at index and then call change.
-        // However, we don't have direct access to the underlying container,
-        // so we use get_container().
-        pq.get_container()[idx] = -pq.get_container()[idx];   ///< Modify priority.
+        pq.get_container()[idx] = -pq.get_container()[idx];
         pq.change(idx);
-        pq.remove(idx_dist(gen));   ///< Remove another random element.
+        pq.remove(idx_dist(gen));
         benchmark::DoNotOptimize(pq);
     }
     state.SetItemsProcessed(state.iterations() * 2);
 }
 BENCHMARK(BM_FermatPriorityQueue_ChangeRemove)->Arg(1000)->Arg(10000)->Arg(100000);
 
-/// BM_FermatPriorityQueue_GetContainer: Access underlying container.
 static void BM_FermatPriorityQueue_GetContainer(benchmark::State& state) {
     const size_t n = state.range(0);
     fermat::PriorityQueue<int, 0> pq;
     for (size_t i = 0; i < n; ++i) pq.push(static_cast<int>(i));
-
     for (auto _ : state) {
         auto& cont = pq.get_container();
         benchmark::DoNotOptimize(cont);
