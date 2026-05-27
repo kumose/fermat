@@ -1,18 +1,15 @@
-/home/jeff/github/kumose/fermat/tests/io/peeker_test.cc: In member function ‘virtual void fermat::PeekerIOBufTest_OperatorStarAndIncrementDecrement_Test::TestBody()’:
-/home/jeff/github/kumose/fermat/tests/io/peeker_test.cc:188:28: warning: ISO C++ says that these are ambiguous, even though the worst conversion for the first is better than the worst conversion for the second:
-  188 |         auto p3 = peeker - 1u; // negative move should clamp to 0
-      |                            ^~
-In file included from /home/jeff/github/kumose/fermat/tests/io/peeker_test.cc:16:
-/home/jeff/github/kumose/fermat/fermat/io/peeker.h:243:16: note: candidate 1: ‘fermat::Peeker<Source, typename std::enable_if<is_iobuf_v<Source>, void>::type> fermat::Peeker<Source, typename std::enable_if<is_iobuf_v<Source>, void>::type>::operator-(size_t) [with Source = fermat::IOBuf<64, 4096>; typename std::enable_if<is_iobuf_v<Source>, void>::type = void; size_t = long unsigned int]’
-  243 |         Peeker operator-(size_t n) {
-      |                ^~~~~~~~
-/home/jeff/github/kumose/fermat/tests/io/peeker_test.cc:188:28: note: candidate 2: ‘operator-(int, unsigned int)’ (built-in)
-  188 |         auto p3 = peeker - 1u; // negative move should clamp to 0
-      |                            ^~
-/home/jeff/github/kumose/fermat/tests/io/cord_buffer_test.cc: In member function ‘virtual void fermat::CordBufferTest_FormatSinkWorks_Test::TestBody()’:
-/home/jeff/github/kumose/fermat/tests/io/cord_buffer_test.cc:186:22: error: ‘using TestCordBuffer = class fermat::CordBufferBase<64, 4096>’ {aka ‘class fermat::CordBufferBase<64, 4096>’} has no member named ‘format_sink’
-  186 |     auto sink = cord.format_sink();
-      |                      ^~~~~~~~~~~
-make[2]: *** [tests/io/CMakeFiles/io_cord_buffer_test.dir/build.make:79: tests/io/CMakeFiles/io_cord_buffer_test.dir/cord_buffer_test.cc.o] Error 1
-make[1]: *** [CMakeFiles/Makefile2:741: tests/io/CMakeFiles/io_cord_buffer_test.dir/all] Error 2
+In file included from /home/jeff/github/kumose/fermat/fermat/container/list.h:18,
+                 from /home/jeff/github/kumose/fermat/benchmark/lru_cache.cc:12:
+/home/jeff/github/kumose/fermat/fermat/memory/allocator.h: In instantiation of ‘class fermat::AlignedAllocator<fermat::ListNode<std::__cxx11::basic_string<char> >, 8, fermat::TimesPolicy<2, 1>, fermat::TieredAllocator<fermat::ListNode<std::__cxx11::basic_string<char> >, 8> >’:
+/usr/include/c++/11/type_traits:756:38:   required from ‘struct std::is_empty<fermat::AlignedAllocator<fermat::ListNode<std::__cxx11::basic_string<char> >, 8, fermat::TimesPolicy<2, 1>, fermat::TieredAllocator<fermat::ListNode<std::__cxx11::basic_string<char> >, 8> > >’
+/home/jeff/github/kumose/fermat/fermat/container/compressed_pair.h:323:11:   required from ‘class fermat::compressed_pair<fermat::ListNodeBase, fermat::AlignedAllocator<fermat::ListNode<std::__cxx11::basic_string<char> >, 8, fermat::TimesPolicy<2, 1>, fermat::TieredAllocator<fermat::ListNode<std::__cxx11::basic_string<char> >, 8> > >’
+/home/jeff/github/kumose/fermat/fermat/container/list.h:130:65:   required from ‘class fermat::ListBase<std::__cxx11::basic_string<char>, 8, fermat::AlignedAllocator<fermat::ListNode<std::__cxx11::basic_string<char> >, 8, fermat::TimesPolicy<2, 1>, fermat::TieredAllocator<fermat::ListNode<std::__cxx11::basic_string<char> >, 8> > >’
+/home/jeff/github/kumose/fermat/fermat/container/list.h:176:11:   required from ‘class fermat::List<std::__cxx11::basic_string<char>, 8>’
+/home/jeff/github/kumose/fermat/benchmark/lru_cache.cc:51:74:   required from here
+/home/jeff/github/kumose/fermat/fermat/memory/allocator.h:94:60: error: static assertion failed: alignment not valid
+   94 |         static_assert(Malloc::is_valid_alignment<Alignment>(), "alignment not valid");
+      |                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~
+/home/jeff/github/kumose/fermat/fermat/memory/allocator.h:94:60: note: ‘fermat::Malloc::is_valid_alignment<8>()’ evaluates to false
+make[2]: *** [benchmark/CMakeFiles/mem_lru_cache.dir/build.make:79: benchmark/CMakeFiles/mem_lru_cache.dir/lru_cache.cc.o] Error 1
+make[1]: *** [CMakeFiles/Makefile2:1273: benchmark/CMakeFiles/mem_lru_cache.dir/all] Error 2
 make: *** [Makefile:146: all] Error 2

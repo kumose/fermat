@@ -17,7 +17,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <mimalloc.h>
 #include <turbo/utility/status.h>
 
 namespace fermat {
@@ -25,96 +24,69 @@ namespace fermat {
     static constexpr size_t kDefaultAlignedSize = 64;
 
     struct Malloc {
-        static size_t good_alloc_size(size_t n) {
-            return mi_good_size(n );
-        }
+        static size_t good_alloc_size(size_t n);
 
-        static void *good_alloc(size_t *n) {
-            auto rn = good_alloc_size(*n);
-            *n = rn;
-            return mi_malloc(rn);
-        }
+        static void *good_alloc(size_t n);
 
-        static void good_free(void *ptr, size_t n) {
-            if (ptr == nullptr) {
-                return;
-            }
-            mi_free_size(ptr, n);
-        }
+        static void good_free(void *ptr, size_t n);
 
-        static void good_free(void *ptr) {
-            if (ptr == nullptr) {
-                return;
-            }
-            mi_free(ptr);
-        }
+        static void good_free(void *ptr);
 
-        static void *good_realloc(void *p, size_t *n) {
-            auto rn = good_alloc_size(*n);
-            *n = rn;
-            return mi_recalloc(p, rn, 1);
-        }
+        /// alignment
+        static size_t good_align_alloc_size(size_t align, size_t n);
 
-        static size_t good_usable_size(void *p) {
-            if (p == nullptr) {
-                return 0;
-            }
-            return mi_malloc_usable_size(p);
-        }
+        static void *good_align_alloc(size_t align, size_t n);
 
-    };
+        static void good_align_free(void *ptr, size_t align, size_t n);
 
-    template<size_t Alignment>
-    struct AlignedMalloc {
-
-        static size_t good_alloc_size(size_t n) {
-            return mi_good_size((n + Alignment - 1) & ~(Alignment - 1));
-        }
-
-        static void *good_alloc(size_t *n) {
-            auto rn = good_alloc_size(*n);
-            *n = rn;
-            return mi_aligned_alloc(Alignment, rn);
-        }
-
-        static void good_free(void *ptr, size_t n) {
-            if (ptr == nullptr) {
-                return;
-            }
-            mi_free_size_aligned(ptr, n, Alignment);
-        }
-
-        static void good_free(void *ptr) {
-            if (ptr == nullptr) {
-                return;
-            }
-            mi_free_aligned(ptr, Alignment);
-        }
-
-        static void *good_realloc(void *p, size_t *n) {
-            auto rn = good_alloc_size(*n);
-            *n = rn;
-            return mi_aligned_recalloc(p, rn, 1, Alignment);
-        }
-
-        static size_t good_usable_size(void *p) {
-            if (p == nullptr) {
-                return 0;
-            }
-            return mi_malloc_usable_size(p);
-        }
+        static void good_align_free(void *ptr, size_t align);
 
         /// @brief Check if a pointer is aligned to the template Alignment.
         /// @param p The pointer to check.
         /// @return True if the pointer is aligned.
-        static bool is_aligned(const void *p) noexcept {
-            return (reinterpret_cast<uintptr_t>(p) & (Alignment - 1)) == 0;
+        static bool is_aligned(const void *p, size_t align) noexcept {
+            return (reinterpret_cast<uintptr_t>(p) & (align - 1)) == 0;
         }
 
         /// @brief Check if the size is a multiple of the template Alignment.
         /// @param n The size to check.
-        static bool is_aligned_size(size_t n) noexcept {
-            return (n & (Alignment - 1)) == 0;
+        static bool is_aligned_size(size_t n, size_t align) noexcept {
+            return (n & (align - 1)) == 0;
+        }
+
+        template<size_t Alignment, typename T>
+        static size_t good_type_size() {
+            if constexpr (Alignment == 0) {
+                return sizeof(T);
+            } else {
+                return good_align_alloc_size(Alignment, sizeof(T));
+            }
+        }
+
+        template<size_t Alignment>
+        static constexpr bool is_valid_alignment() noexcept {
+            if constexpr (Alignment == 0) {
+                return true;
+            } else if constexpr (Alignment == 16) {
+                return true;
+            } else if constexpr (Alignment == 32) {
+                return true;
+            } else if constexpr (Alignment == 64) {
+                return true;
+            } else if constexpr (Alignment == 128) {
+                return true;
+            } else if constexpr (Alignment == 256) {
+                return true;
+            } else if constexpr (Alignment == 512) {
+                return true;
+            } else if constexpr (Alignment == 1024) {
+                return true;
+            } else if constexpr (Alignment == 2048) {
+                return true;
+            } else if constexpr (Alignment == 4096) {
+                return true;
+            }
+            return false;
         }
     };
 } // namespace fermat

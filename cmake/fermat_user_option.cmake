@@ -29,3 +29,4 @@
 # list(APPEND KMCMAKE_CXX_OPTIONS "-fopenmp")
 # ------------------------------------------------------------------------------
 
+option(FERMAT_USE_MIMALLOC "using mimalloc" OFF)

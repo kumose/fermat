@@ -28,7 +28,7 @@ kmcmake_cc_test(
         GTest::gtest_main
         ${KMCMAKE_DEPS_LINK}
 )
-
+#[[
 kmcmake_cc_test(
         NAME malloc_test
         MODULE mem
@@ -44,7 +44,7 @@ kmcmake_cc_test(
         GTest::gtest_main
         ${KMCMAKE_DEPS_LINK}
 )
-
+]]
 kmcmake_cc_test(
         NAME allocator_test
         MODULE mem

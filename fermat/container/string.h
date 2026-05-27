@@ -17,7 +17,6 @@
 #pragma once
 
 #include <algorithm>
-#include <atomic>
 #include <cassert>
 #include <cstddef>
 #include <cstring>
@@ -41,8 +40,7 @@ namespace fermat {
         using allocator_type = Allocator;
 
     public:
-        StringCore() noexcept {
-        }
+        StringCore() noexcept = default;
 
         StringCore(const StringCore &rhs) {
             assert(&rhs != this);
@@ -121,7 +119,7 @@ namespace fermat {
             return Alignment != 0;
         }
 
-        constexpr size_t alignment() const {
+       [[nodiscard]] constexpr size_t alignment() const {
             return Alignment;
         }
 
@@ -144,7 +142,7 @@ namespace fermat {
             return _capacity.second().good_size(n);
         }
 
-        Char *alloc(size_t *n) {
+        Char *allocate(size_t n) {
             return _capacity.second().allocate(n);
         }
 
@@ -177,8 +175,8 @@ namespace fermat {
     inline void StringCore<Char, Alignment, A>::copy_rhs(const StringCore &rhs) {
         deallocate();
         if (rhs.size()) {
-            _capacity.first() = rhs.size() + 1;
-            _data = alloc(&_capacity.first());
+            _capacity.first() = rhs.capacity();
+            _data = allocate(_capacity.first() + 1);
             std::memcpy(_data, rhs._data, sizeof(Char) * (rhs.size_ + 1));
             size_ = rhs.size_;
         }
@@ -193,8 +191,8 @@ namespace fermat {
         }
         // Small strings are allocated normally. Don't forget to
         // allocate one extra Char for the terminating null.
-        auto n  = size + 1;
-        _data = alloc(&n);
+        auto n  = _capacity.second().good_size(size + 1);
+        _data = allocate(n);
         std::memcpy(_data, data, size * sizeof(Char));
         size_ = size;
         _capacity.first() = n - 1;
@@ -223,13 +221,15 @@ namespace fermat {
         if (ns <= _capacity.first()) {
             return;
         }
-        auto ptr = alloc(&ns);
+        auto nn = _capacity.second().get_new_size(size_, ns - size_);
+        nn = _capacity.second().good_size(nn);
+        auto ptr = allocate(nn);
         if (size_ > 0) {
             std::memcpy(ptr, _data, sizeof(Char) * (size_ + 1));
         }
         auto n = size_;
         deallocate();
-        _capacity.first() = ns - 1;
+        _capacity.first() = nn - 1;
         _data = ptr;
         size_ = n;
     }
@@ -240,11 +240,12 @@ namespace fermat {
      * one which is the core.
      */
     template<
-        typename E,
+        typename Char,
         size_t Alignment,
-        class T = std::char_traits<E>,
-        class A = BasicAllocator<E, Alignment>,
-        class Storage = StringCore<E, Alignment, A> >
+        typename T = std::char_traits<Char>,
+        typename P = TimesPolicy<2, 1>,
+        typename A = AlignedAllocator<Char, Alignment, P>,
+        typename Storage = StringCore<Char, Alignment, A> >
     class BasicString {
         template<typename Ex, typename... Args>
         TURBO_FORCE_INLINE static void enforce(bool condition, Args &&... args) {
@@ -278,7 +279,7 @@ namespace fermat {
         typedef T traits_type;
         typedef typename traits_type::char_type value_type;
         typedef A allocator_type;
-        typedef std::allocator<E> std_allocator;
+        typedef std::allocator<Char> std_allocator;
         typedef typename std::allocator_traits<std_allocator>::size_type size_type;
         typedef typename std::allocator_traits<std_allocator>::difference_type difference_type;
 
@@ -287,8 +288,8 @@ namespace fermat {
         typedef typename std::allocator_traits<std_allocator>::pointer pointer;
         typedef typename std::allocator_traits<std_allocator>::const_pointer const_pointer;
 
-        typedef E *iterator;
-        typedef const E *const_iterator;
+        typedef Char *iterator;
+        typedef const Char *const_iterator;
         typedef std::reverse_iterator<iterator> reverse_iterator;
         typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
 
@@ -359,7 +360,7 @@ namespace fermat {
 
         // This is defined for compatibility with std::string
         template<typename A2>
-        /* implicit */ BasicString(const std::basic_string<E, T, A2> &str)
+        /* implicit */ BasicString(const std::basic_string<Char, T, A2> &str)
             : store_(str.data(), str.size()) {
         }
 
@@ -393,9 +394,9 @@ namespace fermat {
         BasicString(
             InIt begin,
             InIt end,
-            typename std::enable_if<
-                !std::is_same<InIt, value_type *>::value,
-                const A>::type & = A()) {
+            typename std::enable_if_t<
+                !std::is_same_v<InIt, value_type *>,
+                const A> & = A()) {
             assign(begin, end);
         }
 
@@ -437,14 +438,14 @@ namespace fermat {
 
         // Compatibility with std::string
         template<typename A2>
-        BasicString &operator=(const std::basic_string<E, T, A2> &rhs) {
+        BasicString &operator=(const std::basic_string<Char, T, A2> &rhs) {
             assign(rhs.data(), rhs.size());
             return *this;
         }
 
         // Compatibility with std::string
-        [[nodiscard]] std::basic_string<E, T, A> toStdString() const {
-            return std::basic_string<E, T, A>(data(), size());
+        [[nodiscard]] std::basic_string<Char, T, A> toStdString() const {
+            return std::basic_string<Char, T, A>(data(), size());
         }
 
         BasicString &operator=(std::nullptr_t) = delete;
@@ -468,11 +469,11 @@ namespace fermat {
         typename std::enable_if<
             std::is_convertible<
                 TP,
-                typename BasicString<E, Alignment, T, A, Storage>::value_type>::value &&
-            !std::is_same<
+                typename BasicString<Char, Alignment, T, P,A, Storage>::value_type>::value &&
+            !std::is_same_v<
                 typename std::decay<TP>::type,
-                typename BasicString<E, Alignment, T, A, Storage>::value_type>::value,
-            BasicString<E, Alignment, T, A, Storage> &>::type
+                typename BasicString<Char, Alignment, T, P,A, Storage>::value_type>,
+            BasicString<Char, Alignment, T, A, Storage> &>::type
         operator=(TP c) = delete;
 
         BasicString &operator=(std::initializer_list<value_type> il) {
@@ -651,9 +652,9 @@ namespace fermat {
         }
 
         BasicString &assign(
-            const BasicString &str, const size_type pos, size_type n);
+            const BasicString &str,  size_type pos, size_type n);
 
-        BasicString &assign(const value_type *s, const size_type n);
+        BasicString &assign(const value_type *s,  size_type n);
 
         BasicString &assign(const value_type *s) {
             return assign(s, traitsLength(s));
@@ -701,9 +702,9 @@ namespace fermat {
             return begin() + pos;
         }
 
-        void bestow(T *data, size_type size, size_type capacity) noexcept;
+        void bestow(Char *data, size_type size, size_type capacity) noexcept;
 
-        T *seize(size_type *size, size_type *capacity) noexcept;
+        Char *seize(size_type *size, size_type *capacity) noexcept;
 
     private:
         typedef std::basic_istream<value_type, traits_type> istream_type;
@@ -816,7 +817,7 @@ namespace fermat {
 
             enforce<std::out_of_range>(pos <= size(), "");
             procrustes(n1, length() - pos);
-            const iterator b = begin() + pos;
+            auto b = begin() + pos;
             return replace(b, b + n1, s_or_n2, n_or_c);
         }
 
@@ -1062,7 +1063,7 @@ namespace fermat {
 
         template<typename H>
         H turbo_hash_value(H h, const BasicString &s) {
-            return H::combine(std::move(h), std::basic_string_view<E>(s.data(), s.size()));
+            return H::combine(std::move(h), std::basic_string_view<Char>(s.data(), s.size()));
         }
 
     private:
@@ -1070,14 +1071,14 @@ namespace fermat {
         Storage store_;
     };
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    TURBO_NOINLINE typename BasicString<E, Alignment, T, A, S>::size_type
-    BasicString<E, Alignment, T, A, S>::traitsLength(const value_type *s) {
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    TURBO_NOINLINE typename BasicString<Char, Alignment, T, Policy, A, S>::size_type
+    BasicString<Char, Alignment, T, Policy, A, S>::traitsLength(const value_type *s) {
         return s ? traits_type::length(s) : 0;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S> &BasicString<E, Alignment, T, A, S>::operator=(
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline BasicString<Char, Alignment, T, Policy, A, S> &BasicString<Char, Alignment, T, Policy, A, S>::operator=(
         const BasicString &lhs) {
         Invariant checker(*this);
 
@@ -1090,8 +1091,8 @@ namespace fermat {
     }
 
     // Move assignment
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S> &BasicString<E, Alignment, T, A, S>::operator=(
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline BasicString<Char, Alignment, T, Policy, A, S> &BasicString<Char, Alignment, T, Policy, A, S>::operator=(
         BasicString &&goner) noexcept {
         if (TURBO_UNLIKELY(&goner == this)) {
             // Compatibility with std::basic_string<>,
@@ -1106,8 +1107,8 @@ namespace fermat {
         return *this;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S> &BasicString<E, Alignment, T, A, S>::operator=(
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline BasicString<Char, Alignment, T, Policy, A, S> &BasicString<Char, Alignment, T, Policy, A, S>::operator=(
         value_type c) {
         Invariant checker(*this);
 
@@ -1120,8 +1121,8 @@ namespace fermat {
         return *this;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline void BasicString<E, Alignment, T, A, S>::resize(
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline void BasicString<Char, Alignment, T, Policy, A, S>::resize(
         const size_type n, const value_type c /*= value_type()*/) {
         Invariant checker(*this);
 
@@ -1136,8 +1137,8 @@ namespace fermat {
         assert(this->size() == n);
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    void BasicString<E, Alignment, T, A, S>::bestow(T *data, size_type size, size_type capacity) noexcept {
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    void BasicString<Char, Alignment, T, Policy, A, S>::bestow(Char *data, size_type size, size_type capacity) noexcept {
         if constexpr (Alignment != 0) {
             // 2. Alignment check: Ensure the external pointer meets hardware/SIMD requirements.
             KCHECK(reinterpret_cast<uintptr_t>(data) % Alignment == 0)
@@ -1161,8 +1162,8 @@ namespace fermat {
         store_._data[store_.size_] = '\0';
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    T *BasicString<E, Alignment, T, A, S>::seize(size_type *out_size, size_type *out_capacity) noexcept {
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    Char *BasicString<Char, Alignment, T, Policy, A, S>::seize(size_type *out_size, size_type *out_capacity) noexcept {
         if (store_._capacity.first() == 0) {
             return nullptr;
         }
@@ -1177,8 +1178,8 @@ namespace fermat {
         return raw_ptr;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S> &BasicString<E, Alignment, T, A, S>::append(
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline BasicString<Char, Alignment, T, Policy, A, S> &BasicString<Char, Alignment, T, Policy, A, S>::append(
         const BasicString &str) {
 #ifndef NDEBUG
         auto desiredSize = size() + str.size();
@@ -1188,8 +1189,8 @@ namespace fermat {
         return *this;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S> &BasicString<E, Alignment, T, A, S>::append(
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline BasicString<Char, Alignment, T, Policy, A, S> &BasicString<Char, Alignment, T, Policy, A, S>::append(
         const BasicString &str, const size_type pos, size_type n) {
         const size_type sz = str.size();
         enforce<std::out_of_range>(pos <= sz, "");
@@ -1197,8 +1198,8 @@ namespace fermat {
         return append(str.data() + pos, n);
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    TURBO_NOINLINE BasicString<E, Alignment, T, A, S> &BasicString<E, Alignment, T, A, S>::append(
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    TURBO_NOINLINE BasicString<Char, Alignment, T, Policy, A, S> &BasicString<Char, Alignment, T, Policy, A, S>::append(
         const value_type *s, size_type n) {
         Invariant checker(*this);
 
@@ -1230,8 +1231,8 @@ namespace fermat {
         return *this;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S> &BasicString<E, Alignment, T, A, S>::append(
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline BasicString<Char, Alignment, T, Policy, A, S> &BasicString<Char, Alignment, T, Policy, A, S>::append(
         size_type n, value_type c) {
         Invariant checker(*this);
         auto pData = store_.expandNoinit(n, /* expGrowth = */ true);
@@ -1239,8 +1240,8 @@ namespace fermat {
         return *this;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S> &BasicString<E, Alignment, T, A, S>::assign(
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline BasicString<Char, Alignment, T, Policy, A, S> &BasicString<Char, Alignment, T, Policy, A, S>::assign(
         const BasicString &str, const size_type pos, size_type n) {
         const size_type sz = str.size();
         enforce<std::out_of_range>(pos <= sz, "");
@@ -1248,8 +1249,8 @@ namespace fermat {
         return assign(str.data() + pos, n);
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    TURBO_NOINLINE BasicString<E, Alignment, T, A, S> &BasicString<E, Alignment, T, A, S>::assign(
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    TURBO_NOINLINE BasicString<Char, Alignment, T, Policy, A, S> &BasicString<Char, Alignment, T, Policy, A, S>::assign(
         const value_type *s, const size_type n) {
         if (n < capacity()) {
             std::memcpy(store_._data, s, n);
@@ -1262,9 +1263,9 @@ namespace fermat {
         return *this;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline typename BasicString<E, Alignment, T, A, S>::istream_type &
-    BasicString<E, Alignment, T, A, S>::getlineImpl(istream_type &is, value_type delim) {
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline typename BasicString<Char, Alignment, T, Policy, A, S>::istream_type &
+    BasicString<Char, Alignment, T, Policy, A, S>::getlineImpl(istream_type &is, value_type delim) {
         Invariant checker(*this);
 
         clear();
@@ -1295,26 +1296,24 @@ namespace fermat {
         return is;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline typename BasicString<E, Alignment, T, A, S>::size_type
-    BasicString<E, Alignment, T, A,
-        S>::find(const value_type *needle, const size_type pos, const size_type nsize) const {
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline typename BasicString<Char, Alignment, T, Policy, A, S>::size_type
+    BasicString<Char, Alignment,  T,Policy, A,S>::find(const value_type *needle, const size_type pos, const size_type nsize) const {
         const size_type total_size = this->size();
         if (nsize == 0) {
             return (pos <= size()) ? pos : npos;
         }
         // String_view is a non-owning wrapper, cost-free to construct.
         // We use it to delegate the heavy-lifting search to the standard library.
-        std::basic_string_view<E> haystack_view(this->data(), total_size);
-        std::basic_string_view<E> needle_view(needle, nsize);
-
+        std::basic_string_view<Char> haystack_view(this->data(), total_size);
+        std::basic_string_view<Char> needle_view(needle, nsize);
         auto p = haystack_view.find(needle_view, pos);
         return p;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline typename BasicString<E, Alignment, T, A, S>::iterator
-    BasicString<E, Alignment, T, A, S>::insertImplDiscr(
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline typename BasicString<Char, Alignment, T, Policy, A, S>::iterator
+    BasicString<Char, Alignment, T, Policy, A, S>::insertImplDiscr(
         const_iterator i, size_type n, value_type c, std::true_type) {
         Invariant checker(*this);
         assert(i >= cbegin() && i <= cend());
@@ -1330,19 +1329,19 @@ namespace fermat {
         return b + pos;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     template<class InputIter>
-    inline typename BasicString<E, Alignment, T, A, S>::iterator
-    BasicString<E, Alignment, T, A, S>::insertImplDiscr(
+    inline typename BasicString<Char, Alignment, T, Policy, A, S>::iterator
+    BasicString<Char, Alignment, T, Policy, A, S>::insertImplDiscr(
         const_iterator i, InputIter b, InputIter e, std::false_type) {
         return insertImpl(
             i, b, e, typename std::iterator_traits<InputIter>::iterator_category());
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     template<class FwdIterator>
-    inline typename BasicString<E, Alignment, T, A, S>::iterator
-    BasicString<E, Alignment, T, A, S>::insertImpl(
+    inline typename BasicString<Char, Alignment, T, Policy, A, S>::iterator
+    BasicString<Char, Alignment, T, Policy, A, S>::insertImpl(
         const_iterator i,
         FwdIterator s1,
         FwdIterator s2,
@@ -1363,10 +1362,10 @@ namespace fermat {
         return b + pos;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     template<class InputIterator>
-    inline typename BasicString<E, Alignment, T, A, S>::iterator
-    BasicString<E, Alignment, T, A, S>::insertImpl(
+    inline typename BasicString<Char, Alignment, T, Policy, A, S>::iterator
+    BasicString<Char, Alignment, T, Policy, A, S>::insertImpl(
         const_iterator i,
         InputIterator b,
         InputIterator e,
@@ -1381,8 +1380,8 @@ namespace fermat {
         return begin() + pos;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S> &BasicString<E, Alignment, T, A, S>::replaceImplDiscr(
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline BasicString<Char, Alignment, T, Policy, A, S> &BasicString<Char, Alignment, T, Policy, A, S>::replaceImplDiscr(
         iterator i1,
         iterator i2,
         const value_type *s,
@@ -1394,8 +1393,8 @@ namespace fermat {
         return replace(i1, i2, s, s + n);
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S> &BasicString<E, Alignment, T, A, S>::replaceImplDiscr(
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline BasicString<Char, Alignment, T, Policy, A, S> &BasicString<Char, Alignment, T, Policy, A, S>::replaceImplDiscr(
         iterator i1,
         iterator i2,
         size_type n2,
@@ -1413,9 +1412,9 @@ namespace fermat {
         return *this;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     template<class InputIter>
-    inline BasicString<E, Alignment, T, A, S> &BasicString<E, Alignment, T, A, S>::replaceImplDiscr(
+    inline BasicString<Char, Alignment, T, Policy, A, S> &BasicString<Char, Alignment, T, Policy, A, S>::replaceImplDiscr(
         iterator i1,
         iterator i2,
         InputIter b,
@@ -1426,9 +1425,9 @@ namespace fermat {
         return *this;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     template<class FwdIterator>
-    inline bool BasicString<E, Alignment, T, A, S>::replaceAliased(
+    inline bool BasicString<Char, Alignment, T, Policy, A, S>::replaceAliased(
         iterator i1, iterator i2, FwdIterator s1, FwdIterator s2, std::true_type) {
         std::less_equal<const value_type *> le{};
         const bool aliased = le(&*begin(), &*s1) && le(&*s1, &*end());
@@ -1443,9 +1442,9 @@ namespace fermat {
         return true;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     template<class FwdIterator>
-    inline void BasicString<E, Alignment, T, A, S>::replaceImpl(
+    inline void BasicString<Char, Alignment, T, Policy, A, S>::replaceImpl(
         iterator i1,
         iterator i2,
         FwdIterator s1,
@@ -1455,8 +1454,8 @@ namespace fermat {
 
         // Handle aliased replace
         using Sel = std::bool_constant<
-            std::is_same<FwdIterator, iterator>::value ||
-            std::is_same<FwdIterator, const_iterator>::value>;
+            std::is_same_v<FwdIterator, iterator> ||
+            std::is_same_v<FwdIterator, const_iterator>>;
         if (replaceAliased(i1, i2, s1, s2, Sel())) {
             return;
         }
@@ -1478,9 +1477,9 @@ namespace fermat {
         assert(isSane());
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     template<class InputIterator>
-    inline void BasicString<E, Alignment, T, A, S>::replaceImpl(
+    inline void BasicString<Char, Alignment, T, Policy, A, S>::replaceImpl(
         iterator i1,
         iterator i2,
         InputIterator b,
@@ -1491,9 +1490,9 @@ namespace fermat {
         swap(temp);
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline typename BasicString<E, Alignment, T, A, S>::size_type
-    BasicString<E, Alignment, T, A, S>::rfind(
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline typename BasicString<Char, Alignment, T, Policy, A, S>::size_type
+    BasicString<Char, Alignment, T, Policy, A, S>::rfind(
         const value_type *s, size_type pos, size_type n) const {
         if (n > length()) {
             return npos;
@@ -1515,9 +1514,9 @@ namespace fermat {
         return npos;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline typename BasicString<E, Alignment, T, A, S>::size_type
-    BasicString<E, Alignment, T, A, S>::find_first_of(
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline typename BasicString<Char, Alignment, T, Policy, A, S>::size_type
+    BasicString<Char, Alignment, T, Policy, A, S>::find_first_of(
         const value_type *s, size_type pos, size_type n) const {
         if (pos > length() || n == 0) {
             return npos;
@@ -1531,9 +1530,9 @@ namespace fermat {
         return npos;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline typename BasicString<E, Alignment, T, A, S>::size_type
-    BasicString<E, Alignment, T, A, S>::find_last_of(
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline typename BasicString<Char, Alignment, T, Policy, A, S>::size_type
+    BasicString<Char, Alignment, T, Policy, A, S>::find_last_of(
         const value_type *s, size_type pos, size_type n) const {
         if (!empty() && n > 0) {
             pos = std::min(pos, length() - 1);
@@ -1550,9 +1549,9 @@ namespace fermat {
         return npos;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline typename BasicString<E, Alignment, T, A, S>::size_type
-    BasicString<E, Alignment, T, A, S>::find_first_not_of(
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline typename BasicString<Char, Alignment, T, Policy, A, S>::size_type
+    BasicString<Char, Alignment, T, Policy, A, S>::find_first_not_of(
         const value_type *s, size_type pos, size_type n) const {
         if (pos < length()) {
             const_iterator i(begin() + pos), finish(end());
@@ -1565,9 +1564,9 @@ namespace fermat {
         return npos;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline typename BasicString<E, Alignment, T, A, S>::size_type
-    BasicString<E, Alignment, T, A, S>::find_last_not_of(
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline typename BasicString<Char, Alignment, T, Policy, A, S>::size_type
+    BasicString<Char, Alignment, T, Policy, A, S>::find_last_not_of(
         const value_type *s, size_type pos, size_type n) const {
         if (!this->empty()) {
             pos = std::min(pos, size() - 1);
@@ -1586,27 +1585,27 @@ namespace fermat {
 
     // non-member functions
     // C++11 21.4.8.1/1
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S> operator+(
-        const BasicString<E, Alignment, T, A, S> &lhs,
-        const BasicString<E, Alignment, T, A, S> &rhs) {
-        BasicString<E, Alignment, T, A, S> result;
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline BasicString<Char, Alignment, T, Policy, A, S> operator+(
+        const BasicString<Char, Alignment, T, Policy, A, S> &lhs,
+        const BasicString<Char, Alignment, T, Policy, A, S> &rhs) {
+        BasicString<Char, Alignment, T, Policy, A, S> result;
         result.reserve(lhs.size() + rhs.size());
         result.append(lhs).append(rhs);
         return result;
     }
 
     // C++11 21.4.8.1/2
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S> operator+(
-        BasicString<E, Alignment, T, A, S> &&lhs, const BasicString<E, Alignment, T, A, S> &rhs) {
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline BasicString<Char, Alignment, T, Policy, A, S> operator+(
+        BasicString<Char, Alignment, T, Policy, A, S> &&lhs, const BasicString<Char, Alignment, T, Policy, A, S> &rhs) {
         return std::move(lhs.append(rhs));
     }
 
     // C++11 21.4.8.1/3
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S> operator+(
-        const BasicString<E, Alignment, T, A, S> &lhs, BasicString<E, Alignment, T, A, S> &&rhs) {
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline BasicString<Char, Alignment, T, Policy, A, S> operator+(
+        const BasicString<Char, Alignment, T, Policy, A, S> &lhs, BasicString<Char, Alignment, T, Policy, A, S> &&rhs) {
         if (rhs.capacity() >= lhs.size() + rhs.size()) {
             return std::move(rhs.insert(0, lhs));
         }
@@ -1616,46 +1615,46 @@ namespace fermat {
     }
 
     // C++11 21.4.8.1/4
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S> operator+(
-        BasicString<E, Alignment, T, A, S> &&lhs, BasicString<E, Alignment, T, A, S> &&rhs) {
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline BasicString<Char, Alignment, T, Policy, A, S> operator+(
+        BasicString<Char, Alignment, T, Policy, A, S> &&lhs, BasicString<Char, Alignment, T, Policy, A, S> &&rhs) {
         return std::move(lhs.append(rhs));
     }
 
     // C++11 21.4.8.1/5
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S> operator+(
-        const E *lhs, const BasicString<E, Alignment, T, A, S> &rhs) {
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline BasicString<Char, Alignment, T, Policy, A, S> operator+(
+        const Char *lhs, const BasicString<Char, Alignment, T, Policy, A, S> &rhs) {
         //
-        BasicString<E, Alignment, T, A, S> result;
-        const auto len = BasicString<E, Alignment, T, A, S>::traits_type::length(lhs);
+        BasicString<Char, Alignment, T, Policy, A, S> result;
+        const auto len = BasicString<Char, Alignment, T, Policy, A, S>::traits_type::length(lhs);
         result.reserve(len + rhs.size());
         result.append(lhs, len).append(rhs);
         return result;
     }
 
     // C++11 21.4.8.1/6
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S> operator+(
-        const E *lhs, BasicString<E, Alignment, T, A, S> &&rhs) {
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline BasicString<Char, Alignment, T, Policy, A, S> operator+(
+        const Char *lhs, BasicString<Char, Alignment, T, Policy, A, S> &&rhs) {
         //
-        const auto len = BasicString<E, Alignment, T, A, S>::traits_type::length(lhs);
+        const auto len = BasicString<Char, Alignment, T, Policy, A, S>::traits_type::length(lhs);
         if (rhs.capacity() >= len + rhs.size()) {
             rhs.insert(rhs.begin(), lhs, lhs + len);
             return std::move(rhs);
         }
         // Meh, no go. Do it by hand since we have len already.
-        BasicString<E, Alignment, T, A, S> result;
+        BasicString<Char, Alignment, T, Policy, A, S> result;
         result.reserve(len + rhs.size());
         result.append(lhs, len).append(rhs);
         return result;
     }
 
     // C++11 21.4.8.1/7
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S> operator+(
-        E lhs, const BasicString<E, Alignment, T, A, S> &rhs) {
-        BasicString<E, Alignment, T, A, S> result;
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline BasicString<Char, Alignment, T, Policy, A, S> operator+(
+        Char lhs, const BasicString<Char, Alignment, T, Policy, A, S> &rhs) {
+        BasicString<Char, Alignment, T, Policy, A, S> result;
         result.reserve(1 + rhs.size());
         result.push_back(lhs);
         result.append(rhs);
@@ -1663,9 +1662,9 @@ namespace fermat {
     }
 
     // C++11 21.4.8.1/8
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S> operator+(
-        E lhs, BasicString<E, Alignment, T, A, S> &&rhs) {
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline BasicString<Char, Alignment, T, Policy, A, S> operator+(
+        Char lhs, BasicString<Char, Alignment, T, Policy, A, S> &&rhs) {
         //
         if (rhs.capacity() > rhs.size()) {
             rhs.insert(rhs.begin(), lhs);
@@ -1677,13 +1676,13 @@ namespace fermat {
     }
 
     // C++11 21.4.8.1/9
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S> operator+(
-        const BasicString<E, Alignment, T, A, S> &lhs, const E *rhs) {
-        typedef typename BasicString<E, Alignment, T, A, S>::size_type size_type;
-        typedef typename BasicString<E, Alignment, T, A, S>::traits_type traits_type;
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline BasicString<Char, Alignment, T, Policy, A, S> operator+(
+        const BasicString<Char, Alignment, T, Policy, A, S> &lhs, const Char *rhs) {
+        typedef typename BasicString<Char, Alignment, T, Policy, A, S>::size_type size_type;
+        typedef typename BasicString<Char, Alignment, T, Policy, A, S>::traits_type traits_type;
 
-        BasicString<E, Alignment, T, A, S> result;
+        BasicString<Char, Alignment, T, Policy, A, S> result;
         const size_type len = traits_type::length(rhs);
         result.reserve(lhs.size() + len);
         result.append(lhs).append(rhs, len);
@@ -1691,18 +1690,18 @@ namespace fermat {
     }
 
     // C++11 21.4.8.1/10
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S> operator+(
-        BasicString<E, Alignment, T, A, S> &&lhs, const E *rhs) {
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline BasicString<Char, Alignment, T, Policy, A, S> operator+(
+        BasicString<Char, Alignment, T, Policy, A, S> &&lhs, const Char *rhs) {
         //
         return std::move(lhs += rhs);
     }
 
     // C++11 21.4.8.1/11
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S> operator+(
-        const BasicString<E, Alignment, T, A, S> &lhs, E rhs) {
-        BasicString<E, Alignment, T, A, S> result;
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline BasicString<Char, Alignment, T, Policy, A, S> operator+(
+        const BasicString<Char, Alignment, T, Policy, A, S> &lhs, Char rhs) {
+        BasicString<Char, Alignment, T, Policy, A, S> result;
         result.reserve(lhs.size() + 1);
         result.append(lhs);
         result.push_back(rhs);
@@ -1710,194 +1709,194 @@ namespace fermat {
     }
 
     // C++11 21.4.8.1/12
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline BasicString<E, Alignment, T, A, S> operator+(
-        BasicString<E, Alignment, T, A, S> &&lhs, E rhs) {
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline BasicString<Char, Alignment, T, Policy, A, S> operator+(
+        BasicString<Char, Alignment, T, Policy, A, S> &&lhs, Char rhs) {
         //
         return std::move(lhs += rhs);
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     inline bool operator==(
-        const BasicString<E, Alignment, T, A, S> &lhs,
-        const BasicString<E, Alignment, T, A, S> &rhs) {
+        const BasicString<Char, Alignment, T, Policy, A, S> &lhs,
+        const BasicString<Char, Alignment, T, Policy, A, S> &rhs) {
         return lhs.size() == rhs.size() && lhs.compare(rhs) == 0;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline bool operator==(std::nullptr_t, const BasicString<E, Alignment, T, A, S> &) = delete;
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline bool operator==(std::nullptr_t, const BasicString<Char, Alignment, T, Policy, A, S> &) = delete;
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     inline bool operator==(
-        const typename BasicString<E, Alignment, T, A, S>::value_type *lhs,
-        const BasicString<E, Alignment, T, A, S> &rhs) {
+        const typename BasicString<Char, Alignment, T, Policy, A, S>::value_type *lhs,
+        const BasicString<Char, Alignment, T, Policy, A, S> &rhs) {
         return rhs == lhs;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline bool operator==(const BasicString<E, Alignment, T, A, S> &, std::nullptr_t) = delete;
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline bool operator==(const BasicString<Char, Alignment, T, Policy, A, S> &, std::nullptr_t) = delete;
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     inline bool operator==(
-        const BasicString<E, Alignment, T, A, S> &lhs,
-        const typename BasicString<E, Alignment, T, A, S>::value_type *rhs) {
+        const BasicString<Char, Alignment, T, Policy, A, S> &lhs,
+        const typename BasicString<Char, Alignment, T, Policy, A, S>::value_type *rhs) {
         return lhs.compare(rhs) == 0;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     inline bool operator!=(
-        const BasicString<E, Alignment, T, A, S> &lhs,
-        const BasicString<E, Alignment, T, A, S> &rhs) {
+        const BasicString<Char, Alignment, T, Policy, A, S> &lhs,
+        const BasicString<Char, Alignment, T, Policy, A, S> &rhs) {
         return !(lhs == rhs);
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline bool operator!=(std::nullptr_t, const BasicString<E, Alignment, T, A, S> &) = delete;
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline bool operator!=(std::nullptr_t, const BasicString<Char, Alignment, T, Policy, A, S> &) = delete;
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     inline bool operator!=(
-        const typename BasicString<E, Alignment, T, A, S>::value_type *lhs,
-        const BasicString<E, Alignment, T, A, S> &rhs) {
+        const typename BasicString<Char, Alignment, T, Policy, A, S>::value_type *lhs,
+        const BasicString<Char, Alignment, T, Policy, A, S> &rhs) {
         return !(lhs == rhs);
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline bool operator!=(const BasicString<E, Alignment, T, A, S> &, std::nullptr_t) = delete;
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline bool operator!=(const BasicString<Char, Alignment, T, Policy, A, S> &, std::nullptr_t) = delete;
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     inline bool operator!=(
-        const BasicString<E, Alignment, T, A, S> &lhs,
-        const typename BasicString<E, Alignment, T, A, S>::value_type *rhs) {
+        const BasicString<Char, Alignment, T, Policy, A, S> &lhs,
+        const typename BasicString<Char, Alignment, T, Policy, A, S>::value_type *rhs) {
         return !(lhs == rhs);
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     inline bool operator<(
-        const BasicString<E, Alignment, T, A, S> &lhs,
-        const BasicString<E, Alignment, T, A, S> &rhs) {
+        const BasicString<Char, Alignment, T, Policy, A, S> &lhs,
+        const BasicString<Char, Alignment, T, Policy, A, S> &rhs) {
         return lhs.compare(rhs) < 0;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline bool operator<(const BasicString<E, Alignment, T, A, S> &, std::nullptr_t) = delete;
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline bool operator<(const BasicString<Char, Alignment, T, Policy, A, S> &, std::nullptr_t) = delete;
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     inline bool operator<(
-        const BasicString<E, Alignment, T, A, S> &lhs,
-        const typename BasicString<E, Alignment, T, A, S>::value_type *rhs) {
+        const BasicString<Char, Alignment, T, Policy, A, S> &lhs,
+        const typename BasicString<Char, Alignment, T, Policy, A, S>::value_type *rhs) {
         return lhs.compare(rhs) < 0;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline bool operator<(std::nullptr_t, const BasicString<E, Alignment, T, A, S> &) = delete;
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline bool operator<(std::nullptr_t, const BasicString<Char, Alignment, T, Policy, A, S> &) = delete;
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     inline bool operator<(
-        const typename BasicString<E, Alignment, T, A, S>::value_type *lhs,
-        const BasicString<E, Alignment, T, A, S> &rhs) {
+        const typename BasicString<Char, Alignment, T, Policy, A, S>::value_type *lhs,
+        const BasicString<Char, Alignment, T, Policy, A, S> &rhs) {
         return rhs.compare(lhs) > 0;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     inline bool operator>(
-        const BasicString<E, Alignment, T, A, S> &lhs,
-        const BasicString<E, Alignment, T, A, S> &rhs) {
+        const BasicString<Char, Alignment, T, Policy, A, S> &lhs,
+        const BasicString<Char, Alignment, T, Policy, A, S> &rhs) {
         return rhs < lhs;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline bool operator>(const BasicString<E, Alignment, T, A, S> &, std::nullptr_t) = delete;
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline bool operator>(const BasicString<Char, Alignment, T, Policy, A, S> &, std::nullptr_t) = delete;
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     inline bool operator>(
-        const BasicString<E, Alignment, T, A, S> &lhs,
-        const typename BasicString<E, Alignment, T, A, S>::value_type *rhs) {
+        const BasicString<Char, Alignment, T, Policy, A, S> &lhs,
+        const typename BasicString<Char, Alignment, T, Policy, A, S>::value_type *rhs) {
         return rhs < lhs;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline bool operator>(std::nullptr_t, const BasicString<E, Alignment, T, A, S> &) = delete;
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline bool operator>(std::nullptr_t, const BasicString<Char, Alignment, T, Policy, A, S> &) = delete;
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     inline bool operator>(
-        const typename BasicString<E, Alignment, T, A, S>::value_type *lhs,
-        const BasicString<E, Alignment, T, A, S> &rhs) {
+        const typename BasicString<Char, Alignment, T, Policy, A, S>::value_type *lhs,
+        const BasicString<Char, Alignment, T, Policy, A, S> &rhs) {
         return rhs < lhs;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     inline bool operator<=(
-        const BasicString<E, Alignment, T, A, S> &lhs,
-        const BasicString<E, Alignment, T, A, S> &rhs) {
+        const BasicString<Char, Alignment, T, Policy, A, S> &lhs,
+        const BasicString<Char, Alignment, T, Policy, A, S> &rhs) {
         return !(rhs < lhs);
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline bool operator<=(const BasicString<E, Alignment, T, A, S> &, std::nullptr_t) = delete;
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline bool operator<=(const BasicString<Char, Alignment, T, Policy, A, S> &, std::nullptr_t) = delete;
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     inline bool operator<=(
-        const BasicString<E, Alignment, T, A, S> &lhs,
-        const typename BasicString<E, Alignment, T, A, S>::value_type *rhs) {
+        const BasicString<Char, Alignment, T, Policy, A, S> &lhs,
+        const typename BasicString<Char, Alignment, T, Policy, A, S>::value_type *rhs) {
         return !(rhs < lhs);
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline bool operator<=(std::nullptr_t, const BasicString<E, Alignment, T, A, S> &) = delete;
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline bool operator<=(std::nullptr_t, const BasicString<Char, Alignment, T, Policy, A, S> &) = delete;
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     inline bool operator<=(
-        const typename BasicString<E, Alignment, T, A, S>::value_type *lhs,
-        const BasicString<E, Alignment, T, A, S> &rhs) {
+        const typename BasicString<Char, Alignment, T, Policy, A, S>::value_type *lhs,
+        const BasicString<Char, Alignment, T, Policy, A, S> &rhs) {
         return !(rhs < lhs);
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     inline bool operator>=(
-        const BasicString<E, Alignment, T, A, S> &lhs,
-        const BasicString<E, Alignment, T, A, S> &rhs) {
+        const BasicString<Char, Alignment, T, Policy, A, S> &lhs,
+        const BasicString<Char, Alignment, T, Policy, A, S> &rhs) {
         return !(lhs < rhs);
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline bool operator>=(const BasicString<E, Alignment, T, A, S> &, std::nullptr_t) = delete;
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline bool operator>=(const BasicString<Char, Alignment, T, Policy, A, S> &, std::nullptr_t) = delete;
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     inline bool operator>=(
-        const BasicString<E, Alignment, T, A, S> &lhs,
-        const typename BasicString<E, Alignment, T, A, S>::value_type *rhs) {
+        const BasicString<Char, Alignment, T, Policy, A, S> &lhs,
+        const typename BasicString<Char, Alignment, T, Policy, A, S>::value_type *rhs) {
         return !(lhs < rhs);
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
-    inline bool operator>=(std::nullptr_t, const BasicString<E, Alignment, T, A, S> &) = delete;
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    inline bool operator>=(std::nullptr_t, const BasicString<Char, Alignment, T, Policy, A, S> &) = delete;
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     inline bool operator>=(
-        const typename BasicString<E, Alignment, T, A, S>::value_type *lhs,
-        const BasicString<E, Alignment, T, A, S> &rhs) {
+        const typename BasicString<Char, Alignment, T, Policy, A, S>::value_type *lhs,
+        const BasicString<Char, Alignment, T, Policy, A, S> &rhs) {
         return !(lhs < rhs);
     }
 
     // C++11 21.4.8.8
-    template<typename E, size_t Alignment, class T, class A, class S>
-    void swap(BasicString<E, Alignment, T, A, S> &lhs, BasicString<E, Alignment, T, A, S> &rhs) noexcept {
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    void swap(BasicString<Char, Alignment, T, Policy, A, S> &lhs, BasicString<Char, Alignment, T, Policy, A, S> &rhs) noexcept {
         lhs.swap(rhs);
     }
 
     // TODO: make this faster.
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     inline std::basic_istream<
-        typename BasicString<E, Alignment, T, A, S>::value_type,
-        typename BasicString<E, Alignment, T, A, S>::traits_type> &
+        typename BasicString<Char, Alignment, T, Policy, A, S>::value_type,
+        typename BasicString<Char, Alignment, T, Policy, A, S>::traits_type> &
     operator>>(
         std::basic_istream<
-            typename BasicString<E, Alignment, T, A, S>::value_type,
-            typename BasicString<E, Alignment, T, A, S>::traits_type> &is,
-        BasicString<E, Alignment, T, A, S> &str) {
+            typename BasicString<Char, Alignment, T, Policy, A, S>::value_type,
+            typename BasicString<Char, Alignment, T, Policy, A, S>::traits_type> &is,
+        BasicString<Char, Alignment, T, Policy, A, S> &str) {
         typedef std::basic_istream<
-                    typename BasicString<E, Alignment, T, A, S>::value_type,
-                    typename BasicString<E, Alignment, T, A, S>::traits_type>
+                    typename BasicString<Char, Alignment, T, Policy, A, S>::value_type,
+                    typename BasicString<Char, Alignment, T, Policy, A, S>::traits_type>
                 _istream_type;
         typename _istream_type::sentry sentry(is);
         size_t extracted = 0;
@@ -1908,7 +1907,7 @@ namespace fermat {
                 n = str.max_size();
             }
             str.erase();
-            for (auto got = is.rdbuf()->sgetc(); extracted != size_t(n); ++extracted) {
+            for (auto got = is.rdbuf()->sgetc(); extracted != static_cast<size_t>(n); ++extracted) {
                 if (got == T::eof()) {
                     err |= _istream_type::eofbit;
                     is.width(0);
@@ -1930,25 +1929,25 @@ namespace fermat {
         return is;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S>
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
     inline std::basic_ostream<
-        typename BasicString<E, Alignment, T, A, S>::value_type,
-        typename BasicString<E, Alignment, T, A, S>::traits_type> &
+        typename BasicString<Char, Alignment, T, Policy, A, S>::value_type,
+        typename BasicString<Char, Alignment, T, Policy, A, S>::traits_type> &
     operator<<(
         std::basic_ostream<
-            typename BasicString<E, Alignment, T, A, S>::value_type,
-            typename BasicString<E, Alignment, T, A, S>::traits_type> &os,
-        const BasicString<E, Alignment, T, A, S> &str) {
+            typename BasicString<Char, Alignment, T, Policy, A, S>::value_type,
+            typename BasicString<Char, Alignment, T, Policy, A, S>::traits_type> &os,
+        const BasicString<Char, Alignment, T, Policy, A, S> &str) {
 #ifdef _LIBCPP_VERSION
         typedef std::basic_ostream<
-                    typename BasicString<E, Alignment, T, A, S>::value_type,
-                    typename BasicString<E, Alignment, T, A, S>::traits_type>
+                    typename BasicString<Char, Alignment, T, Policy, A, S>::value_type,
+                    typename BasicString<Char, Alignment, T, Policy, A, S>::traits_type>
                 _ostream_type;
         typename _ostream_type::sentry _s(os);
         if (_s) {
             typedef std::ostreambuf_iterator<
-                        typename BasicString<E, Alignment, T, A, S>::value_type,
-                        typename BasicString<E, Alignment, T, A, S>::traits_type>
+                        typename BasicString<Char, Alignment, T, Policy, A, S>::value_type,
+                        typename BasicString<Char, Alignment, T, Policy, A, S>::traits_type>
                     _Ip;
             size_t __len = str.size();
             bool __left =
@@ -1976,88 +1975,88 @@ namespace fermat {
 
     // basic_string compatibility routines
 
-    template<typename E, size_t Alignment, class T, class A, class S, class A2>
+    template<typename Char, size_t Alignment,  typename  T,typename Policy, typename  A, typename  S, typename  A2>
     inline bool operator==(
-        const BasicString<E, Alignment, T, A, S> &lhs,
-        const std::basic_string<E, T, A2> &rhs) {
+        const BasicString<Char, Alignment,  T, Policy, A, S> &lhs,
+        const std::basic_string<Char, T, A2> &rhs) {
         auto r = lhs.compare(0, lhs.size(), rhs.data(), rhs.size());
         return r == 0;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S, class A2>
+    template<typename Char, size_t Alignment, typename Policy, typename  T, typename  A, typename  S, typename  A2>
     inline bool operator==(
-        const std::basic_string<E, T, A2> &lhs,
-        const BasicString<E, Alignment, T, A, S> &rhs) {
+        const std::basic_string<Char, T, A2> &lhs,
+        const BasicString<Char, Alignment,  T, Policy,A, S> &rhs) {
         return rhs == lhs;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S, class A2>
+    template<typename Char, size_t Alignment, typename  T, typename Policy, typename  A, typename  S, typename  A2>
     inline bool operator!=(
-        const BasicString<E, Alignment, T, A, S> &lhs,
-        const std::basic_string<E, T, A2> &rhs) {
+        const BasicString<Char, Alignment,  T, Policy, A, S> &lhs,
+        const std::basic_string<Char, T, A2> &rhs) {
         return !(lhs == rhs);
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S, class A2>
+    template<typename Char, size_t Alignment,  typename  T, typename Policy, typename  A, typename  S, typename  A2>
     inline bool operator!=(
-        const std::basic_string<E, T, A2> &lhs,
-        const BasicString<E, Alignment, T, A, S> &rhs) {
+        const std::basic_string<Char, T, A2> &lhs,
+        const BasicString<Char, Alignment,  T, Policy,A, S> &rhs) {
         return !(lhs == rhs);
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S, class A2>
+    template<typename Char, size_t Alignment,  typename  T, typename Policy, typename  A, typename  S, typename  A2>
     inline bool operator<(
-        const BasicString<E, Alignment, T, A, S> &lhs,
-        const std::basic_string<E, T, A2> &rhs) {
+        const BasicString<Char, Alignment, T, Policy, A, S> &lhs,
+        const std::basic_string<Char, T, A2> &rhs) {
         return lhs.compare(0, lhs.size(), rhs.data(), rhs.size()) < 0;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S, class A2>
+    template<typename Char, size_t Alignment, typename Policy, typename  T, typename  A, typename  S, typename  A2>
     inline bool operator>(
-        const BasicString<E, Alignment, T, A, S> &lhs,
-        const std::basic_string<E, T, A2> &rhs) {
+        const BasicString<Char, Alignment, T, Policy, A, S> &lhs,
+        const std::basic_string<Char, T, A2> &rhs) {
         return lhs.compare(0, lhs.size(), rhs.data(), rhs.size()) > 0;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S, class A2>
+    template<typename Char, size_t Alignment, typename Policy, typename  T, typename  A, typename  S, typename  A2>
     inline bool operator<(
-        const std::basic_string<E, T, A2> &lhs,
-        const BasicString<E, Alignment, T, A, S> &rhs) {
+        const std::basic_string<Char, T, A2> &lhs,
+        const BasicString<Char, Alignment, T, Policy, A, S> &rhs) {
         return rhs > lhs;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S, class A2>
+    template<typename Char, size_t Alignment, typename Policy, typename  T, typename  A, typename  S, typename  A2>
     inline bool operator>(
-        const std::basic_string<E, T, A2> &lhs,
-        const BasicString<E, Alignment, T, A, S> &rhs) {
+        const std::basic_string<Char, T, A2> &lhs,
+        const BasicString<Char, Alignment, T, Policy, A, S> &rhs) {
         return rhs < lhs;
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S, class A2>
+    template<typename Char, size_t Alignment, typename Policy, typename  T, typename  A, typename  S, typename  A2>
     inline bool operator<=(
-        const BasicString<E, Alignment, T, A, S> &lhs,
-        const std::basic_string<E, T, A2> &rhs) {
+        const BasicString<Char, Alignment, T, Policy, A, S> &lhs,
+        const std::basic_string<Char, T, A2> &rhs) {
         return !(lhs > rhs);
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S, class A2>
+    template<typename Char, size_t Alignment, typename Policy, typename  T, typename  A, typename  S, typename  A2>
     inline bool operator>=(
-        const BasicString<E, Alignment, T, A, S> &lhs,
-        const std::basic_string<E, T, A2> &rhs) {
+        const BasicString<Char, Alignment, T, Policy, A, S> &lhs,
+        const std::basic_string<Char, T, A2> &rhs) {
         return !(lhs < rhs);
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S, class A2>
+    template<typename Char, size_t Alignment, typename Policy, typename  T, typename  A, typename  S, typename  A2>
     inline bool operator<=(
-        const std::basic_string<E, T, A2> &lhs,
-        const BasicString<E, Alignment, T, A, S> &rhs) {
+        const std::basic_string<Char, T, A2> &lhs,
+        const BasicString<Char, Alignment, T, Policy, A, S> &rhs) {
         return !(lhs > rhs);
     }
 
-    template<typename E, size_t Alignment, class T, class A, class S, class A2>
+    template<typename Char, size_t Alignment, typename Policy, typename  T, typename  A, typename  S, typename  A2>
     inline bool operator>=(
-        const std::basic_string<E, T, A2> &lhs,
-        const BasicString<E, Alignment, T, A, S> &rhs) {
+        const std::basic_string<Char, T, A2> &lhs,
+        const BasicString<Char, Alignment, T, Policy, A, S> &rhs) {
         return !(lhs < rhs);
     }
 
@@ -2098,10 +2097,10 @@ namespace fermat {
 
 
 namespace std {
-    template<typename E, size_t Alignment, class T, class A, class S>
-    struct hash<fermat::BasicString<E, Alignment, T, A, S> > {
-        size_t operator()(const fermat::BasicString<E, Alignment, T, A, S> &s) const noexcept {
-            return hash<basic_string_view<E, T> >()(basic_string_view<E, T>(s.data(), s.size()));
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    struct hash<fermat::BasicString<Char, Alignment, T, Policy, A, S> > {
+        size_t operator()(const fermat::BasicString<Char, Alignment, T, Policy, A, S> &s) const noexcept {
+            return hash<basic_string_view<Char, T> >()(basic_string_view<Char, T>(s.data(), s.size()));
         }
     };
 }

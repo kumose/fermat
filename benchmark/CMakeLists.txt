@@ -259,7 +259,7 @@ kmcmake_cc_bm(
         ${KMCMAKE_DEPS_LINK}
 )
 
-
+if(FERMAT_USE_MIMALLOC)
 kmcmake_cc_bm(
         NAME malloc_bench
         MODULE mem
@@ -275,7 +275,7 @@ kmcmake_cc_bm(
         benchmark::benchmark
         ${KMCMAKE_DEPS_LINK}
 )
-
+endif ()
 kmcmake_cc_bm(
         NAME deque_bench
         MODULE mem

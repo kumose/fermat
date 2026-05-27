@@ -62,7 +62,7 @@ namespace fermat {
     ///     be destroyed before entering the handler of a function-try-block
     ///     of a constructor or destructor for that block."
     ///
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     struct VectorBase {
         using allocator_type = Allocator;
         typedef size_t size_type;
@@ -72,7 +72,7 @@ namespace fermat {
         static const size_type kMaxSize = (size_type) -2;
         /// -1 is reserved for 'npos'. It also happens to be slightly beneficial that kMaxSize is a value less than -1, as it helps us deal with potential integer wraparound issues.
 
-        size_type GetNewCapacity(size_type currentSize);
+        size_type get_new_capacity(size_type currentSize, size_type need);
 
     protected:
         T *_begin{nullptr};
@@ -87,7 +87,7 @@ namespace fermat {
         virtual ~VectorBase();
 
     protected:
-        T *do_allocate(size_type *n);
+        T *do_allocate(size_type n);
 
         size_type do_allocate_size(size_type n);
 
@@ -101,10 +101,11 @@ namespace fermat {
     ///
     /// Implements a dynamic array.
     ///
-    template<typename T, size_t Alignment = 0, typename Allocator = BasicAllocator<T, Alignment> >
-    class Vector : public VectorBase<T, Alignment, Allocator> {
-        typedef VectorBase<T, Alignment, Allocator> base_type;
-        typedef Vector<T, Alignment, Allocator> this_type;
+    template<typename T, size_t Alignment = 0, typename Policy = TimesPolicy<2, 1>, typename Allocator= AlignedAllocator
+        <T, Alignment, Policy> >
+    class Vector : public VectorBase<T, Alignment, Policy, Allocator> {
+        typedef VectorBase<T, Alignment, Policy, Allocator> base_type;
+        typedef Vector<T, Alignment, Policy, Allocator> this_type;
 
         template<class T2, class Allocator2, class U>
         friend typename Vector<T2, Alignment>::size_type erase_unsorted(Vector<T2, Alignment> &c, const U &value);
@@ -139,7 +140,7 @@ namespace fermat {
         typedef typename base_type::allocator_type allocator_type;
 
         using base_type::npos;
-        using base_type::GetNewCapacity;
+        using base_type::get_new_capacity;
 
         static_assert(!std::is_const<value_type>::value, "Vector<T> value_type must be non-const.");
         static_assert(!std::is_volatile<value_type>::value, "Vector<T> value_type must be non-volatile.");
@@ -328,11 +329,11 @@ namespace fermat {
 
         template<typename ForwardIterator>
         // Allocates a pointer of array count n and copy-constructs it with [first,last).
-        pointer do_realloc(size_type *newCapacity, ForwardIterator first, ForwardIterator last, should_copy_tag);
+        pointer do_realloc(size_type newCapacity, ForwardIterator first, ForwardIterator last, should_copy_tag);
 
         template<typename ForwardIterator>
         // Allocates a pointer of array count n and copy-constructs it with [first,last).
-        pointer do_realloc(size_type *newCapacity, ForwardIterator first, ForwardIterator last, should_move_tag);
+        pointer do_realloc(size_type newCapacity, ForwardIterator first, ForwardIterator last, should_move_tag);
 
         template<typename Integer>
         void DoInit(Integer n, Integer value, std::true_type);
@@ -398,41 +399,35 @@ namespace fermat {
     // VectorBase
     ///////////////////////////////////////////////////////////////////////
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline VectorBase<T, Alignment, Allocator>::VectorBase(const allocator_type &allocator) : _capacity_end(
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline VectorBase<T, Alignment, Policy, Allocator>::VectorBase(const allocator_type &allocator) : _capacity_end(
         nullptr, allocator) {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline VectorBase<T, Alignment,
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline VectorBase<T, Alignment, Policy,
         Allocator>::VectorBase(size_type n, const allocator_type &allocator) : _capacity_end(nullptr, allocator) {
         uninitialized_n(n);
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline VectorBase<T, Alignment, Allocator>::~VectorBase() {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline VectorBase<T, Alignment, Policy, Allocator>::~VectorBase() {
         if (_begin) {
             do_free(_begin, _capacity_end.first() - _begin);
         }
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline T *VectorBase<T, Alignment, Allocator>::do_allocate(size_type *n) {
-        // If n is zero, then we allocate no memory and just return nullptr.
-        // This is fine, as our default ctor initializes with NULL pointers.
-        if (TURBO_LIKELY(n)) {
-            auto ptr = _capacity_end.second().allocate(n);
-            return ptr;
-        } else {
-            return nullptr;
-        }
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline T *VectorBase<T, Alignment, Policy, Allocator>::do_allocate(size_type n) {
+        auto ptr = _capacity_end.second().allocate(n);
+        return ptr;
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename VectorBase<T, Alignment, Allocator>::size_type VectorBase<T, Alignment,
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename VectorBase<T, Alignment, Policy, Allocator>::size_type VectorBase<T, Alignment, Policy,
         Allocator>::do_allocate_size(size_type n) {
         if (TURBO_LIKELY(n)) {
             return _capacity_end.second().good_size(n);
@@ -441,36 +436,29 @@ namespace fermat {
         }
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
-    void VectorBase<T, Alignment, Allocator>::uninitialized_n(size_t n) {
-        _begin = _capacity_end.second().allocate(&n);
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    void VectorBase<T, Alignment, Policy, Allocator>::uninitialized_n(size_t n) {
+        auto nn = _capacity_end.second().good_size(n);
+        _begin = _capacity_end.second().allocate(nn);
         _end = _begin;
-        _capacity_end.first() = _begin + n;
+        _capacity_end.first() = _begin + nn;
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline void VectorBase<T, Alignment, Allocator>::do_free(T *p, size_type n) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline void VectorBase<T, Alignment, Policy, Allocator>::do_free(T *p, size_type n) {
         if (p) {
             _capacity_end.second().deallocate(p, n);
         }
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename VectorBase<T, Alignment, Allocator>::size_type
-    VectorBase<T, Alignment, Allocator>::GetNewCapacity(size_type currentSize) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename VectorBase<T, Alignment, Policy, Allocator>::size_type
+    VectorBase<T, Alignment, Policy, Allocator>::get_new_capacity(size_type currentSize, size_type need) {
         // This function must return a value larger than currentSize.
-        if (currentSize > 0) {
-            if (currentSize < (std::numeric_limits<size_type>::max() / 2)) {
-                return 2 * currentSize;
-            } else {
-                KCHECK(currentSize < std::numeric_limits<size_type>::max()) <<
-                                 "Vector growth will overflow the value of the capacity! This is extremely bad!";
-                return std::numeric_limits<size_type>::max();
-            }
-        } else {
-            return 1;
-        }
+        auto r = _capacity_end.second().get_new_size(currentSize, need);
+        auto gr = _capacity_end.second().good_size(r);
+        return gr;
     }
 
 
@@ -478,77 +466,77 @@ namespace fermat {
     // Vector
     ///////////////////////////////////////////////////////////////////////
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline Vector<T, Alignment, Allocator>::Vector() noexcept
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline Vector<T, Alignment, Policy, Allocator>::Vector() noexcept
         : base_type() {
         // Empty
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline Vector<T, Alignment, Allocator>::Vector(const allocator_type &allocator) noexcept
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline Vector<T, Alignment, Policy, Allocator>::Vector(const allocator_type &allocator) noexcept
         : base_type(allocator) {
         // Empty
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline Vector<T, Alignment, Allocator>::Vector(size_type n, const allocator_type &allocator)
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline Vector<T, Alignment, Policy, Allocator>::Vector(size_type n, const allocator_type &allocator)
         : base_type(n, allocator) {
         std::uninitialized_value_construct_n(_begin, n);
         _end = _begin + n;
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline Vector<T, Alignment, Allocator>::Vector(size_type n, const value_type &value,
-                                                   const allocator_type &allocator)
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline Vector<T, Alignment, Policy, Allocator>::Vector(size_type n, const value_type &value,
+                                                           const allocator_type &allocator)
         : base_type(n, allocator) {
         std::uninitialized_fill_n(_begin, n, value);
         _end = _begin + n;
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline Vector<T, Alignment, Allocator>::Vector(const this_type &x, const allocator_type &allocator)
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline Vector<T, Alignment, Policy, Allocator>::Vector(const this_type &x, const allocator_type &allocator)
         : base_type(x.size(), allocator) {
         _end = std::uninitialized_copy(x._begin, x._end, _begin);
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline Vector<T, Alignment, Allocator>::Vector(this_type &&x, const allocator_type &allocator) noexcept
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline Vector<T, Alignment, Policy, Allocator>::Vector(this_type &&x, const allocator_type &allocator) noexcept
         : base_type(allocator) {
         DoSwap(x);
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline Vector<T, Alignment, Allocator>::Vector(std::initializer_list<value_type> ilist,
-                                                   const allocator_type &allocator)
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline Vector<T, Alignment, Policy, Allocator>::Vector(std::initializer_list<value_type> ilist,
+                                                           const allocator_type &allocator)
         : base_type(allocator) {
         DoInit(ilist.begin(), ilist.end(), std::false_type());
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     template<typename InputIterator>
-    inline Vector<T, Alignment, Allocator>::Vector(InputIterator first, InputIterator last,
-                                                   const allocator_type &allocator)
+    inline Vector<T, Alignment, Policy, Allocator>::Vector(InputIterator first, InputIterator last,
+                                                           const allocator_type &allocator)
         : base_type(allocator) {
         DoInit(first, last, std::is_integral<InputIterator>());
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline Vector<T, Alignment, Allocator>::~Vector() {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline Vector<T, Alignment, Policy, Allocator>::~Vector() {
         // Call destructor for the values. Parent class will free the memory.
         std::destroy(_begin, _end);
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    typename Vector<T, Alignment, Allocator>::this_type &
-    Vector<T, Alignment, Allocator>::operator=(const this_type &x) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    typename Vector<T, Alignment, Policy, Allocator>::this_type &
+    Vector<T, Alignment, Policy, Allocator>::operator=(const this_type &x) {
         if (this != &x) // If not assigning to self...
         {
             bool bSlowerPathwayRequired = false;
@@ -565,9 +553,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    typename Vector<T, Alignment, Allocator>::this_type &
-    Vector<T, Alignment, Allocator>::operator=(std::initializer_list<value_type> ilist) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    typename Vector<T, Alignment, Policy, Allocator>::this_type &
+    Vector<T, Alignment, Policy, Allocator>::operator=(std::initializer_list<value_type> ilist) {
         typedef typename std::initializer_list<value_type>::iterator InputIterator;
         typedef typename std::iterator_traits<InputIterator>::iterator_category IC;
         DoAssignFromIterator<InputIterator, false>(ilist.begin(), ilist.end(), IC());
@@ -576,9 +564,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    typename Vector<T, Alignment, Allocator>::this_type &
-    Vector<T, Alignment, Allocator>::operator=(this_type &&x) noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    typename Vector<T, Alignment, Policy, Allocator>::this_type &
+    Vector<T, Alignment, Policy, Allocator>::operator=(this_type &&x) noexcept {
         if (this != &x) {
             DoClearCapacity();
             // To consider: Are we really required to clear here? x is going away soon and will clear itself in its dtor.
@@ -589,15 +577,15 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline void Vector<T, Alignment, Allocator>::assign(size_type n, const value_type &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline void Vector<T, Alignment, Policy, Allocator>::assign(size_type n, const value_type &value) {
         DoAssignValues(n, value);
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     template<typename InputIterator>
-    inline void Vector<T, Alignment, Allocator>::assign(InputIterator first, InputIterator last) {
+    inline void Vector<T, Alignment, Policy, Allocator>::assign(InputIterator first, InputIterator last) {
         // It turns out that the C++ std::Vector<int, int> specifies a two argument
         // version of assign that takes (int size, int value). These are not iterators,
         // so we need to do a template compiler trick to do the right thing.
@@ -605,8 +593,8 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline void Vector<T, Alignment, Allocator>::assign(std::initializer_list<value_type> ilist) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline void Vector<T, Alignment, Policy, Allocator>::assign(std::initializer_list<value_type> ilist) {
         typedef typename std::initializer_list<value_type>::iterator InputIterator;
         typedef typename std::iterator_traits<InputIterator>::iterator_category IC;
         DoAssignFromIterator<InputIterator, false>(ilist.begin(), ilist.end(), IC());
@@ -614,112 +602,112 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::iterator
-    Vector<T, Alignment, Allocator>::begin() noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::iterator
+    Vector<T, Alignment, Policy, Allocator>::begin() noexcept {
         return _begin;
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::const_iterator
-    Vector<T, Alignment, Allocator>::begin() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::const_iterator
+    Vector<T, Alignment, Policy, Allocator>::begin() const noexcept {
         return _begin;
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::const_iterator
-    Vector<T, Alignment, Allocator>::cbegin() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::const_iterator
+    Vector<T, Alignment, Policy, Allocator>::cbegin() const noexcept {
         return _begin;
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::iterator
-    Vector<T, Alignment, Allocator>::end() noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::iterator
+    Vector<T, Alignment, Policy, Allocator>::end() noexcept {
         return _end;
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::const_iterator
-    Vector<T, Alignment, Allocator>::end() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::const_iterator
+    Vector<T, Alignment, Policy, Allocator>::end() const noexcept {
         return _end;
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::const_iterator
-    Vector<T, Alignment, Allocator>::cend() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::const_iterator
+    Vector<T, Alignment, Policy, Allocator>::cend() const noexcept {
         return _end;
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::reverse_iterator
-    Vector<T, Alignment, Allocator>::rbegin() noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::reverse_iterator
+    Vector<T, Alignment, Policy, Allocator>::rbegin() noexcept {
         return reverse_iterator(_end);
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::const_reverse_iterator
-    Vector<T, Alignment, Allocator>::rbegin() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::const_reverse_iterator
+    Vector<T, Alignment, Policy, Allocator>::rbegin() const noexcept {
         return const_reverse_iterator(_end);
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::const_reverse_iterator
-    Vector<T, Alignment, Allocator>::crbegin() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::const_reverse_iterator
+    Vector<T, Alignment, Policy, Allocator>::crbegin() const noexcept {
         return const_reverse_iterator(_end);
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::reverse_iterator
-    Vector<T, Alignment, Allocator>::rend() noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::reverse_iterator
+    Vector<T, Alignment, Policy, Allocator>::rend() noexcept {
         return reverse_iterator(_begin);
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::const_reverse_iterator
-    Vector<T, Alignment, Allocator>::rend() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::const_reverse_iterator
+    Vector<T, Alignment, Policy, Allocator>::rend() const noexcept {
         return const_reverse_iterator(_begin);
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::const_reverse_iterator
-    Vector<T, Alignment, Allocator>::crend() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::const_reverse_iterator
+    Vector<T, Alignment, Policy, Allocator>::crend() const noexcept {
         return const_reverse_iterator(_begin);
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    bool Vector<T, Alignment, Allocator>::empty() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    bool Vector<T, Alignment, Policy, Allocator>::empty() const noexcept {
         return (_begin == _end);
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::size_type
-    Vector<T, Alignment, Allocator>::size() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::size_type
+    Vector<T, Alignment, Policy, Allocator>::size() const noexcept {
         return (size_type) (_end - _begin);
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::size_type
-    Vector<T, Alignment, Allocator>::capacity() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::size_type
+    Vector<T, Alignment, Policy, Allocator>::capacity() const noexcept {
         return (size_type) (_capacity_end.first() - _begin);
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline void Vector<T, Alignment, Allocator>::resize(size_type n, const value_type &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline void Vector<T, Alignment, Policy, Allocator>::resize(size_type n, const value_type &value) {
         if (n > (size_type) (_end - _begin)) // We expect that more often than not, resizes will be upsizes.
             DoInsertValuesEnd(n - ((size_type) (_end - _begin)), value);
         else {
@@ -729,8 +717,8 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline void Vector<T, Alignment, Allocator>::resize(size_type n) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline void Vector<T, Alignment, Policy, Allocator>::resize(size_type n) {
         // Alternative implementation:
         // resize(n, value_type());
 
@@ -743,16 +731,16 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    void Vector<T, Alignment, Allocator>::reserve(size_type n) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    void Vector<T, Alignment, Policy, Allocator>::reserve(size_type n) {
         // If the user wants to reduce the reserved memory, there is the set_capacity function.
         if (n > size_type(_capacity_end.first() - _begin)) // If n > capacity ...
             DoGrow(n);
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    void Vector<T, Alignment, Allocator>::set_capacity(size_type n) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    void Vector<T, Alignment, Policy, Allocator>::set_capacity(size_type n) {
         if ((n == npos) || (n <= (size_type) (_end - _begin))) // If new capacity <= size...
         {
             if (n == 0) // Very often n will be 0, and clear will be faster than resize and use less stack space.
@@ -763,8 +751,8 @@ namespace fermat {
             shrink_to_fit();
         } else {
             // Else new capacity > size.
-            auto nn = n;
-            pointer const pNewData = do_realloc(&nn, _begin, _end, should_move_tag());
+            auto nn = _capacity_end.second().good_size(n);
+            auto pNewData = do_realloc(nn, _begin, _end, should_move_tag());
             std::destroy(_begin, _end);
             do_free(_begin, (size_type) (_capacity_end.first() - _begin));
 
@@ -775,8 +763,8 @@ namespace fermat {
         }
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline void Vector<T, Alignment, Allocator>::shrink_to_fit() {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline void Vector<T, Alignment, Policy, Allocator>::shrink_to_fit() {
         // This is the simplest way to accomplish this, and it is as efficient as any other.
         auto n = do_allocate_size(size());
         if (n < capacity()) {
@@ -788,23 +776,23 @@ namespace fermat {
         }
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::pointer
-    Vector<T, Alignment, Allocator>::data() noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::pointer
+    Vector<T, Alignment, Policy, Allocator>::data() noexcept {
         return _begin;
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::const_pointer
-    Vector<T, Alignment, Allocator>::data() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::const_pointer
+    Vector<T, Alignment, Policy, Allocator>::data() const noexcept {
         return _begin;
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::reference
-    Vector<T, Alignment, Allocator>::operator[](size_type n) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::reference
+    Vector<T, Alignment, Policy, Allocator>::operator[](size_type n) {
         // We allow the user to use a reference to v[0] of an empty container. But this was merely grandfathered in and ideally we shouldn't allow such access to [0].
         //if (TURBO_UNLIKELY((n != 0) && (n >= (static_cast<size_type>(_end - _begin)))))
         //    KCHECK(false) << "Vector::operator[] -- out of range";
@@ -813,9 +801,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::const_reference
-    Vector<T, Alignment, Allocator>::operator[](size_type n) const {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::const_reference
+    Vector<T, Alignment, Policy, Allocator>::operator[](size_type n) const {
         //if (TURBO_UNLIKELY(n >= (static_cast<size_type>(_end - _begin))))
         //    KCHECK(false) << "Vector::operator[] -- out of range";
 
@@ -823,9 +811,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::reference
-    Vector<T, Alignment, Allocator>::at(size_type n) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::reference
+    Vector<T, Alignment, Policy, Allocator>::at(size_type n) {
         // The difference between at() and operator[] is it signals
         // the requested position is out of range by throwing an
         // out_of_range exception.
@@ -836,9 +824,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::const_reference
-    Vector<T, Alignment, Allocator>::at(size_type n) const {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::const_reference
+    Vector<T, Alignment, Policy, Allocator>::at(size_type n) const {
         //if (TURBO_UNLIKELY(n >= (static_cast<size_type>(_end - _begin))))
         //    KCHECK(false) << "Vector::at -- out of range";
 
@@ -846,43 +834,43 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::reference
-    Vector<T, Alignment, Allocator>::front() {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::reference
+    Vector<T, Alignment, Policy, Allocator>::front() {
         //if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
-            // We don't allow the user to reference an empty container.
+        // We don't allow the user to reference an empty container.
         //    KCHECK(false) << "Vector::front -- empty Vector";
 
         return *_begin;
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::const_reference
-    Vector<T, Alignment, Allocator>::front() const {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::const_reference
+    Vector<T, Alignment, Policy, Allocator>::front() const {
         //if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
-            // We don't allow the user to reference an empty container.
-       //     KCHECK(false) << "Vector::front -- empty Vector";
+        // We don't allow the user to reference an empty container.
+        //     KCHECK(false) << "Vector::front -- empty Vector";
 
         return *_begin;
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::reference
-    Vector<T, Alignment, Allocator>::back() {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::reference
+    Vector<T, Alignment, Policy, Allocator>::back() {
         // if _end is nullptr the expression (_end - 1) is undefined behaviour.
         // any use of back() with an empty Vector is thus conceptually wrong.
         //if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
-       //     KCHECK(false) << "Vector::back -- empty Vector";
+        //     KCHECK(false) << "Vector::back -- empty Vector";
 
         return *(_end - 1);
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::const_reference
-    Vector<T, Alignment, Allocator>::back() const {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::const_reference
+    Vector<T, Alignment, Policy, Allocator>::back() const {
         // if _end is nullptr the expression (_end - 1) is undefined behaviour.
         // any use of back() with an empty Vector is thus conceptually wrong.
         //if (TURBO_UNLIKELY((_begin == nullptr) || (_end <= _begin)))
@@ -892,8 +880,8 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline void Vector<T, Alignment, Allocator>::push_back(const value_type &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline void Vector<T, Alignment, Policy, Allocator>::push_back(const value_type &value) {
         if (_end < _capacity_end.first()) {
             construct_at(_end++, value);
         } else {
@@ -902,8 +890,8 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline void Vector<T, Alignment, Allocator>::push_back(value_type &&value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline void Vector<T, Alignment, Policy, Allocator>::push_back(value_type &&value) {
         if (_end < _capacity_end.first())
             construct_at(_end++, std::move(value));
         else
@@ -911,9 +899,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::reference
-    Vector<T, Alignment, Allocator>::push_back() {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::reference
+    Vector<T, Alignment, Policy, Allocator>::push_back() {
         if (_end < _capacity_end.first())
             construct_at(_end++);
         else
@@ -923,11 +911,11 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline void *Vector<T, Alignment, Allocator>::push_back_uninitialized() {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline void *Vector<T, Alignment, Policy, Allocator>::push_back_uninitialized() {
         if (_end == _capacity_end.first()) {
             const size_type nPrevSize = size_type(_end - _begin);
-            const size_type nNewCapacity = GetNewCapacity(nPrevSize);
+            const size_type nNewCapacity = get_new_capacity(nPrevSize, 1);
             DoGrow(nNewCapacity);
         }
 
@@ -935,8 +923,8 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline void Vector<T, Alignment, Allocator>::pop_back() {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline void Vector<T, Alignment, Policy, Allocator>::pop_back() {
         //if (TURBO_UNLIKELY(_end <= _begin))
         //    KCHECK(false) << "Vector::pop_back -- empty Vector";
 
@@ -945,10 +933,10 @@ namespace fermat {
         _end->~value_type();
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     template<class... Args>
-    inline typename Vector<T, Alignment, Allocator>::iterator
-    Vector<T, Alignment, Allocator>::emplace(const_iterator position, Args &&... args) {
+    inline typename Vector<T, Alignment, Policy, Allocator>::iterator
+    Vector<T, Alignment, Policy, Allocator>::emplace(const_iterator position, Args &&... args) {
         const ptrdiff_t n = position - _begin; // Save this because we might reallocate.
 
         if ((_end == _capacity_end.first()) || (position != _end))
@@ -961,10 +949,10 @@ namespace fermat {
         return _begin + n;
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     template<class... Args>
-    inline typename Vector<T, Alignment, Allocator>::reference
-    Vector<T, Alignment, Allocator>::emplace_back(Args &&... args) {
+    inline typename Vector<T, Alignment, Policy, Allocator>::reference
+    Vector<T, Alignment, Policy, Allocator>::emplace_back(Args &&... args) {
         if (_end < _capacity_end.first()) {
             construct_at(_end, std::forward<Args>(args)...);
             ++_end; // Increment this after the construction above in case the construction throws an exception.
@@ -974,9 +962,9 @@ namespace fermat {
         return back();
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::iterator
-    Vector<T, Alignment, Allocator>::insert(const_iterator position, const value_type &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::iterator
+    Vector<T, Alignment, Policy, Allocator>::insert(const_iterator position, const value_type &value) {
         //if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
         //    KCHECK(false) << "Vector::insert -- invalid position";
 
@@ -994,44 +982,44 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::iterator
-    Vector<T, Alignment, Allocator>::insert(const_iterator position, value_type &&value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::iterator
+    Vector<T, Alignment, Policy, Allocator>::insert(const_iterator position, value_type &&value) {
         return emplace(position, std::move(value));
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::iterator
-    Vector<T, Alignment, Allocator>::insert(const_iterator position, size_type n, const value_type &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::iterator
+    Vector<T, Alignment, Policy, Allocator>::insert(const_iterator position, size_type n, const value_type &value) {
         const ptrdiff_t p = position - _begin; // Save this because we might reallocate.
         DoInsertValues(position, n, value);
         return _begin + p;
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     template<typename InputIterator>
-    inline typename Vector<T, Alignment, Allocator>::iterator
-    Vector<T, Alignment, Allocator>::insert(const_iterator position, InputIterator first, InputIterator last) {
+    inline typename Vector<T, Alignment, Policy, Allocator>::iterator
+    Vector<T, Alignment, Policy, Allocator>::insert(const_iterator position, InputIterator first, InputIterator last) {
         const ptrdiff_t n = position - _begin; // Save this because we might reallocate.
         DoInsert(position, first, last, std::is_integral<InputIterator>());
         return _begin + n;
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::iterator
-    Vector<T, Alignment, Allocator>::insert(const_iterator position, std::initializer_list<value_type> ilist) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::iterator
+    Vector<T, Alignment, Policy, Allocator>::insert(const_iterator position, std::initializer_list<value_type> ilist) {
         const ptrdiff_t n = position - _begin; // Save this because we might reallocate.
         DoInsert(position, ilist.begin(), ilist.end(), std::false_type());
         return _begin + n;
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::iterator
-    Vector<T, Alignment, Allocator>::erase(const_iterator position) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::iterator
+    Vector<T, Alignment, Policy, Allocator>::erase(const_iterator position) {
         //if (TURBO_UNLIKELY((position < _begin) || (position >= _end)))
         //    KCHECK(false) << "Vector::erase -- invalid position";
 
@@ -1046,11 +1034,11 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::iterator
-    Vector<T, Alignment, Allocator>::erase(const_iterator first, const_iterator last) {
-       // if (TURBO_UNLIKELY((first < _begin) || (first > _end) || (last < _begin) || (last > _end) || (last < first)))
-      //      KCHECK(false) << "Vector::erase -- invalid position";
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::iterator
+    Vector<T, Alignment, Policy, Allocator>::erase(const_iterator first, const_iterator last) {
+        // if (TURBO_UNLIKELY((first < _begin) || (first > _end) || (last < _begin) || (last > _end) || (last < first)))
+        //      KCHECK(false) << "Vector::erase -- invalid position";
         if (first != last) {
             const auto position = const_cast<value_type *>(std::move(
                 const_cast<value_type *>(last), const_cast<value_type *>(_end), const_cast<value_type *>(first)));
@@ -1062,9 +1050,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::iterator
-    Vector<T, Alignment, Allocator>::erase_unsorted(const_iterator position) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::iterator
+    Vector<T, Alignment, Policy, Allocator>::erase_unsorted(const_iterator position) {
         //if (TURBO_UNLIKELY((position < _begin) || (position >= _end)))
         //    KCHECK(false) << "Vector::erase -- invalid position";
 
@@ -1079,8 +1067,9 @@ namespace fermat {
         return destPosition;
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::iterator Vector<T, Alignment, Allocator>::erase_first(
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::iterator Vector<T, Alignment, Policy,
+        Allocator>::erase_first(
         const T &value) {
         static_assert(has_equality_operator<T>::value, "T must be comparable");
 
@@ -1092,9 +1081,9 @@ namespace fermat {
             return it;
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::iterator
-    Vector<T, Alignment, Allocator>::erase_first_unsorted(const T &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::iterator
+    Vector<T, Alignment, Policy, Allocator>::erase_first_unsorted(const T &value) {
         static_assert(has_equality_operator<T>::value, "T must be comparable");
 
         iterator it = std::find(begin(), end(), value);
@@ -1105,9 +1094,9 @@ namespace fermat {
             return it;
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::reverse_iterator
-    Vector<T, Alignment, Allocator>::erase_last(const T &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::reverse_iterator
+    Vector<T, Alignment, Policy, Allocator>::erase_last(const T &value) {
         static_assert(has_equality_operator<T>::value, "T must be comparable");
 
         reverse_iterator it = std::find(rbegin(), rend(), value);
@@ -1118,9 +1107,9 @@ namespace fermat {
             return it;
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::reverse_iterator
-    Vector<T, Alignment, Allocator>::erase_last_unsorted(const T &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::reverse_iterator
+    Vector<T, Alignment, Policy, Allocator>::erase_last_unsorted(const T &value) {
         static_assert(has_equality_operator<T>::value, "T must be comparable");
 
         reverse_iterator it = std::find(rbegin(), rend(), value);
@@ -1131,16 +1120,16 @@ namespace fermat {
             return it;
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::reverse_iterator
-    Vector<T, Alignment, Allocator>::erase(const_reverse_iterator position) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::reverse_iterator
+    Vector<T, Alignment, Policy, Allocator>::erase(const_reverse_iterator position) {
         return reverse_iterator(erase((++position).base()));
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::reverse_iterator
-    Vector<T, Alignment, Allocator>::erase(const_reverse_iterator first, const_reverse_iterator last) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::reverse_iterator
+    Vector<T, Alignment, Policy, Allocator>::erase(const_reverse_iterator first, const_reverse_iterator last) {
         // Version which erases in order from first to last.
         // difference_type i(first.base() - last.base());
         // while(i--)
@@ -1152,22 +1141,22 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline typename Vector<T, Alignment, Allocator>::reverse_iterator
-    Vector<T, Alignment, Allocator>::erase_unsorted(const_reverse_iterator position) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline typename Vector<T, Alignment, Policy, Allocator>::reverse_iterator
+    Vector<T, Alignment, Policy, Allocator>::erase_unsorted(const_reverse_iterator position) {
         return reverse_iterator(erase_unsorted((++position).base()));
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline void Vector<T, Alignment, Allocator>::clear() noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline void Vector<T, Alignment, Policy, Allocator>::clear() noexcept {
         std::destroy(_begin, _end);
         _end = _begin;
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline void Vector<T, Alignment, Allocator>::reset_lose_memory() noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline void Vector<T, Alignment, Policy, Allocator>::reset_lose_memory() noexcept {
         // The reset function is a special extension function which unilaterally
         // resets the container to an empty state without freeing the memory of
         // the contained objects. This is useful for very quickly tearing down a
@@ -1176,41 +1165,43 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline void Vector<T, Alignment, Allocator>::swap(this_type &x) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline void Vector<T, Alignment, Policy, Allocator>::swap(this_type &x) {
         DoSwap(x);
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     template<typename ForwardIterator>
-    inline typename Vector<T, Alignment, Allocator>::pointer
-    Vector<T, Alignment, Allocator>::do_realloc(size_type *newCapacity, ForwardIterator first, ForwardIterator last,
-                                                should_copy_tag) {
+    inline typename Vector<T, Alignment, Policy, Allocator>::pointer
+    Vector<T, Alignment, Policy, Allocator>::do_realloc(size_type newCapacity, ForwardIterator first,
+                                                        ForwardIterator last,
+                                                        should_copy_tag) {
         T *const p = do_allocate(newCapacity); // p is of type T* but is not constructed.
         std::uninitialized_copy(first, last, p); // copy-constructs p from [first,last).
         return p;
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     template<typename ForwardIterator>
-    inline typename Vector<T, Alignment, Allocator>::pointer
-    Vector<T, Alignment, Allocator>::do_realloc(size_type *newCapacity, ForwardIterator first, ForwardIterator last,
-                                                should_move_tag) {
+    inline typename Vector<T, Alignment, Policy, Allocator>::pointer
+    Vector<T, Alignment, Policy, Allocator>::do_realloc(size_type newCapacity, ForwardIterator first,
+                                                        ForwardIterator last,
+                                                        should_move_tag) {
         T *const p = do_allocate(newCapacity); // p is of type T* but is not constructed.
         std::uninitialized_move(first, last, p); // move-constructs p from [first,last).
         return p;
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     template<typename Integer>
-    inline void Vector<T, Alignment, Allocator>::DoInit(Integer n, Integer value, std::true_type) {
+    inline void Vector<T, Alignment, Policy, Allocator>::DoInit(Integer n, Integer value, std::true_type) {
         container_internal::AssertValueFitsInType<size_type>(
             n, "Attempting to initialize a Vector larger than can fit in a size_type!");
-        size_type nn = n;
-        _begin = do_allocate(&nn);
+        size_type nn = _capacity_end.second().good_size(n);
+        _begin = do_allocate(nn);
         _capacity_end.first() = _begin + nn;
         _end = _begin + n;
 
@@ -1218,18 +1209,19 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     template<typename InputIterator>
-    inline void Vector<T, Alignment, Allocator>::DoInit(InputIterator first, InputIterator last, std::false_type) {
+    inline void Vector<T, Alignment, Policy, Allocator>::DoInit(InputIterator first, InputIterator last,
+                                                                std::false_type) {
         typedef typename std::iterator_traits<InputIterator>::iterator_category IC;
         DoInitFromIterator(first, last, IC());
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     template<typename InputIterator>
-    inline void Vector<T, Alignment, Allocator>::DoInitFromIterator(InputIterator first, InputIterator last,
-                                                                    std::input_iterator_tag) {
+    inline void Vector<T, Alignment, Policy, Allocator>::DoInitFromIterator(InputIterator first, InputIterator last,
+                                                                            std::input_iterator_tag) {
         // To do: Use emplace_back instead of push_back(). Our emplace_back will work below without any ifdefs.
         for (; first != last; ++first)
             // InputIterators by definition actually only allow you to iterate through them once.
@@ -1237,18 +1229,18 @@ namespace fermat {
     } // Luckily, InputIterators are in practice almost never used, so this code will likely never get executed.
 
 
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     template<typename ForwardIterator>
-    inline void Vector<T, Alignment, Allocator>::DoInitFromIterator(ForwardIterator first, ForwardIterator last,
-                                                                    std::forward_iterator_tag) {
+    inline void Vector<T, Alignment, Policy, Allocator>::DoInitFromIterator(ForwardIterator first, ForwardIterator last,
+                                                                            std::forward_iterator_tag) {
         const auto d = std::distance(first, last);
 
         container_internal::AssertValueFitsInType<size_type>(
             d, "Attempting to initialize a Vector larger than can fit in a size_type!");
 
-        const size_type n = static_cast<size_type>(d);
-        auto nn = n;
-        _begin = do_allocate(&nn);
+        auto n = static_cast<size_type>(d);
+        auto nn = _capacity_end.second().good_size(n);
+        _begin = do_allocate(nn);
         _capacity_end.first() = _begin + nn;
         _end = _begin + n;
 
@@ -1256,25 +1248,26 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     template<typename Integer, bool bMove>
-    inline void Vector<T, Alignment, Allocator>::DoAssign(Integer n, Integer value, std::true_type) {
+    inline void Vector<T, Alignment, Policy, Allocator>::DoAssign(Integer n, Integer value, std::true_type) {
         container_internal::AssertValueFitsInType<size_type>(
             n, "Attempting to assign more values than can fit in a size_type!");
         DoAssignValues(static_cast<size_type>(n), static_cast<value_type>(value));
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     template<typename InputIterator, bool bMove>
-    inline void Vector<T, Alignment, Allocator>::DoAssign(InputIterator first, InputIterator last, std::false_type) {
+    inline void Vector<T, Alignment, Policy, Allocator>::DoAssign(InputIterator first, InputIterator last,
+                                                                  std::false_type) {
         typedef typename std::iterator_traits<InputIterator>::iterator_category IC;
         DoAssignFromIterator<InputIterator, bMove>(first, last, IC());
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    void Vector<T, Alignment, Allocator>::DoAssignValues(size_type n, const value_type &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    void Vector<T, Alignment, Policy, Allocator>::DoAssignValues(size_type n, const value_type &value) {
         if (n > size_type(_capacity_end.first() - _begin)) // If n > capacity ...
         {
             this_type temp(n, value); // We have little choice but to reallocate with new memory.
@@ -1292,10 +1285,10 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     template<typename InputIterator, bool bMove>
-    void Vector<T, Alignment, Allocator>::DoAssignFromIterator(InputIterator first, InputIterator last,
-                                                               std::input_iterator_tag) {
+    void Vector<T, Alignment, Policy, Allocator>::DoAssignFromIterator(InputIterator first, InputIterator last,
+                                                                       std::input_iterator_tag) {
         iterator position(_begin);
 
         while ((position != _end) && (first != last)) {
@@ -1310,33 +1303,34 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     template<typename RandomAccessIterator, bool bMove>
-    void Vector<T, Alignment, Allocator>::DoAssignFromIterator(RandomAccessIterator first, RandomAccessIterator last,
-                                                               std::random_access_iterator_tag) {
+    void Vector<T, Alignment, Policy, Allocator>::DoAssignFromIterator(RandomAccessIterator first,
+                                                                       RandomAccessIterator last,
+                                                                       std::random_access_iterator_tag) {
         const auto d = std::distance(first, last);
         container_internal::AssertValueFitsInType<size_type>(
             d, "Attempting to assign more values than can fit in a size_type!");
 
-        const size_type n = static_cast<size_type>(d);
+        auto n = static_cast<size_type>(d);
         // If n > capacity ...
         if (n > size_type(_capacity_end.first() - _begin)) {
-            auto nn = n;
-            pointer const pNewData = do_realloc(&nn, first, last, should_move_or_copy_tag<bMove>());
+            auto nn = _capacity_end.second().good_size(n);
+            auto pNewData = do_realloc(nn, first, last, should_move_or_copy_tag<bMove>());
             std::destroy(_begin, _end);
             do_free(_begin, (size_type) (_capacity_end.first() - _begin));
 
             _begin = pNewData;
             _end = _begin + n;
             _capacity_end.first() = _begin + nn;
-        } else if (n <= size_type(_end - _begin)) // If n <= size ...
-        {
-            pointer const pNewEnd = std::copy(first, last, _begin);
+        } else if (n <= size_type(_end - _begin)) {
+            // If n <= size ...
+            auto pNewEnd = std::copy(first, last, _begin);
             // Since we are copying to _begin, we don't have to worry about needing copy_backward or a memmove-like copy (as opposed to memcpy-like copy).
             std::destroy(pNewEnd, _end);
             _end = pNewEnd;
-        } else // else size < n <= capacity
-        {
+        } else {
+            // else size < n <= capacity
             RandomAccessIterator position = first + (_end - _begin);
             std::copy(first, position, _begin);
             // Since we are copying to _begin, we don't have to worry about needing copy_backward or a memmove-like copy (as opposed to memcpy-like copy).
@@ -1345,10 +1339,10 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     template<typename Integer>
-    inline void Vector<T, Alignment, Allocator>::DoInsert(const_iterator position, Integer n, Integer value,
-                                                          std::true_type) {
+    inline void Vector<T, Alignment, Policy, Allocator>::DoInsert(const_iterator position, Integer n, Integer value,
+                                                                  std::true_type) {
         container_internal::AssertValueFitsInType<size_type>(
             n, "Attempting to insert more elements than can can fit in size_type!");
 
@@ -1356,32 +1350,34 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     template<typename InputIterator>
-    inline void Vector<T, Alignment, Allocator>::DoInsert(const_iterator position, InputIterator first,
-                                                          InputIterator last,
-                                                          std::false_type) {
+    inline void Vector<T, Alignment, Policy, Allocator>::DoInsert(const_iterator position, InputIterator first,
+                                                                  InputIterator last,
+                                                                  std::false_type) {
         typedef typename std::iterator_traits<InputIterator>::iterator_category IC;
         DoInsertFromIterator(position, first, last, IC());
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     template<typename InputIterator>
-    inline void Vector<T, Alignment, Allocator>::DoInsertFromIterator(const_iterator position, InputIterator first,
-                                                                      InputIterator last, std::input_iterator_tag) {
+    inline void Vector<T, Alignment, Policy, Allocator>::DoInsertFromIterator(
+        const_iterator position, InputIterator first,
+        InputIterator last, std::input_iterator_tag) {
         for (; first != last; ++first, ++position)
             position = insert(position, *first);
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     template<typename BidirectionalIterator>
-    void Vector<T, Alignment, Allocator>::DoInsertFromIterator(const_iterator position, BidirectionalIterator first,
-                                                               BidirectionalIterator last,
-                                                               std::bidirectional_iterator_tag) {
-       // if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
-       //     KCHECK(false) << "Vector::insert -- invalid position";
+    void Vector<T, Alignment, Policy, Allocator>::DoInsertFromIterator(const_iterator position,
+                                                                       BidirectionalIterator first,
+                                                                       BidirectionalIterator last,
+                                                                       std::bidirectional_iterator_tag) {
+        // if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
+        //     KCHECK(false) << "Vector::insert -- invalid position";
 
         // C++11 stipulates that position is const_iterator, but the return value is iterator.
         iterator destPosition = const_cast<value_type *>(position);
@@ -1416,11 +1412,8 @@ namespace fermat {
             } else {
                 // else we need to expand our capacity.
                 const size_type nPrevSize = size_type(_end - _begin);
-                const size_type nGrowCapacity = GetNewCapacity(nPrevSize);
-                KCHECK(nPrevSize <= std::numeric_limits<size_type>::max() - n) <<
-                                 "Size overflow: Attempting to insert more elements than can fit in a Vector.";
-                size_type nNewCapacity = std::max(nGrowCapacity, nPrevSize + n);
-                pointer const pNewData = do_allocate(&nNewCapacity);
+                const size_type nNewCapacity = get_new_capacity(nPrevSize, n);
+                auto pNewData = do_allocate(nNewCapacity);
 
 
                 pointer pNewEnd = std::uninitialized_move(_begin, destPosition, pNewData);
@@ -1438,22 +1431,22 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    void Vector<T, Alignment,
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    void Vector<T, Alignment, Policy,
         Allocator>::DoInsertValues(const_iterator position, size_type n, const value_type &value) {
         //if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
-         //   KCHECK(false) << "Vector::insert -- invalid position";
+        //   KCHECK(false) << "Vector::insert -- invalid position";
 
         // C++11 stipulates that position is const_iterator, but the return value is iterator.
-        iterator destPosition = const_cast<value_type *>(position);
+        auto destPosition = const_cast<value_type *>(position);
 
         if (n <= size_type(_capacity_end.first() - _end)) // If n is <= capacity...
         {
-            if (n > 0) // To do: See if there is a way we can eliminate this 'if' statement.
-            {
+            if (n > 0) {
+                // To do: See if there is a way we can eliminate this 'if' statement.
                 // To consider: Make this algorithm work more like DoInsertValue whereby a pointer to value is used.
                 const value_type temp = value;
-                const size_type nExtra = static_cast<size_type>(_end - destPosition);
+                auto nExtra = static_cast<size_type>(_end - destPosition);
 
                 if (n < nExtra) {
                     std::uninitialized_move(_end - n, _end, _end);
@@ -1468,16 +1461,11 @@ namespace fermat {
 
                 _end += n;
             }
-        } else // else n > capacity
-        {
+        } else {
+            // else n > capacity
             const size_type nPrevSize = size_type(_end - _begin);
-            const size_type nGrowCapacity = GetNewCapacity(nPrevSize);
-            KCHECK(nPrevSize <= std::numeric_limits<size_type>::max() - n) <<
-                             "Size overflow: Attempting to insert more elements than can fit in a Vector.";
-            size_type nNewCapacity = std::max(nGrowCapacity, nPrevSize + n);
-            pointer const pNewData = do_allocate(&nNewCapacity);
-
-
+            const size_type nNewCapacity = get_new_capacity(nPrevSize, n);
+            auto pNewData = do_allocate(nNewCapacity);
             pointer pNewEnd = std::uninitialized_move(_begin, destPosition, pNewData);
             std::uninitialized_fill_n(pNewEnd, n, value);
             pNewEnd = std::uninitialized_move(destPosition, _end, pNewEnd + n);
@@ -1492,8 +1480,8 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    void Vector<T, Alignment, Allocator>::DoClearCapacity()
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    void Vector<T, Alignment, Policy, Allocator>::DoClearCapacity()
     // This function exists because set_capacity() currently indirectly requires value_type to be default-constructible,
     {
         // and some functions that need to clear our capacity (e.g. operator=) aren't supposed to require default-constructibility.
@@ -1503,9 +1491,9 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    void Vector<T, Alignment, Allocator>::DoGrow(size_type newCapacity) {
-        pointer const pNewData = do_allocate(&newCapacity);
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    void Vector<T, Alignment, Policy, Allocator>::DoGrow(size_type newCapacity) {
+        auto pNewData = do_allocate(newCapacity);
 
         pointer pNewEnd = std::uninitialized_move(_begin, _end, pNewData);
 
@@ -1518,8 +1506,8 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline void Vector<T, Alignment, Allocator>::DoSwap(this_type &x) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline void Vector<T, Alignment, Policy, Allocator>::DoSwap(this_type &x) {
         std::swap(_begin, x._begin);
         std::swap(_end, x._end);
         std::swap(_capacity_end.first(), x._capacity_end.first());
@@ -1527,15 +1515,12 @@ namespace fermat {
 
     // The code duplication between this and the version that takes no value argument and default constructs the values
     // is unfortunate but not easily resolved without relying on C++11 perfect forwarding.
-    template<typename T, size_t Alignment, typename Allocator>
-    void Vector<T, Alignment, Allocator>::DoInsertValuesEnd(size_type n, const value_type &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    void Vector<T, Alignment, Policy, Allocator>::DoInsertValuesEnd(size_type n, const value_type &value) {
         if (n > size_type(_capacity_end.first() - _end)) {
             const size_type nPrevSize = size_type(_end - _begin);
-            const size_type nGrowCapacity = GetNewCapacity(nPrevSize);
-            KCHECK(nPrevSize <= std::numeric_limits<size_type>::max() - n) <<
-                             "Size overflow: Attempting to insert more elements than can fit in a Vector.";
-            size_type nNewCapacity = std::max(nGrowCapacity, nPrevSize + n);
-            pointer const pNewData = do_allocate(&nNewCapacity);
+            const size_type nNewCapacity = get_new_capacity(nPrevSize, n);
+            auto pNewData = do_allocate(nNewCapacity);
 
             pointer pNewEnd = std::uninitialized_move(_begin, _end, pNewData);
 
@@ -1554,16 +1539,12 @@ namespace fermat {
         }
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
-    void Vector<T, Alignment, Allocator>::DoInsertValuesEnd(size_type n) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    void Vector<T, Alignment, Policy, Allocator>::DoInsertValuesEnd(size_type n) {
         if (n > size_type(_capacity_end.first() - _end)) {
             const size_type nPrevSize = size_type(_end - _begin);
-            const size_type nGrowCapacity = GetNewCapacity(nPrevSize);
-            KCHECK(
-                nPrevSize <= std::numeric_limits<size_type>::max() -
-                n) << "Size overflow: Attempting to insert more elements than can fit in a Vector.";
-            size_type nNewCapacity = std::max(nGrowCapacity, nPrevSize + n);
-            pointer const pNewData = do_allocate(&nNewCapacity);
+            const size_type nNewCapacity = get_new_capacity(nPrevSize, n);
+            auto pNewData = do_allocate(nNewCapacity);
 
 
             pointer pNewEnd = std::uninitialized_move(_begin, _end, pNewData);
@@ -1583,13 +1564,13 @@ namespace fermat {
         }
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     template<typename... Args>
-    void Vector<T, Alignment, Allocator>::DoInsertValue(const_iterator position, Args &&... args) {
-       // if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
-       //     KCHECK(false) << "Vector::insert/emplace -- invalid position";
+    void Vector<T, Alignment, Policy, Allocator>::DoInsertValue(const_iterator position, Args &&... args) {
+        // if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
+        //     KCHECK(false) << "Vector::insert/emplace -- invalid position";
 
-        iterator destPosition = const_cast<value_type *>(position);
+        auto destPosition = const_cast<value_type *>(position);
 
         if (_end != _capacity_end.first()) {
             /// Insertion with spare capacity
@@ -1615,8 +1596,8 @@ namespace fermat {
             /// No spare capacity: reallocate
             const size_type nPosSize = destPosition - _begin;
             const size_type nPrevSize = _end - _begin;
-            size_type nNewCapacity = GetNewCapacity(nPrevSize);
-            pointer pNewData = do_allocate(&nNewCapacity);
+            size_type nNewCapacity = get_new_capacity(nPrevSize, 1);
+            pointer pNewData = do_allocate(nNewCapacity);
 
             /// Construct the new element directly at the insertion point in the new buffer
             construct_at(pNewData + nPosSize, std::forward<Args>(args)...);
@@ -1637,12 +1618,12 @@ namespace fermat {
     }
 
     // assumes _end == _capacity_end, ie. create a new array and move existing elements into it while inserting the new element at the end.
-    template<typename T, size_t Alignment, typename Allocator>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
     template<typename... Args>
-    void Vector<T, Alignment, Allocator>::DoInsertValueEnd(Args &&... args) {
+    void Vector<T, Alignment, Policy, Allocator>::DoInsertValueEnd(Args &&... args) {
         const size_type nPrevSize = size_type(_end - _begin);
-        size_type nNewCapacity = GetNewCapacity(nPrevSize);
-        pointer const pNewData = do_allocate(&nNewCapacity);
+        size_type nNewCapacity = get_new_capacity(nPrevSize, 1);
+        auto pNewData = do_allocate(nNewCapacity);
 
 
         // Because args... may potentially reference an element (or its sub-object) of this Vector, we need to construct
@@ -1660,8 +1641,8 @@ namespace fermat {
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline bool Vector<T, Alignment, Allocator>::validate() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline bool Vector<T, Alignment, Policy, Allocator>::validate() const noexcept {
         if (_end < _begin)
             return false;
         if (_capacity_end.first() < _end)
@@ -1669,8 +1650,8 @@ namespace fermat {
         return true;
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
-    void Vector<T, Alignment, Allocator>::bestow(T *data, size_type size, size_type capacity) noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    void Vector<T, Alignment, Policy, Allocator>::bestow(T *data, size_type size, size_type capacity) noexcept {
         // 1. Pre-condition: Buffer must be empty to avoid accidental data loss.
         if (TURBO_UNLIKELY(_begin != nullptr || data == nullptr)) {
             KCHECK(_begin == nullptr) << "Buffer::bestow -- buffer is not empty";
@@ -1688,8 +1669,8 @@ namespace fermat {
         _capacity_end.first() = data + capacity;
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
-    T *Vector<T, Alignment, Allocator>::seize(size_type *out_size, size_type *out_capacity) noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    T *Vector<T, Alignment, Policy, Allocator>::seize(size_type *out_size, size_type *out_capacity) noexcept {
         if (_begin == nullptr) {
             return nullptr;
         }
@@ -1711,42 +1692,48 @@ namespace fermat {
     // global operators
     ///////////////////////////////////////////////////////////////////////
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline bool operator==(const Vector<T, Alignment, Allocator> &a, const Vector<T, Alignment, Allocator> &b) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline bool operator==(const Vector<T, Alignment, Policy, Allocator> &a,
+                           const Vector<T, Alignment, Policy, Allocator> &b) {
         return ((a.size() == b.size()) && std::equal(a.begin(), a.end(), b.begin()));
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline bool operator!=(const Vector<T, Alignment, Allocator> &a, const Vector<T, Alignment, Allocator> &b) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline bool operator!=(const Vector<T, Alignment, Policy, Allocator> &a,
+                           const Vector<T, Alignment, Policy, Allocator> &b) {
         return ((a.size() != b.size()) || !std::equal(a.begin(), a.end(), b.begin()));
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline bool operator<(const Vector<T, Alignment, Allocator> &a, const Vector<T, Alignment, Allocator> &b) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline bool operator<(const Vector<T, Alignment, Policy, Allocator> &a,
+                          const Vector<T, Alignment, Policy, Allocator> &b) {
         return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline bool operator>(const Vector<T, Alignment, Allocator> &a, const Vector<T, Alignment, Allocator> &b) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline bool operator>(const Vector<T, Alignment, Policy, Allocator> &a,
+                          const Vector<T, Alignment, Policy, Allocator> &b) {
         return b < a;
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline bool operator<=(const Vector<T, Alignment, Allocator> &a, const Vector<T, Alignment, Allocator> &b) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline bool operator<=(const Vector<T, Alignment, Policy, Allocator> &a,
+                           const Vector<T, Alignment, Policy, Allocator> &b) {
         return !(b < a);
     }
 
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline bool operator>=(const Vector<T, Alignment, Allocator> &a, const Vector<T, Alignment, Allocator> &b) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline bool operator>=(const Vector<T, Alignment, Policy, Allocator> &a,
+                           const Vector<T, Alignment, Policy, Allocator> &b) {
         return !(a < b);
     }
 
-    template<typename T, size_t Alignment, typename Allocator>
-    inline void swap(Vector<T, Alignment, Allocator> &a, Vector<T, Alignment, Allocator> &b) noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator>
+    inline void swap(Vector<T, Alignment, Policy, Allocator> &a, Vector<T, Alignment, Policy, Allocator> &b) noexcept {
         a.swap(b);
     }
 
@@ -1756,20 +1743,21 @@ namespace fermat {
     //
     // https://en.cppreference.com/w/cpp/container/Vector/erase2
     ///////////////////////////////////////////////////////////////////////
-    template<class T, size_t Alignment, class Allocator, class U>
-    typename Vector<T, Alignment, Allocator>::size_type erase(Vector<T, Alignment, Allocator> &c, const U &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename U>
+    typename Vector<T, Alignment, Policy, Allocator>::size_type erase(Vector<T, Alignment, Policy, Allocator> &c,
+                                                                      const U &value) {
         // Erases all elements that compare equal to value from the container.
         auto origEnd = c.end();
         auto newEnd = std::remove(c.begin(), origEnd, value);
         auto numRemoved = std::distance(newEnd, origEnd);
         c.erase(newEnd, origEnd);
 
-        return static_cast<typename Vector<T, Alignment, Allocator>::size_type>(numRemoved);
+        return static_cast<typename Vector<T, Alignment, Policy, Allocator>::size_type>(numRemoved);
     }
 
-    template<class T, size_t Alignment, class Allocator, class Predicate>
-    typename Vector<T, Alignment, Allocator>::size_type erase_if(Vector<T, Alignment, Allocator> &c,
-                                                                 Predicate predicate) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename Predicate>
+    typename Vector<T, Alignment, Policy, Allocator>::size_type erase_if(Vector<T, Alignment, Policy, Allocator> &c,
+                                                                         Predicate predicate) {
         // Erases all elements that satisfy the predicate pred from the container.
         auto origEnd = c.end();
         auto newEnd = std::remove_if(c.begin(), origEnd, predicate);
@@ -1777,7 +1765,7 @@ namespace fermat {
         c.erase(newEnd, origEnd);
 
 
-        return static_cast<typename Vector<T, Alignment, Allocator>::size_type>(numRemoved);
+        return static_cast<typename Vector<T, Alignment, Policy, Allocator>::size_type>(numRemoved);
     }
 
 
@@ -1795,9 +1783,10 @@ namespace fermat {
     // Complexity: Linear
     //
     ///////////////////////////////////////////////////////////////////////
-    template<class T, size_t Alignment, class Allocator, class U>
-    typename Vector<T, Alignment, Allocator>::size_type erase_unsorted(Vector<T, Alignment, Allocator> &c,
-                                                                       const U &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename U>
+    typename Vector<T, Alignment, Policy, Allocator>::size_type erase_unsorted(
+        Vector<T, Alignment, Policy, Allocator> &c,
+        const U &value) {
         auto itRemove = c.begin();
         auto ritMove = c.rbegin();
 
@@ -1823,7 +1812,7 @@ namespace fermat {
         std::destroy(itRemove, c.end());
         c._end = itRemove;
 
-        return static_cast<typename Vector<T, Alignment, Allocator>::size_type>(numRemoved);
+        return static_cast<typename Vector<T, Alignment, Policy, Allocator>::size_type>(numRemoved);
     }
 
     ///////////////////////////////////////////////////////////////////////
@@ -1840,9 +1829,9 @@ namespace fermat {
     // Complexity: Linear
     //
     ///////////////////////////////////////////////////////////////////////
-    template<class T, size_t Alignment, class Allocator, class Predicate>
-    typename Vector<T, Alignment, Allocator>::size_type erase_unsorted_if(
-        Vector<T, Alignment, Allocator> &c, Predicate predicate) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename Predicate>
+    typename Vector<T, Alignment, Policy, Allocator>::size_type erase_unsorted_if(
+        Vector<T, Alignment, Policy, Allocator> &c, Predicate predicate) {
         // Erases all elements that satisfy predicate from the container.
         auto itRemove = c.begin();
         auto ritMove = c.rbegin();
@@ -1868,7 +1857,7 @@ namespace fermat {
         std::destroy(itRemove, c.end());
         c._end = itRemove;
 
-        return static_cast<typename Vector<T, Alignment, Allocator>::size_type>(numRemoved);
+        return static_cast<typename Vector<T, Alignment, Policy, Allocator>::size_type>(numRemoved);
     }
 
 

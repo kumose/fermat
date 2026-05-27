@@ -97,7 +97,12 @@ namespace fermat {
 
     /// BitmapView
     ///
-    /// Implements a BitmapView much like the C++ std::BitmapView.
+    /// Non-owning view over caller-supplied bit storage (bind via constructor or setup()).
+    /// Does not allocate or free memory; intended for operating on existing buffers.
+    ///
+    /// Supported configuration: WordType must be uint64_t and backing storage must be
+    /// 8-byte aligned. Smaller WordType instantiations are not guaranteed for performance
+    /// or safety.
     ///
     /// As of this writing we don't implement a specialization of BitmapView<0>,
     /// as it is deemed an academic exercise that nobody would actually
@@ -106,11 +111,10 @@ namespace fermat {
     /// it means that our version of it isn't as efficient as it would be
     /// if a specialization was made for it.
     ///
-    /// - N can be any unsigned (non-zero) value, though memory usage is
-    ///   linear with respect to N, so large values of N use large amounts of memory.
+    /// - Bit count is supplied at setup time; backing storage size is linear in bit count.
     /// - WordType must be a non-cv qualified unsigned integral other than bool.
-    ///   By default the WordType is the largest native register type that the
-    ///   target platform supports.
+    ///   Default is uint64_t; only uint64_t with 8-byte-aligned backing is supported for
+    ///   performance and safety. Smaller WordType sizes are not guaranteed.
     ///
     // BITSET_WORD_COUNT(N, WordType)
     template<bool OverFlowAsFalse, typename WordType>

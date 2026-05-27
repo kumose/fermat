@@ -21,6 +21,17 @@
 
 
 namespace fermat {
+
+
+    template<size_t Numerator, size_t Denominator>
+    struct TimesPolicy {
+        static_assert(Denominator > 0, "Denominator must be greater than zero");
+        static constexpr float Delta = float(Numerator) / float(Denominator);
+        size_t get_new_size(size_t current_size, size_t added, size_t align) noexcept {
+            return static_cast<size_t>((current_size + added) * Delta);
+        }
+    };
+
     template<typename T, size_t Alignment, typename Operator = TieredAllocator<T, Alignment> >
     struct BasicAllocator {
     public:
@@ -41,7 +52,7 @@ namespace fermat {
 
 
         T *allocate(size_t *n) {
-            return operator_type::pooled_alloc(n);
+            return operator_type::pooled_alloc(*n);
         }
 
         void deallocate(T *ptr, size_t n) {
@@ -77,8 +88,10 @@ namespace fermat {
     /// @brief STL compatible allocator using mimalloc with explicit alignment.
     /// @tparam T Element type.
     /// @tparam Alignment Must be a power of 2, defaults to kDefaultAlignedSize (64).
-    template<typename T, size_t Alignment = kDefaultAlignedSize>
-    class AlignedAllocator {
+    template<typename T, size_t Alignment = kDefaultAlignedSize, typename GrowPolicy = TimesPolicy<2,1>, typename Operator = TieredAllocator<T, Alignment>>
+    class AlignedAllocator : GrowPolicy {
+    private:
+        static_assert(Malloc::is_valid_alignment<Alignment>(), "alignment not valid");
     public:
         using value_type = T;
         using pointer = T *;
@@ -87,6 +100,8 @@ namespace fermat {
         using const_reference = const T &;
         using size_type = size_t;
         using difference_type = ptrdiff_t;
+        using policy_type = GrowPolicy;
+        using operator_type = Operator;
 
         /// @brief Tell STL containers that all instances of this allocator are interchangeable.
         /// This enables optimizations like O(1) container swap and move operations.
@@ -98,24 +113,32 @@ namespace fermat {
             return kAlignment;
         }
 
+        [[nodiscard]] size_t good_size(size_t n) const noexcept {
+            return operator_type::pooled_alloc_size(n);
+        }
+
         [[nodiscard]] bool is_aligned_size(size_t n) const noexcept {
-            return AlignedMalloc<Alignment>::is_aligned_size(n);
+            return Malloc::is_aligned_size(Alignment, n);
         }
 
         [[nodiscard]] bool is_aligned(const T *ptr) const noexcept {
-            return AlignedMalloc<Alignment>::is_aligned(ptr);
+            return Malloc::is_aligned(ptr, Alignment);
+        }
+
+        size_t get_new_size(size_t current_size, size_t added) noexcept {
+            return GrowPolicy::get_new_size(current_size, added, Alignment);
         }
 
         /// @brief Rebind convenience for STL containers.
         template<typename U>
         struct rebind {
-            using other = AlignedAllocator<U, Alignment>;
+            using other = AlignedAllocator<U, Alignment, GrowPolicy,typename Operator::template rebind<U>::other>;
         };
 
         AlignedAllocator() noexcept = default;
 
         template<typename U>
-        constexpr AlignedAllocator(const AlignedAllocator<U, Alignment> &) noexcept {
+        constexpr AlignedAllocator(const AlignedAllocator<U, Alignment, GrowPolicy,Operator> &) noexcept {
         }
 
         /// @brief Returns the actual address of x.
@@ -124,30 +147,16 @@ namespace fermat {
 
         /// @brief Allocate memory for n elements of type T.
         [[nodiscard]] T *allocate(size_t n, const void *hint = nullptr) {
-            (void) hint; // hint is not used in this implementation
-            if (n == 0) return nullptr;
-            if (n > max_size()) {
-                throw std::bad_array_new_length();
-            }
-            size_t total_bytes = n * sizeof(T);
-            /// Request a 'good size' from mimalloc to optimize bucket usage.
-            void *ptr = AlignedMalloc<Alignment>::good_alloc(&total_bytes);
-
-            if (!ptr) throw std::bad_alloc();
-            return static_cast<T *>(ptr);
+            return operator_type::pooled_alloc(n);
         }
 
         /// @brief Deallocate memory previously allocated with allocate.
         void deallocate(T *p, size_t n) noexcept {
-            if (p == nullptr) return;
-            /// We must pass the exact same size used in mi_aligned_alloc to mi_free_size_aligned.
-            size_t total_bytes = n * sizeof(T);
-            size_t rn = AlignedMalloc<Alignment>::good_alloc_size(total_bytes);
-            AlignedMalloc<Alignment>::good_free(p);
+            operator_type::pooled_free(p, n);
         }
 
         /// @brief Maximum number of elements that can be allocated.
-        size_type max_size() const noexcept {
+       [[nodiscard]] size_type max_size() const noexcept {
             return std::numeric_limits<size_type>::max() / sizeof(T);
         }
 

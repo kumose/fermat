@@ -117,7 +117,7 @@ BENCHMARK_BOTH_CONSTRUCT_DEFAULT(1024);
 BENCHMARK_BOTH_CONSTRUCT_DEFAULT(2048);
 
 // ============================================================================
-//  Constructor from unsigned long long (only fixed-size)
+//  Constructor from uint64_t (only fixed-size)
 // ============================================================================
 
 template <size_t N>

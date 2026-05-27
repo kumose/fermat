@@ -100,7 +100,7 @@ namespace fermat {
                 if constexpr (Alignment == 0) {
                     Malloc::good_free(ptr, n);
                 } else {
-                    AlignedMalloc<Alignment>::good_free(ptr, n);
+                    Malloc::good_align_free(ptr, Alignment);
                 }
             }
             ptrs.clear();
@@ -147,13 +147,13 @@ namespace fermat {
                 if constexpr (Alignment == 0) {
                     rn = Malloc::good_alloc_size(sizeof(T));
                 } else {
-                    rn = AlignedMalloc<Alignment>::good_alloc_size(sizeof(T));
+                    rn = Malloc::good_align_alloc_size(Alignment, sizeof(T));
                 }
                 for (void *ptr: cache) {
                     if constexpr (Alignment == 0) {
                         Malloc::good_free(ptr, rn);
                     } else {
-                        AlignedMalloc<Alignment>::good_free(ptr, rn);
+                        Malloc::good_align_free(ptr, Alignment);
                     }
                 }
                 cache.clear();
@@ -167,9 +167,8 @@ namespace fermat {
         }
 
     public:
-        static inline const size_t kGoodSize = Alignment > 0
-                                                   ? AlignedMalloc<Alignment>::good_alloc_size(sizeof(T))
-                                                   : Malloc::good_alloc_size(sizeof(T));
+        static const size_t kGoodSize;
+
         /// @brief Acquire an uninitialized memory block for type T.
         /// @return Pointer to the memory block.
         static T *get_uninitialize() {
@@ -179,9 +178,9 @@ namespace fermat {
                 ++tls.glb_alloc;
                 /// Fetch from mimalloc if local cache is empty.
                 if constexpr (Alignment == 0) {
-                    return static_cast<T *>(Malloc::good_alloc(&n));
+                    return static_cast<T *>(Malloc::good_alloc(n));
                 } else {
-                    return static_cast<T *>(AlignedMalloc<Alignment>::good_alloc(&n));
+                    return static_cast<T *>(Malloc::good_align_alloc(Alignment, n));
                 }
             }
             /// LIFO: Best for CPU cache locality.
@@ -213,7 +212,7 @@ namespace fermat {
                 if constexpr (Alignment == 0) {
                     Malloc::good_free(ptr, kGoodSize);
                 } else {
-                    AlignedMalloc<Alignment>::good_free(ptr, kGoodSize);
+                    Malloc::good_align_free(ptr, Alignment);
                 }
 
                 return;
@@ -234,9 +233,9 @@ namespace fermat {
                 tls.cache.pop_back();
                 /// Cache is full: return to mimalloc to prevent memory bloat.
                 if constexpr (Alignment == 0) {
-                    Malloc::good_free(ptr, kGoodSize);
+                    Malloc::good_free(ptr);
                 } else {
-                    AlignedMalloc<Alignment>::good_free(ptr, kGoodSize);
+                    Malloc::good_align_free(ptr, Alignment);
                 }
             }
         }
@@ -255,7 +254,7 @@ namespace fermat {
                 if constexpr (Alignment == 0) {
                     Malloc::good_free(ptr, kGoodSize);
                 } else {
-                    AlignedMalloc<Alignment>::good_free(ptr, kGoodSize);
+                    Malloc::good_align_free(ptr, Alignment);
                 }
             }
             return old_size - n;
@@ -301,6 +300,9 @@ namespace fermat {
         }
     };
 
+    template<class T, size_t Alignment, size_t MaxFree>
+    const size_t ObjectPool<T, Alignment, MaxFree>::kGoodSize = Malloc::good_type_size<Alignment, T>();
+
     template<size_t N, size_t Alignment>
     struct AlignBytes {
         static constexpr size_t size = N;
@@ -345,6 +347,7 @@ namespace fermat {
     };
 
     static constexpr size_t kTinySize = 64;
+    static constexpr size_t kMiniSize = 128;
     static constexpr size_t kSmallSize = 256;
     static constexpr size_t kMediumSize = 512;
     static constexpr size_t kBigSize = 1024;
@@ -354,44 +357,54 @@ namespace fermat {
 
     template<typename T, size_t Alignment>
     struct TieredAllocator {
-        static T *pooled_alloc(size_t *n) {
+        template<typename U>
+        struct rebind {
+            using other = TieredAllocator<U, Alignment>;
+        };
+
+
+        static T *pooled_alloc(size_t n) {
             T *ptr = nullptr;
-            size_t nn = 1;
-            if (n == nullptr || *n == 1) {
-                nn = 1;
-                ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, 1, Alignment>::allocate());
-            } else if (*n <= 64) {
-                ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, kTinySize, Alignment>::allocate());
-                *n = kTinySize;
-            } else if (*n <= kSmallSize) {
-                ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, kSmallSize, Alignment>::allocate());
-                *n = kSmallSize;
-            } else if (*n <= kMediumSize) {
-                ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, kMediumSize, Alignment>::allocate());
-                *n = kMediumSize;
-            } else if (*n <= kBigSize) {
-                ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, kBigSize, Alignment>::allocate());
-                *n = kBigSize;
-            } else if (*n <= kPageSize) {
-                ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, kPageSize, Alignment>::allocate());
-                *n = kPageSize;
-            } else if (*n <= kX2PageSize) {
-                ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, kX2PageSize, Alignment>::allocate());
-                *n = kX2PageSize;
-            } else if (*n <= kX4PageSize) {
-                ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, kX4PageSize, Alignment>::allocate());
-                *n = kX4PageSize;
-            } else {
-                size_t bytes;
-                if (!checked_muladd(&bytes, *n, sizeof(T), 0UL)) {
-                    throw std::length_error("");
+            switch (n) {
+                case 1:
+                    ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, 1, Alignment>::allocate());
+                    break;
+                case kTinySize:
+                    ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, kTinySize, Alignment>::allocate());
+                    break;
+                case kMiniSize:
+                    ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, kMiniSize, Alignment>::allocate());
+                    break;
+                case kSmallSize:
+                    ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, kSmallSize, Alignment>::allocate());
+                    break;
+                case kMediumSize:
+                    ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, kMediumSize, Alignment>::allocate());
+                    break;
+                case kBigSize:
+                    ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, kBigSize, Alignment>::allocate());
+                    break;
+                case kPageSize:
+                    ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, kPageSize, Alignment>::allocate());
+                    break;
+                case kX2PageSize:
+                    ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, kX2PageSize, Alignment>::allocate());
+                    break;
+                case kX4PageSize:
+                    ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, kX4PageSize, Alignment>::allocate());
+                    break;
+                default: {
+                    size_t bytes;
+                    if (!checked_muladd(&bytes, n, sizeof(T), 0UL)) {
+                        throw std::length_error("");
+                    }
+                    if constexpr (Alignment > 0) {
+                        ptr = static_cast<T *>(Malloc::good_align_alloc(Alignment, bytes));
+                    } else {
+                        ptr = static_cast<T *>(Malloc::good_alloc(bytes));
+                    }
+                    break;
                 }
-                if constexpr (Alignment > 0) {
-                    ptr = static_cast<T *>(AlignedMalloc<Alignment>::good_alloc(&bytes));
-                } else {
-                    ptr = static_cast<T *>(Malloc::good_alloc(&bytes));
-                }
-                *n = bytes / sizeof(T);
             }
             if (!ptr) {
                 throw std::length_error("");
@@ -404,8 +417,10 @@ namespace fermat {
             if (n == 1) {
                 return 1;
             }
-            if (n <= 64) {
+            if (n <= kTinySize) {
                 return kTinySize;
+            } else if (n <= kMiniSize) {
+                return kMiniSize;
             } else if (n <= kSmallSize) {
                 return kSmallSize;
             } else if (n <= kMediumSize) {
@@ -420,12 +435,12 @@ namespace fermat {
                 return kX4PageSize;
             } else {
                 size_t bytes;
-                if (!checked_muladd(&bytes, n, sizeof(sizeof(T)), 0UL)) {
+                if (!checked_muladd(&bytes, n, sizeof(T), 0UL)) {
                     return std::numeric_limits<size_t>::max();
                 }
                 size_t nn;
                 if constexpr (Alignment > 0) {
-                    nn = AlignedMalloc<Alignment>::good_alloc_size(bytes);
+                    nn = Malloc::good_align_alloc_size(Alignment, bytes);
                 } else {
                     nn = Malloc::good_alloc_size(bytes);
                 }
@@ -444,6 +459,10 @@ namespace fermat {
 
                 case kTinySize: {
                     AlignedBytesAllocator<T, kTinySize, Alignment>::deallocate(ptr);
+                    break;
+                }
+                case kMiniSize: {
+                    AlignedBytesAllocator<T, kMiniSize, Alignment>::deallocate(ptr);
                     break;
                 }
                 case kSmallSize: {
@@ -471,10 +490,8 @@ namespace fermat {
                     break;
                 }
                 default:
-                    DKCHECK(kX4PageSize < n);
-                    DKCHECK(AlignedMalloc<Alignment>::good_alloc_size(n) == n);
                     if constexpr (Alignment > 0) {
-                        AlignedMalloc<Alignment>::good_free(ptr, n);
+                        Malloc::good_align_free(ptr, Alignment);
                     } else {
                         Malloc::good_free(ptr, n);
                     }
@@ -485,8 +502,10 @@ namespace fermat {
         static void set_tsl_limit(size_t slot, size_t n) {
             if (slot == 1) {
                 AlignedBytesAllocator<T, 1, Alignment>::set_tsl_limit(n);
-            } else if (slot <= 64) {
+            } else if (slot <= kTinySize) {
                 AlignedBytesAllocator<T, kTinySize, Alignment>::set_tsl_limit(n);
+            }else if (slot <= kMiniSize) {
+                AlignedBytesAllocator<T, kMiniSize, Alignment>::set_tsl_limit(n);
             } else if (slot <= kSmallSize) {
                 AlignedBytesAllocator<T, kSmallSize, Alignment>::set_tsl_limit(n);
             } else if (slot <= kMediumSize) {
@@ -495,9 +514,9 @@ namespace fermat {
                 AlignedBytesAllocator<T, kBigSize, Alignment>::set_tsl_limit(n);
             } else if (slot <= kPageSize) {
                 AlignedBytesAllocator<T, kPageSize, Alignment>::set_tsl_limit(n);
-            }else if (slot <= kX2PageSize) {
+            } else if (slot <= kX2PageSize) {
                 AlignedBytesAllocator<T, kX2PageSize, Alignment>::set_tsl_limit(n);
-            }else if (slot <= kX4PageSize) {
+            } else if (slot <= kX4PageSize) {
                 AlignedBytesAllocator<T, kX4PageSize, Alignment>::set_tsl_limit(n);
             }
         }
@@ -505,6 +524,7 @@ namespace fermat {
         static void set_tsl_limit(size_t n) {
             set_tsl_limit(1, n);
             set_tsl_limit(kTinySize, n);
+            set_tsl_limit(kMiniSize, n);
             set_tsl_limit(kSmallSize, n);
             set_tsl_limit(kMediumSize, n);
             set_tsl_limit(kBigSize, n);
@@ -516,8 +536,10 @@ namespace fermat {
         static void release_tsl(size_t slot, float precent_to_save) {
             if (slot == 1) {
                 AlignedBytesAllocator<T, 1, Alignment>::release_tsl(precent_to_save);
-            } else if (slot <= 64) {
+            } else if (slot <= kTinySize) {
                 AlignedBytesAllocator<T, kTinySize, Alignment>::release_tsl(precent_to_save);
+            }else if (slot <= kMiniSize) {
+                AlignedBytesAllocator<T, kMiniSize, Alignment>::release_tsl(precent_to_save);
             } else if (slot <= kSmallSize) {
                 AlignedBytesAllocator<T, kSmallSize, Alignment>::release_tsl(precent_to_save);
             } else if (slot <= kMediumSize) {
@@ -526,10 +548,9 @@ namespace fermat {
                 AlignedBytesAllocator<T, kBigSize, Alignment>::release_tsl(precent_to_save);
             } else if (slot <= kPageSize) {
                 AlignedBytesAllocator<T, kPageSize, Alignment>::release_tsl(precent_to_save);
-            }else if (slot <= kX2PageSize) {
+            } else if (slot <= kX2PageSize) {
                 AlignedBytesAllocator<T, kX2PageSize, Alignment>::release_tsl(precent_to_save);
-            }
-            else if (slot <= kX4PageSize) {
+            } else if (slot <= kX4PageSize) {
                 AlignedBytesAllocator<T, kX4PageSize, Alignment>::release_tsl(precent_to_save);
             }
         }
@@ -537,6 +558,7 @@ namespace fermat {
         static void release_tsl(float precent_to_save) {
             release_tsl(1, precent_to_save);
             release_tsl(kTinySize, precent_to_save);
+            release_tsl(kMiniSize, precent_to_save);
             release_tsl(kSmallSize, precent_to_save);
             release_tsl(kMediumSize, precent_to_save);
             release_tsl(kBigSize, precent_to_save);
@@ -548,8 +570,10 @@ namespace fermat {
         static std::optional<PoolStats> tls_stats(size_t n) {
             if (n == 1) {
                 return AlignedBytesAllocator<T, 1, Alignment>::tls_stats();
-            } else if (n <= 64) {
+            } else if (n <= kTinySize) {
                 return AlignedBytesAllocator<T, kTinySize, Alignment>::tls_stats();
+            }else if (n <= kMiniSize) {
+                return AlignedBytesAllocator<T, kMiniSize, Alignment>::tls_stats();
             } else if (n <= kSmallSize) {
                 return AlignedBytesAllocator<T, kSmallSize, Alignment>::tls_stats();
             } else if (n <= kMediumSize) {
@@ -558,9 +582,9 @@ namespace fermat {
                 return AlignedBytesAllocator<T, kBigSize, Alignment>::tls_stats();
             } else if (n <= kPageSize) {
                 return AlignedBytesAllocator<T, kPageSize, Alignment>::tls_stats();
-            }else if (n <= kX2PageSize) {
+            } else if (n <= kX2PageSize) {
                 return AlignedBytesAllocator<T, kX2PageSize, Alignment>::tls_stats();
-            }else if (n <= kX4PageSize) {
+            } else if (n <= kX4PageSize) {
                 return AlignedBytesAllocator<T, kX4PageSize, Alignment>::tls_stats();
             } else {
                 return std::nullopt;
@@ -571,6 +595,7 @@ namespace fermat {
             std::vector<std::pair<size_t, PoolStats> > result;
             result.emplace_back(1, *tls_stats(1));
             result.emplace_back(kTinySize, *tls_stats(kTinySize));
+            result.emplace_back(kMiniSize, *tls_stats(kMiniSize));
             result.emplace_back(kSmallSize, *tls_stats(kSmallSize));
             result.emplace_back(kMediumSize, *tls_stats(kMediumSize));
             result.emplace_back(kBigSize, *tls_stats(kBigSize));
@@ -583,8 +608,10 @@ namespace fermat {
         static ObjectGuard<Alignment> collect_tsl(size_t n) {
             if (n == 1) {
                 return AlignedBytesAllocator<T, 1, Alignment>::collect_tsl();
-            } else if (n <= 64) {
+            } else if (n <= kTinySize) {
                 return AlignedBytesAllocator<T, kTinySize, Alignment>::collect_tsl();
+            }else if (n <= kMiniSize) {
+                return AlignedBytesAllocator<T, kMiniSize, Alignment>::collect_tsl();
             } else if (n <= kSmallSize) {
                 return AlignedBytesAllocator<T, kSmallSize, Alignment>::collect_tsl();
             } else if (n <= kMediumSize) {
@@ -593,9 +620,9 @@ namespace fermat {
                 return AlignedBytesAllocator<T, kBigSize, Alignment>::collect_tsl();
             } else if (n <= kPageSize) {
                 return AlignedBytesAllocator<T, kPageSize, Alignment>::collect_tsl();
-            }else if (n <= kX2PageSize) {
+            } else if (n <= kX2PageSize) {
                 return AlignedBytesAllocator<T, kX2PageSize, Alignment>::collect_tsl();
-            }else if (n <= kX4PageSize) {
+            } else if (n <= kX4PageSize) {
                 return AlignedBytesAllocator<T, kX4PageSize, Alignment>::collect_tsl();
             } else {
                 return ObjectGuard<Alignment>{};
@@ -607,6 +634,7 @@ namespace fermat {
             result.reserve(6);
             result.emplace_back(collect_tsl(1));
             result.emplace_back(collect_tsl(kTinySize));
+            result.emplace_back(collect_tsl(kMiniSize));
             result.emplace_back(collect_tsl(kSmallSize));
             result.emplace_back(collect_tsl(kMediumSize));
             result.emplace_back(collect_tsl(kBigSize));
@@ -623,7 +651,9 @@ namespace fermat {
                 AlignedBytesAllocator<T, 1, Alignment>::apply_tsl(objs);
             } else if (objs.n == AlignedBytesAllocator<T, kTinySize, Alignment>::good_size()) {
                 AlignedBytesAllocator<T, kTinySize, Alignment>::apply_tsl(objs);
-            } else if (objs.n == AlignedBytesAllocator<T, kSmallSize, Alignment>::good_size()) {
+            } else if (objs.n == AlignedBytesAllocator<T, kMiniSize, Alignment>::good_size()) {
+                AlignedBytesAllocator<T, kMiniSize, Alignment>::apply_tsl(objs);
+            }else if (objs.n == AlignedBytesAllocator<T, kSmallSize, Alignment>::good_size()) {
                 AlignedBytesAllocator<T, kSmallSize, Alignment>::apply_tsl(objs);
             } else if (objs.n == AlignedBytesAllocator<T, kMediumSize, Alignment>::good_size()) {
                 AlignedBytesAllocator<T, kMediumSize, Alignment>::apply_tsl(objs);
@@ -631,9 +661,9 @@ namespace fermat {
                 AlignedBytesAllocator<T, kBigSize, Alignment>::apply_tsl(objs);
             } else if (objs.n == AlignedBytesAllocator<T, kPageSize, Alignment>::good_size()) {
                 AlignedBytesAllocator<T, kPageSize, Alignment>::apply_tsl(objs);
-            }else if (objs.n == AlignedBytesAllocator<T, kX2PageSize, Alignment>::good_size()) {
+            } else if (objs.n == AlignedBytesAllocator<T, kX2PageSize, Alignment>::good_size()) {
                 AlignedBytesAllocator<T, kX2PageSize, Alignment>::apply_tsl(objs);
-            }else if (objs.n == AlignedBytesAllocator<T, kX4PageSize, Alignment>::good_size()) {
+            } else if (objs.n == AlignedBytesAllocator<T, kX4PageSize, Alignment>::good_size()) {
                 AlignedBytesAllocator<T, kX4PageSize, Alignment>::apply_tsl(objs);
             } else {
                 KCHECK(false) << "unknown size:" << objs.n;

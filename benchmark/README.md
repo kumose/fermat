@@ -194,7 +194,9 @@
 
 ## Bitset
 
-根据您提供的 benchmark 数据，以下是 `fermat::Bitset`、`std::bitset` 和 `fermat::Bitmap`（视图类，不拥有内存）的性能对比表格。**注意**：`Bitmap` 是一个视图类，本身不管理内存，其 `Setup` 操作对应于绑定外部内存，构造开销极小。表格中已对不适用或缺失的项标注“—”。
+以下是 `fermat::Bitset`、`std::bitset` 和 **`fermat::BitmapView`**（文档/表中简称 **Bitmap**；**不拥有内存的视图**）的性能对比。`BitmapView` 通过 `setup()` 绑定调用方已有的 `uint64_t` 缓冲区，构造/绑定开销极小；表中不适用项标注「—」。
+
+**使用约束（BitmapView）**：仅保证 **`WordType = uint64_t`** 且后备存储 **8 字节对齐**；小于 8 字节的 `WordType` 无法保证性能与安全性。本表数据均来自 `BitmapView<true, uint64_t>`。
 
 | Operation | Bits | fermat::Bitset | std::bitset | fermat::Bitmap (view) |
 |-----------|------|----------------|-------------|------------------------|
@@ -278,45 +280,43 @@
 | | 2048 | **0.381 ns** | 1.56 ns | 0.705 ns |
 
 > **Note**:
-> - `fermat::Bitmap` is a view class that does not own the underlying memory. Its `Setup` operation (corresponding to `BM_Bitmap_Setup`) is mainly for binding external memory and is not included in the table, as its semantics differ from construction.
-> - “—” in the table indicates that the operation is not available or not applicable for that type.
-> - Bold numbers indicate the best performance among the three implementations.
-> - Overall, `fermat::Bitset` performs best in most operations (especially construction, 
-> - set‑all, reset‑all, and find); `std::bitset` is slightly better in bitwise 
-> - operations and shifts; `Bitmap` as a view class achieves near‑optimal or even better
-> - performance in some shifts and queries (thanks to its zero‑copy nature), but incurs
-> - higher overhead in modifying operations (e.g., `SetAll`). Choose the appropriate 
-> - type based on your specific use case.
+> - **`fermat::BitmapView`**（表中 Bitmap）为**非拥有型视图**：不分配底层存储，仅包装已有 `uint64_t` 内存；`BM_Bitmap_Setup` 对应 `setup()` 绑定，语义不同于 Bitset 的构造，故未单独列行。
+> - **受支持配置**：`BitmapView<true, uint64_t>`，后备区须 **8 字节对齐**；其他 `WordType`（&lt; 8 字节）**不保证**效率与安全性。
+> - 表中「—」表示该类型无对应操作或不适用。
+> - 粗体为三者中最优。
+> - 总体上 `fermat::Bitset` 在构造、set/reset all、find 等占优；`std::bitset` 在部分按位运算与移位略优；`BitmapView` 在部分移位与查询上接近最优（零拷贝绑定），但 `SetAll` 等修改类操作开销更大。按是否已有缓冲区、是否需拥有存储选型。
 
 ## Deque
 
+`fermat::Deque<T, Allocator, kDequeSubarraySize>` — third template parameter is elements per internal block (power of 2; default **256** for `int` in `mem_deque_bench`).
+
 | Benchmark | Size | std::deque<int> | fermat::Deque<int> |
 |-----------|------|-----------------|---------------------|
-| **ConstructEmpty** | – | 26.4 ns | **7.12 ns** |
-| **ConstructFill** | 8 | 28.3 ns | **9.24 ns** |
-| | 64 | 30.8 ns | **10.9 ns** |
-| | 512 | 78.6 ns | **41.4 ns** |
-| | 4096 | 816 ns | **191 ns** |
-| | 32768 | 10558 ns | **2452 ns** |
-| | 100000 | 67826 ns | **12082 ns** |
-| **PushBack** | 8 | 28.0 ns | **11.7 ns** |
-| | 64 | 62.4 ns | **42.8 ns** |
-| | 512 | 537 ns | **271 ns** |
-| | 4096 | 3902 ns | **2160 ns** |
-| | 32768 | 32595 ns | **18295 ns** |
-| | 100000 | 160975 ns | **59774 ns** |
-| **PushFront** | 8 | 42.3 ns | **12.5 ns** |
-| | 64 | 57.6 ns | **39.0 ns** |
-| | 512 | 308 ns | **268 ns** |
-| | 4096 | 2463 ns | **2203 ns** |
-| | 32768 | 22437 ns | **19084 ns** |
-| | 100000 | 67693 ns | **60082 ns** |
-| **RandomAccess** | – | **1.46 ns** | 1.61 ns |
-| **Iteration** | – | **29301 ns** | 36529 ns |
-| **InsertMiddle** | – | **1485 ns** | 3149 ns |
-| **EraseMiddle** | – | **1715 ns** | 3091 ns |
-| **Clear** | – | 212 ns | **163 ns** |
-| **Destruct** | – | 126 ns | **61.3 ns** |
+| **ConstructEmpty** | – | 26.1 ns | **7.25 ns** |
+| **ConstructFill** | 8 | 29.6 ns | **9.29 ns** |
+| | 64 | 30.8 ns | **10.8 ns** |
+| | 512 | 79.3 ns | **32.5 ns** |
+| | 4096 | 826 ns | **203 ns** |
+| | 32768 | 10617 ns | **1974 ns** |
+| | 100000 | 69040 ns | **6476 ns** |
+| **PushBack** | 8 | 28.1 ns | **11.5 ns** |
+| | 64 | 63.4 ns | **42.3 ns** |
+| | 512 | 535 ns | **249 ns** |
+| | 4096 | 3899 ns | **1945 ns** |
+| | 32768 | 32319 ns | **17317 ns** |
+| | 100000 | 167878 ns | **54955 ns** |
+| **PushFront** | 8 | 42.5 ns | **12.1 ns** |
+| | 64 | 57.4 ns | **40.5 ns** |
+| | 512 | 303 ns | **268 ns** |
+| | 4096 | 2464 ns | **2002 ns** |
+| | 32768 | 22512 ns | **18141 ns** |
+| | 100000 | 67356 ns | **56549 ns** |
+| **RandomAccess** | – | 1.63 ns | **1.62 ns** |
+| **Iteration** | – | 30287 ns | **29205 ns** |
+| **InsertMiddle** | – | 1488 ns | **882 ns** |
+| **EraseMiddle** | – | 1767 ns | **767 ns** |
+| **Clear** | – | 222 ns | **62.2 ns** |
+| **Destruct** | – | 128 ns | **44.5 ns** |
 
 
 ## CordBuffer

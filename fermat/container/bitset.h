@@ -430,7 +430,7 @@ namespace fermat {
         Bitset();
 
 
-        Bitset(unsigned long long value);
+        Bitset(uint64_t value);
 
         // We don't define copy constructor and operator= because
         // the compiler-generated versions will suffice.
@@ -495,8 +495,8 @@ namespace fermat {
             return detail::to_unsigned_integral<unsigned long, true>(*this);
         }
 
-        unsigned long long to_ullong_assert_convertible() const {
-            return detail::to_unsigned_integral<unsigned long long, true>(*this);
+        uint64_t to_ullong_assert_convertible() const {
+            return detail::to_unsigned_integral<uint64_t, true>(*this);
         }
 
         /// to_xxx_no_assert_convertible()
@@ -518,8 +518,8 @@ namespace fermat {
             return detail::to_unsigned_integral<unsigned long, false>(*this);
         }
 
-        unsigned long long to_ullong_no_assert_convertible() const {
-            return detail::to_unsigned_integral<unsigned long long, false>(*this);
+        uint64_t to_ullong_no_assert_convertible() const {
+            return detail::to_unsigned_integral<uint64_t, false>(*this);
         }
 
         /// as_uint<UInt>() / as_xxx()
@@ -547,7 +547,7 @@ namespace fermat {
         }
 
         template<size_t NumBits = N>
-        std::enable_if_t<NumBits <= (CHAR_BIT * sizeof(unsigned long long)), unsigned long long>
+        std::enable_if_t<NumBits <= (CHAR_BIT * sizeof(uint64_t)), uint64_t>
         as_ullong() const noexcept { return to_ullong_assert_convertible(); }
 
         //size_type count() const;            // We inherit this from the base class.
@@ -1438,7 +1438,7 @@ namespace fermat {
     }
 
     template<size_t N, typename WordType>
-    inline Bitset<N, WordType>::Bitset(unsigned long long value) {
+    inline Bitset<N, WordType>::Bitset(uint64_t value) {
         detail::from_unsigned_integral(*this, value);
     }
 

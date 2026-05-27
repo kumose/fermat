@@ -25,7 +25,7 @@ fermat aims to provide **significant** performance gains (>20%) in its sweet spo
 | `KString` | construction, copy, move, append | 1.2x – 3x (>20%) |
 | `Buffer<T>` | construction (all sizes), small push/iteration/middle insert‑erase, clear (Release) | 2x – 5x |
 | `Vector<T>` | same allocation path as `Buffer`; random access on par or faster than `std` in Release | 2x – 5x |
-| `Deque<T>` | construction, push_front/push_back, clear, destruct | 2x – 10x |
+| `Deque<T, Alloc, kSubarray>` | construction, push_front/push_back, iteration, random access, middle insert/erase, clear, destruct | 2x – 10x |
 | `List<T>` | all operations | 2x – 20x |
 | `PriorityQueue<T>` | large push/pop (10k+), construction from iterators | 10% – 30% |
 | `Stack<T>` | all operations | 20% – 10x (construction) |
@@ -42,8 +42,6 @@ fermat aims to provide **significant** performance gains (>20%) in its sweet spo
 | Component | Weak operations | Slower than `std` | Reason |
 |-----------|-----------------|--------------------|--------|
 | `KString` | short‑string `find` | ~30% | different implementation path from `std::string` |
-| `Deque<T>` | random access | ~10% | need to compute block index |
-| `Deque<T>` | middle insert/erase | ~2× | block structure causes more data movement |
 | `PriorityQueue<T>` | push/pop for small sizes (1000 elements) | ~2× | `std` algorithm better for small heaps |
 | `CordInputStringStream` | token read (`>> string`) | ~20–30% | need cross‑block search |
 | `CordInputStringStream` | bulk read (`read`) | ~2× | multiple cross‑block copies |
@@ -55,6 +53,8 @@ fermat aims to provide **significant** performance gains (>20%) in its sweet spo
 > - `FermatStack` is faster than `std::stack` in all operations – no disadvantage.
 > - `KString` is significantly faster in construction, copy, move, append; short‑string `find` is slightly slower than `std::string`.
 > - `Buffer<T>` (plain data such as `int`/`float`) and `Vector<T>` (general contiguous container) have no significant disadvantage vs `std::vector` in **Release** mode after recent optimizations; small‑size random access is now roughly on par with `std`.
+> - `Deque<T>` (`mem_deque_bench`, default `kDequeSubarraySize = 256`) is faster than or on par with `std::deque` on all measured operations; tune the third template parameter (power of 2) for block size vs memory overhead.
+> - `ObjectPool` cross-thread transfer (`collect_tsl` / `apply_tls`, `collect_arena` / `apply_arena`) stops at **moving free blocks via `ObjectGuard`**—an intentional ceiling after **coroutine / M:N** considerations. **Advanced users only** (strict memory/lifetime control); otherwise use same-thread pool or `ResourcePool`.
 
 ## When to use which component
 
@@ -67,14 +67,17 @@ fermat aims to provide **significant** performance gains (>20%) in its sweet spo
 | Streaming large data (logs, network packets) | `CordBufferBase` | extremely high random‑chunk append throughput (best in 10 KiB–100 MiB) |
 | Filling chunked data from disk/network | `CordBufferBase` + `append_by_*` | seamless integration with `IOReader`, zero‑copy |
 | Performance‑sensitive small/medium contiguous arrays | `Buffer<T>` / `Vector<T>` | use `Buffer` for plain POD; `Vector` for full `std::vector` semantics. Release: many ops ≥20% faster; large push_back roughly on par |
+| Frequent push_front / push_back (deque) | `Deque<T, Alloc, kSubarray>` | third template arg `kSubarray` (power of 2, default **256**) sets elements per memory block; larger blocks reduce chunk crossings (better scan/insert); smaller blocks save memory when `size()` is tiny |
 | Ordered read‑only / bulk construction of maps/sets | `VectorMap` / `VectorSet` | ordered insert 3.8× faster, iteration 24× faster; random insert slower, not for frequent modification |
 | Frequent stack operations | `FermatStack` | construction from container ~11× faster, push/pop ~1.2× faster, no disadvantage |
 | Priority queue with priority change/remove | `FermatPriorityQueue` | supports `change`/`remove`, large push/pop 30% faster; for small (<1000) slower than `std`, trade‑off |
-| Small object pooling | `ObjectPool` | 5–10× faster than `new`/`delete` |
-| High‑concurrency resource reuse (with versioning) | `ResourcePool` | thread‑safe, 16 threads ~394 ns/op |
+| Small object pooling (same thread) | `ObjectPool` | 5–10× faster than `new`/`delete` on thread‑local cache |
+| Producer / consumer threads reuse pooled memory | `ObjectPool` / `BasicAllocator` + `collect_tsl` / `apply_tls` (or `collect_arena` / `apply_arena`) | **Advanced**: strict memory/thread/lifetime control required; see ObjectPool section |
+| High‑concurrency resource reuse (with versioning) | `ResourcePool` | thread‑safe handle lookup; 16 threads ~394 ns/op |
 | Local LRU cache | `LruCache` + `turbo::flat_hash_map` + `fermat::List` | 20–50% faster than `std::map`+`std::list` in all operations |
 | Large integer sorting (random data) | `RadixSort` | 5–10× faster than `std::sort`; for already‑sorted or reverse‑sorted data, `std::sort` is faster |
 | Finding next set bit in a bitset | `fermat::Bitset` | `FindNext` 4× faster than `std::bitset`; bitwise ops slightly slower, avoid heavy use |
+| Bit flags over **existing** memory (no extra allocation) | `BitmapView<true, uint64_t>` | non-owning view via `setup()` / constructor; backing must be **8-byte-aligned** `uint64_t` words — see Bitset section |
 | Synchronous file I/O | `sys_*` / `*ReadFile` / `*WriteFile` | cross‑platform abstraction, error handling with `turbo::Result` |
 | Zero‑copy cross‑block traversal of CordBuffer | `Peeker` | returns `string_view`, no copy |
 | Consuming data from CordBuffer into a container | `Customer` / `Reader` | supports copy‑or‑move consumption |
@@ -209,6 +212,45 @@ v.reserve(1000);
 v.push_back(42);
 ```
 
+### Double-ended queue `Deque<T>`
+
+`fermat::Deque` is interface-compatible with `std::deque`. The third template parameter **`kDequeSubarraySize`** (must be a **power of 2**) is the number of elements per internal memory block; default is **256**. Smaller blocks reduce wasted capacity for very small deques; larger blocks reduce pointer-array and chunk-crossing overhead (better for scan and middle insert/erase on large deques).
+
+```cpp
+fermat::Deque<int> dq;                         // default kDequeSubarraySize = 256
+fermat::Deque<int, BasicAllocator<int>, 128> dq128;  // 128 elements per block
+```
+
+Benchmark below: `fermat::Deque<int>` vs `std::deque<int>` (`mem_deque_bench`, Release). Better per row in **bold**.
+
+| Benchmark | Size | std::deque&lt;int&gt; | fermat::Deque&lt;int&gt; |
+|-----------|------|----------------------|--------------------------|
+| **ConstructEmpty** | – | 26.1 ns | **7.25 ns** |
+| **ConstructFill** | 8 | 29.6 ns | **9.29 ns** |
+| | 64 | 30.8 ns | **10.8 ns** |
+| | 512 | 79.3 ns | **32.5 ns** |
+| | 4096 | 826 ns | **203 ns** |
+| | 32768 | 10617 ns | **1974 ns** |
+| | 100000 | 69040 ns | **6476 ns** |
+| **PushBack** | 8 | 28.1 ns | **11.5 ns** |
+| | 64 | 63.4 ns | **42.3 ns** |
+| | 512 | 535 ns | **249 ns** |
+| | 4096 | 3899 ns | **1945 ns** |
+| | 32768 | 32319 ns | **17317 ns** |
+| | 100000 | 167878 ns | **54955 ns** |
+| **PushFront** | 8 | 42.5 ns | **12.1 ns** |
+| | 64 | 57.4 ns | **40.5 ns** |
+| | 512 | 303 ns | **268 ns** |
+| | 4096 | 2464 ns | **2002 ns** |
+| | 32768 | 22512 ns | **18141 ns** |
+| | 100000 | 67356 ns | **56549 ns** |
+| **RandomAccess** | – | 1.63 ns | **1.62 ns** |
+| **Iteration** | – | 30287 ns | **29205 ns** |
+| **InsertMiddle** | – | 1488 ns | **882 ns** |
+| **EraseMiddle** | – | 1767 ns | **767 ns** |
+| **Clear** | – | 222 ns | **62.2 ns** |
+| **Destruct** | – | 128 ns | **44.5 ns** |
+
 ### Contiguous container `Vector<T>`
 
 `fermat::Vector<T>` is interface‑compatible with `std::vector` and supports non‑trivial types; it shares the optimized storage/allocation path with `Buffer`. **Release** data below (same machine as above). Full tables: [`benchmark/README.md`](benchmark/README.md) (Vector section).
@@ -296,17 +338,96 @@ pq.remove(idx);
 
 ### Object pool ObjectPool
 
-Single‑thread allocation/deallocation ~6× faster than `new`/`delete`. Better per row in **bold**.
+`fermat::ObjectPool` (`fermat/memory/object_pool.h`) keeps a **thread‑local free list** per type: hot `get` / `put` on one thread avoid the global allocator. Single‑thread allocation/deallocation is ~6× faster than `new`/`delete` in benchmarks. Better per row in **bold**.
 
 | Operation | ObjectPool | new/delete | Speedup |
 |-----------|------------|------------|---------|
 | single thread | **2.02 ns** | 11.7 ns | 5.8× |
 | 16 threads | **3.77 ns** | 29.0 ns | 7.7× |
 
+**Same thread (typical):**
+
 ```cpp
 MyClass* obj = fermat::ObjectPool<MyClass>::get(/* ctor args */);
 fermat::ObjectPool<MyClass>::put(obj);
 ```
+
+**Producer / consumer threads — transfer pooled memory between threads**
+
+**Intentional API boundary (not “we could only go this far”)**
+
+With **coroutines** and M:N scheduling, one OS thread often runs many logical tasks, and work may **resume on another thread or executor**. If the library wrapped a “standard producer–consumer pool,” it would have to own **batching, backpressure, queue depth, and when to transfer memory**—overlapping your runtime, locks, and pipeline semantics.
+
+After explicitly accounting for coroutine scenarios, fermat exposes only:
+
+- **`ObjectPool<T>::collect_tsl()` / `apply_tls()`** — move a thread’s TLS free list through an **`ObjectGuard`**
+- **`BasicAllocator::collect_arena()` / `apply_arena()`** — the same for **tiered** pools behind `Buffer` / `Vector` / `KString`
+
+You call these at **boundaries you already define** (end of batch, coroutine handoff, thread switch). **Free blocks** move; live object lifetime rules stay yours.
+
+A higher layer would embed **contention and scheduling policy** and **compete with business code**. The current primitives are a **deliberate design ceiling**, not an unfinished wrapper.
+
+> **Audience**  
+> **`collect` / `apply` cross-thread transfer is an advanced path.** You must strictly own object lifetime, which thread may `get` / `put_raw`, when live pointers are in flight vs when only free blocks move, and guard handoff ordering. If that is not your team’s comfort zone, stay on **same-thread `ObjectPool`** or use **`ResourcePool`** for cross-thread handles—do not use TLS transfer as a default shortcut.
+
+`ObjectPool` caches are **thread‑local**: do not `put` on thread B a pointer allocated on thread A. Typical **producer allocates, consumer recycles**: the producer `get`s from its TLS; the consumer `put_raw`s into its TLS; when a batch is done, the **consumer `collect_tsl()`** and the **producer `apply_tls()`** move the free list back to the producer’s cache:
+
+| API | Role |
+|-----|------|
+| `ObjectPool<T>::collect_tsl()` | On the **source** thread: move all blocks in the current TLS free list into an `ObjectGuard` (RAII; frees on destroy if not moved). |
+| `ObjectPool<T>::apply_tls(guard)` | On the **destination** thread: merge `guard` into that thread’s TLS cache; subsequent `get_uninitialize` / `put_raw` reuse those blocks locally. |
+| `BasicAllocator<T, Align>::collect_arena()` / `apply_arena()` | Same idea for **tiered** pool slots used by `Buffer` / `Vector` / `KString` (`TieredAllocator` behind `BasicAllocator`). Returns one `ObjectGuard` per size class. |
+
+Hand off the guard under your own sync (mutex, queue, epoch barrier). After the consumer **`put_raw`s a batch**, **`collect_tsl()` on the consumer** and **`apply_tls()` on the producer** return freed blocks to the producer’s TLS—**ping‑pong reuse** with only a short critical section on the guard, not per object.
+
+```cpp
+struct RequestCtx { /* ... */ };
+
+std::mutex mu;
+std::optional<fermat::ObjectGuard<0>> freed;  // consumer → producer
+
+// Producer (e.g. accept / parse): alloc from local TLS; send live objects via your queue
+void producer_issue(WorkQueue& q) {
+  RequestCtx* ctx = fermat::ObjectPool<RequestCtx>::get_uninitialize();
+  // construct / fill ctx ...
+  q.push(ctx);  // business queue — not ObjectGuard
+}
+
+// Producer: after consumer collect_tsl — merge returned free blocks into local TLS
+void producer_reclaim_free_list() {
+  fermat::ObjectGuard<0> guard;
+  {
+    std::lock_guard lock(mu);
+    if (freed) { guard = std::move(*freed); freed.reset(); }
+  }
+  if (!guard.ptrs.empty()) {
+    fermat::ObjectPool<RequestCtx>::apply_tls(guard);
+  }
+}
+
+// Consumer (e.g. worker): process, put_raw locally, then collect and hand back to producer
+void consumer_drain(WorkQueue& q) {
+  while (RequestCtx* ctx = q.pop()) {
+    // ... process ...
+    fermat::ObjectPool<RequestCtx>::put_raw(ctx);
+  }
+  auto guard = fermat::ObjectPool<RequestCtx>::collect_tsl();
+  std::lock_guard lock(mu);
+  freed = std::move(guard);
+}
+```
+
+**Tiered allocator** (consumer releases many `Buffer`/`Vector` blocks, then returns caches to the producer):
+
+```cpp
+using Alloc = fermat::BasicAllocator<uint8_t, 64>;
+// on consumer thread after deallocations into the pool:
+auto guards = Alloc::collect_arena();
+// move `guards` to producer thread, then on producer:
+Alloc::apply_arena(guards);
+```
+
+For **cross‑thread live object handles** (not just moving empty blocks), use **`ResourcePool`** (versioned ID + `find` / `put`) instead of passing raw pool pointers.
 
 ### Resource pool ResourcePool
 
@@ -375,12 +496,31 @@ std::vector<uint32_t> data = {5, 2, 8, 1};
 fermat::radix_sort(data.begin(), data.end());
 ```
 
-### Bitset
+### Bitset and `BitmapView`
 
-`FindNext` for 1024 bits is faster than `std::bitset` (`mem_bitset_bench`):
+**`fermat::Bitset`** — fixed-size, owning bitset (compile-time bit count), comparable to `std::bitset`.
 
-| Operation (1024 bit) | fermat | std::bitset | Speedup |
-|----------------------|--------|-------------|---------|
+**`fermat::BitmapView`** — **non-owning view** over memory you already have (e.g. a field in a struct, a slab, mmap). It does not allocate or free storage; bind with `setup(span<uint64_t>, bit_count)` or the constructor taking `turbo::span<WordType>`. This is intended so business code can operate on existing bitmap buffers without copying.
+
+> **Required: `WordType = uint64_t` and 8-byte-aligned backing**
+>
+> - The third template parameter **`WordType`** must be **`uint64_t`** (8 bytes per machine word) for **supported** use. Benchmarks and fast paths (`find_*`, word-wise ops) assume 64-bit words.
+> - The backing buffer must be an array of `uint64_t` with **8-byte alignment** (`alignas(8)` or equivalent), sized to at least `ceil(bit_count / 64)` words.
+> - Instantiating `BitmapView` with **`WordType` smaller than 8 bytes** (e.g. `uint32_t`, `uint16_t`, `uint8_t`) is **not** supported for performance or safety guarantees: correctness and SIMD/word tricks are only validated for **`uint64_t`**.
+
+```cpp
+constexpr size_t kBits = 1024;
+alignas(8) uint64_t storage[(kBits + 63) / 64]{};
+
+fermat::BitmapView<true, uint64_t> bm;
+bm.setup(turbo::span<uint64_t>(storage), kBits);
+size_t i = bm.find_first();
+```
+
+`FindNext` on **`fermat::Bitset`** for 1024 bits is faster than `std::bitset` (`mem_bitset_bench`); `BitmapView<uint64_t>` is similar on find paths when bound to aligned `uint64_t` storage. Full three-way tables: [`benchmark/README.md`](benchmark/README.md) (Bitset section).
+
+| Operation (1024 bit) | fermat::Bitset | std::bitset | Speedup |
+|----------------------|----------------|-------------|---------|
 | find_next | **0.387 ns** | 1.56 ns | 4.0× |
 
 ### Synchronous disk I/O

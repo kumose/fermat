@@ -19,6 +19,7 @@
 #include <iterator>
 #include <cstring>
 #include <numeric>
+#include <turbo/log/logging.h>
 
 namespace fermat::container_internal {
     template<class InIt, class OutIt>

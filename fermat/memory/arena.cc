@@ -24,14 +24,14 @@ namespace fermat {
 
     Arena::~Arena() {
         for (auto &c: _chunks) {
-            mi_free(c.data);
+            Malloc::good_free(c.data);
             c.data = nullptr;
         }
     }
 
     void Arena::add_chunk(size_t size) {
         Chunk c;
-        c.data = mi_malloc(size);
+        c.data = Malloc::good_alloc(size);
         if (!c.data) throw std::bad_alloc();
         c.capacity = size;
         c.offset = 0;
@@ -53,7 +53,7 @@ namespace fermat {
             // Oversized allocation: allocate a dedicated chunk, do NOT replace _current.
             Chunk big;
 
-            big.data = mi_malloc(n);
+            big.data = Malloc::good_alloc(n);
 
             if (!big.data) throw std::bad_alloc();
             big.capacity = static_cast<uint32_t>(n);

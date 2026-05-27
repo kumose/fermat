@@ -201,9 +201,9 @@ namespace fermat {
         // We follow the naming convention established for stack, queue, priority_queue and name this 'c'. This variable must always have a size of at least 1, as even an empty RingBuffer has an unused terminating element.
 
     protected:
-        container_iterator mBegin; // We keep track of where our begin and end are by using Container iterators.
-        container_iterator mEnd;
-        size_type mSize;
+        container_iterator _begin; // We keep track of where our begin and end are by using Container iterators.
+        container_iterator _end;
+        size_type _size;
 
     public:
         // There currently isn't a RingBuffer constructor that specifies an initial size, unlike other containers.
@@ -230,12 +230,12 @@ namespace fermat {
 
         this_type &operator=(std::initializer_list<value_type> ilist);
 
-        this_type &operator=(this_type &&x);
+        this_type &operator=(this_type &&x) noexcept;
 
         template<typename InputIterator>
         void assign(InputIterator first, InputIterator last);
 
-        void swap(this_type &x);
+        void swap(this_type &x) noexcept;
 
         iterator begin() noexcept;
 
@@ -261,9 +261,9 @@ namespace fermat {
 
         const_reverse_iterator crend() const noexcept;
 
-        bool empty() const noexcept;
+        [[nodiscard]] bool empty() const noexcept;
 
-        bool full() const noexcept;
+        [[nodiscard]] bool full() const noexcept;
 
         size_type size() const noexcept;
 
@@ -571,12 +571,12 @@ namespace fermat {
         // To do: This code needs to be amended to deal with possible exceptions
         // that could occur during the resize call below.
 
-        // We add one because the element at mEnd is necessarily unused.
+        // We add one because the element at _end is necessarily unused.
         c.resize(cap + 1);
         // Possibly we could construct 'c' with size, but c may not have such a ctor, though we rely on it having a resize function.
-        mBegin = c.begin();
-        mEnd = mBegin;
-        mSize = 0;
+        _begin = c.begin();
+        _end = _begin;
+        _size = 0;
     }
 
 
@@ -586,12 +586,12 @@ namespace fermat {
         // To do: This code needs to be amended to deal with possible exceptions
         // that could occur during the resize call below.
 
-        // We add one because the element at mEnd is necessarily unused.
+        // We add one because the element at _end is necessarily unused.
         c.resize(cap + 1);
         // Possibly we could construct 'c' with size, but c may not have such a ctor, though we rely on it having a resize function.
-        mBegin = c.begin();
-        mEnd = mBegin;
-        mSize = 0;
+        _begin = c.begin();
+        _end = _begin;
+        _size = 0;
     }
 
 
@@ -604,9 +604,9 @@ namespace fermat {
         // that could occur during the resize call below.
         if (c.empty())
             c.resize(1);
-        mBegin = c.begin();
-        mEnd = mBegin;
-        mSize = 0;
+        _begin = c.begin();
+        _end = _begin;
+        _size = 0;
     }
 
 
@@ -616,25 +616,25 @@ namespace fermat {
         // To do: This code needs to be amended to deal with possible exceptions
         // that could occur during the resize call below.
 
-        // We add one because the element at mEnd is necessarily unused.
+        // We add one because the element at _end is necessarily unused.
         c.resize(1);
         // Possibly we could construct 'c' with size, but c may not have such a ctor, though we rely on it having a resize function.
-        mBegin = c.begin();
-        mEnd = mBegin;
-        mSize = 0;
+        _begin = c.begin();
+        _end = _begin;
+        _size = 0;
     }
 
 
     template<typename T, typename Container, typename Allocator>
     RingBuffer<T, Container, Allocator>::RingBuffer(const this_type &x)
         : c(x.c) {
-        mBegin = c.begin();
-        mEnd = mBegin;
-        mSize = x.mSize;
+        _begin = c.begin();
+        _end = _begin;
+        _size = x._size;
 
-        std::advance(mBegin, std::distance(const_cast<this_type &>(x).c.begin(), x.mBegin));
+        std::advance(_begin, std::distance(const_cast<this_type &>(x).c.begin(), x._begin));
         // We can do a simple distance algorithm here, as there will be no wraparound.
-        std::advance(mEnd, std::distance(const_cast<this_type &>(x).c.begin(), x.mEnd));
+        std::advance(_end, std::distance(const_cast<this_type &>(x).c.begin(), x._end));
     }
 
     template<typename T, typename Container, typename Allocator>
@@ -643,9 +643,9 @@ namespace fermat {
     {
         c.resize(1);
         // Possibly we could construct 'c' with size, but c may not have such a ctor, though we rely on it having a resize function.
-        mBegin = c.begin();
-        mEnd = mBegin;
-        mSize = 0;
+        _begin = c.begin();
+        _end = _begin;
+        _size = 0;
 
         swap(x);
         // We are leaving x in an unusual state by swapping default-initialized members with it, as it won't be usable and can be only destructible.
@@ -656,9 +656,9 @@ namespace fermat {
         : c(allocator) {
         c.resize(1);
         // Possibly we could construct 'c' with size, but c may not have such a ctor, though we rely on it having a resize function.
-        mBegin = c.begin();
-        mEnd = mBegin;
-        mSize = 0;
+        _begin = c.begin();
+        _end = _begin;
+        _size = 0;
 
         if (c.get_allocator() == x.c.get_allocator())
             swap(x);
@@ -673,9 +673,9 @@ namespace fermat {
                                                       const allocator_type &allocator)
         : c(allocator) {
         c.resize(ilist.size() + 1);
-        mBegin = c.begin();
-        mEnd = mBegin;
-        mSize = 0;
+        _begin = c.begin();
+        _end = _begin;
+        _size = 0;
 
         assign(ilist.begin(), ilist.end());
     }
@@ -687,13 +687,13 @@ namespace fermat {
         if (&x != this) {
             c = x.c;
 
-            mBegin = c.begin();
-            mEnd = mBegin;
-            mSize = x.mSize;
+            _begin = c.begin();
+            _end = _begin;
+            _size = x._size;
 
-            std::advance(mBegin, std::distance(const_cast<this_type &>(x).c.begin(), x.mBegin));
+            std::advance(_begin, std::distance(const_cast<this_type &>(x).c.begin(), x._begin));
             // We can do a simple distance algorithm here, as there will be no wraparound.
-            std::advance(mEnd, std::distance(const_cast<this_type &>(x).c.begin(), x.mEnd));
+            std::advance(_end, std::distance(const_cast<this_type &>(x).c.begin(), x._end));
         }
 
         return *this;
@@ -702,7 +702,7 @@ namespace fermat {
 
     template<typename T, typename Container, typename Allocator>
     typename RingBuffer<T, Container, Allocator>::this_type &
-    RingBuffer<T, Container, Allocator>::operator=(this_type &&x) {
+    RingBuffer<T, Container, Allocator>::operator=(this_type &&x) noexcept {
         swap(x);
         return *this;
     }
@@ -729,29 +729,29 @@ namespace fermat {
 
 
     template<typename T, typename Container, typename Allocator>
-    void RingBuffer<T, Container, Allocator>::swap(this_type &x) {
+    void RingBuffer<T, Container, Allocator>::swap(this_type &x) noexcept {
         if (&x != this) {
-            const difference_type dBegin = std::distance(c.begin(), mBegin);
+            const difference_type dBegin = std::distance(c.begin(), _begin);
             // We can do a simple distance algorithm here, as there will be no wraparound.
-            const difference_type dEnd = std::distance(c.begin(), mEnd);
+            const difference_type dEnd = std::distance(c.begin(), _end);
 
-            const difference_type dxBegin = std::distance(x.c.begin(), x.mBegin);
-            const difference_type dxEnd = std::distance(x.c.begin(), x.mEnd);
+            const difference_type dxBegin = std::distance(x.c.begin(), x._begin);
+            const difference_type dxEnd = std::distance(x.c.begin(), x._end);
 
             std::swap(c, x.c);
-            std::swap(mSize, x.mSize);
+            std::swap(_size, x._size);
 
-            mBegin = c.begin();
-            std::advance(mBegin, dxBegin); // We can do a simple advance algorithm here, as there will be no wraparound.
+            _begin = c.begin();
+            std::advance(_begin, dxBegin); // We can do a simple advance algorithm here, as there will be no wraparound.
 
-            mEnd = c.begin();
-            std::advance(mEnd, dxEnd);
+            _end = c.begin();
+            std::advance(_end, dxEnd);
 
-            x.mBegin = x.c.begin();
-            std::advance(x.mBegin, dBegin);
+            x._begin = x.c.begin();
+            std::advance(x._begin, dBegin);
 
-            x.mEnd = x.c.begin();
-            std::advance(x.mEnd, dEnd);
+            x._end = x.c.begin();
+            std::advance(x._end, dEnd);
         }
     }
 
@@ -759,14 +759,14 @@ namespace fermat {
     template<typename T, typename Container, typename Allocator>
     typename RingBuffer<T, Container, Allocator>::iterator
     RingBuffer<T, Container, Allocator>::begin() noexcept {
-        return iterator(&c, mBegin);
+        return iterator(&c, _begin);
     }
 
 
     template<typename T, typename Container, typename Allocator>
     typename RingBuffer<T, Container, Allocator>::const_iterator
     RingBuffer<T, Container, Allocator>::begin() const noexcept {
-        return const_iterator(const_cast<Container *>(&c), mBegin);
+        return const_iterator(const_cast<Container *>(&c), _begin);
         // We trust that the const_iterator will respect const-ness.
     }
 
@@ -774,7 +774,7 @@ namespace fermat {
     template<typename T, typename Container, typename Allocator>
     typename RingBuffer<T, Container, Allocator>::const_iterator
     RingBuffer<T, Container, Allocator>::cbegin() const noexcept {
-        return const_iterator(const_cast<Container *>(&c), mBegin);
+        return const_iterator(const_cast<Container *>(&c), _begin);
         // We trust that the const_iterator will respect const-ness.
     }
 
@@ -782,14 +782,14 @@ namespace fermat {
     template<typename T, typename Container, typename Allocator>
     typename RingBuffer<T, Container, Allocator>::iterator
     RingBuffer<T, Container, Allocator>::end() noexcept {
-        return iterator(&c, mEnd);
+        return iterator(&c, _end);
     }
 
 
     template<typename T, typename Container, typename Allocator>
     typename RingBuffer<T, Container, Allocator>::const_iterator
     RingBuffer<T, Container, Allocator>::end() const noexcept {
-        return const_iterator(const_cast<Container *>(&c), mEnd);
+        return const_iterator(const_cast<Container *>(&c), _end);
         // We trust that the const_iterator will respect const-ness.
     }
 
@@ -797,7 +797,7 @@ namespace fermat {
     template<typename T, typename Container, typename Allocator>
     typename RingBuffer<T, Container, Allocator>::const_iterator
     RingBuffer<T, Container, Allocator>::cend() const noexcept {
-        return const_iterator(const_cast<Container *>(&c), mEnd);
+        return const_iterator(const_cast<Container *>(&c), _end);
         // We trust that the const_iterator will respect const-ness.
     }
 
@@ -805,67 +805,67 @@ namespace fermat {
     template<typename T, typename Container, typename Allocator>
     typename RingBuffer<T, Container, Allocator>::reverse_iterator
     RingBuffer<T, Container, Allocator>::rbegin() noexcept {
-        return reverse_iterator(iterator(&c, mEnd));
+        return reverse_iterator(iterator(&c, _end));
     }
 
 
     template<typename T, typename Container, typename Allocator>
     typename RingBuffer<T, Container, Allocator>::const_reverse_iterator
     RingBuffer<T, Container, Allocator>::rbegin() const noexcept {
-        return const_reverse_iterator(const_iterator(const_cast<Container *>(&c), mEnd));
+        return const_reverse_iterator(const_iterator(const_cast<Container *>(&c), _end));
     }
 
 
     template<typename T, typename Container, typename Allocator>
     typename RingBuffer<T, Container, Allocator>::const_reverse_iterator
     RingBuffer<T, Container, Allocator>::crbegin() const noexcept {
-        return const_reverse_iterator(const_iterator(const_cast<Container *>(&c), mEnd));
+        return const_reverse_iterator(const_iterator(const_cast<Container *>(&c), _end));
     }
 
 
     template<typename T, typename Container, typename Allocator>
     typename RingBuffer<T, Container, Allocator>::reverse_iterator
     RingBuffer<T, Container, Allocator>::rend() noexcept {
-        return reverse_iterator(iterator(&c, mBegin));
+        return reverse_iterator(iterator(&c, _begin));
     }
 
 
     template<typename T, typename Container, typename Allocator>
     typename RingBuffer<T, Container, Allocator>::const_reverse_iterator
     RingBuffer<T, Container, Allocator>::rend() const noexcept {
-        return const_reverse_iterator(const_iterator(const_cast<Container *>(&c), mBegin));
+        return const_reverse_iterator(const_iterator(const_cast<Container *>(&c), _begin));
     }
 
 
     template<typename T, typename Container, typename Allocator>
     typename RingBuffer<T, Container, Allocator>::const_reverse_iterator
     RingBuffer<T, Container, Allocator>::crend() const noexcept {
-        return const_reverse_iterator(const_iterator(const_cast<Container *>(&c), mBegin));
+        return const_reverse_iterator(const_iterator(const_cast<Container *>(&c), _begin));
     }
 
 
     template<typename T, typename Container, typename Allocator>
     bool RingBuffer<T, Container, Allocator>::empty() const noexcept {
-        return mBegin == mEnd;
+        return _begin == _end;
     }
 
 
     template<typename T, typename Container, typename Allocator>
     bool RingBuffer<T, Container, Allocator>::full() const noexcept {
         // Implementation that relies on c.size() being a fast operation:
-        // return mSize == (c.size() - 1); // (c.size() - 1) == capacity(); we are attempting to reduce function calls.
+        // return _size == (c.size() - 1); // (c.size() - 1) == capacity(); we are attempting to reduce function calls.
 
         // Version that has constant speed guarantees, but is still pretty fast.
         const_iterator afterEnd(end());
         ++afterEnd;
-        return afterEnd.mContainerIterator == mBegin;
+        return afterEnd.mContainerIterator == _begin;
     }
 
 
     template<typename T, typename Container, typename Allocator>
     typename RingBuffer<T, Container, Allocator>::size_type
     RingBuffer<T, Container, Allocator>::size() const noexcept {
-        return mSize;
+        return _size;
 
         // Alternatives:
         // return std::distance(begin(), end());
@@ -898,15 +898,15 @@ namespace fermat {
     RingBuffer<T, Container, Allocator>::DoGetSize(std::random_access_iterator_tag) const
     {
         // A simpler but less efficient implementation fo this function would be:
-        //     return std::distance(mBegin, mEnd);
+        //     return std::distance(_begin, _end);
         //
         // The calculation of distance here takes advantage of the fact that random
         // access iterators' distances can be calculated by simple pointer calculation.
         // Thus the code below boils down to a few subtractions when using a vector,
         // string, or array as the Container type.
         //
-        const difference_type dBegin = std::distance(const_cast<Container&>(c).begin(), mBegin); // const_cast here solves a little compiler
-        const difference_type dEnd   = std::distance(const_cast<Container&>(c).begin(), mEnd);   // argument matching problem.
+        const difference_type dBegin = std::distance(const_cast<Container&>(c).begin(), _begin); // const_cast here solves a little compiler
+        const difference_type dEnd   = std::distance(const_cast<Container&>(c).begin(), _end);   // argument matching problem.
 
         if(dEnd >= dBegin)
             return dEnd - dBegin;
@@ -1001,7 +1001,7 @@ namespace fermat {
         KCHECK(c.size() >= 1);
         const size_type cap = (c.size() - 1);
 
-        mSize = n;
+        _size = n;
 
         if (n > cap) {
             // If we need to grow in capacity...
@@ -1021,24 +1021,24 @@ namespace fermat {
             std::copy(begin(), end(), cTemp.get().begin());
             std::swap(c, cTemp.get());
 
-            mBegin = c.begin();
-            mEnd = mBegin;
-            std::advance(mEnd, n);
-            // We can do a simple advance algorithm on this because we know that mEnd will not wrap around.
+            _begin = c.begin();
+            _end = _begin;
+            std::advance(_end, n);
+            // We can do a simple advance algorithm on this because we know that _end will not wrap around.
         } else
         // We could do a check here for n != size(), but that would be costly and people don't usually resize things to their same size.
         {
-            mEnd = mBegin;
+            _end = _begin;
 
-            // std::advance(mEnd, n); // We *cannot* use this because there may be wraparound involved.
+            // std::advance(_end, n); // We *cannot* use this because there may be wraparound involved.
 
             // To consider: Possibly we should implement some more detailed logic to optimize the code here.
             // We'd need to do different behaviour dending on whether the container iterator type is a
             // random access iterator or otherwise.
 
             while (n--) {
-                if (TURBO_UNLIKELY(++mEnd == c.end()))
-                    mEnd = c.begin();
+                if (TURBO_UNLIKELY(++_end == c.end()))
+                    _end = c.begin();
             }
         }
     }
@@ -1050,7 +1050,7 @@ namespace fermat {
         KCHECK(c.size() >= 1);
         // This is required because even an empty RingBuffer has one unused termination element, somewhat like a \0 at the end of a C string.
 
-        return (c.size() - 1); // Need to subtract one because the position at mEnd is unused.
+        return (c.size() - 1); // Need to subtract one because the position at _end is unused.
     }
 
 
@@ -1065,20 +1065,20 @@ namespace fermat {
 
             iterator itCopyBegin = begin();
 
-            if (n < mSize) // If we are shrinking the capacity, to less than our size...
+            if (n < _size) // If we are shrinking the capacity, to less than our size...
             {
-                std::advance(itCopyBegin, mSize - n);
-                mSize = n;
+                std::advance(itCopyBegin, _size - n);
+                _size = n;
             }
 
             std::copy(itCopyBegin, end(), cTemp.get().begin());
             // The begin-end range may in fact be larger than n, in which case values will be overwritten.
             std::swap(c, cTemp.get());
 
-            mBegin = c.begin();
-            mEnd = mBegin;
-            std::advance(mEnd, mSize);
-            // We can do a simple advance algorithm on this because we know that mEnd will not wrap around.
+            _begin = c.begin();
+            _end = _begin;
+            std::advance(_end, _size);
+            // We can do a simple advance algorithm on this because we know that _end will not wrap around.
         }
     }
 
@@ -1096,10 +1096,10 @@ namespace fermat {
             std::copy(begin(), end(), cTemp.get().begin());
             std::swap(c, cTemp.get());
 
-            mBegin = c.begin();
-            mEnd = mBegin;
-            std::advance(mEnd, mSize);
-            // We can do a simple advance algorithm on this because we know that mEnd will not wrap around.
+            _begin = c.begin();
+            _end = _begin;
+            std::advance(_end, _size);
+            // We can do a simple advance algorithm on this because we know that _end will not wrap around.
         }
     }
 
@@ -1107,14 +1107,14 @@ namespace fermat {
     template<typename T, typename Container, typename Allocator>
     typename RingBuffer<T, Container, Allocator>::reference
     RingBuffer<T, Container, Allocator>::front() {
-        return *mBegin;
+        return *_begin;
     }
 
 
     template<typename T, typename Container, typename Allocator>
     typename RingBuffer<T, Container, Allocator>::const_reference
     RingBuffer<T, Container, Allocator>::front() const {
-        return *mBegin;
+        return *_begin;
     }
 
 
@@ -1143,16 +1143,16 @@ namespace fermat {
     /// being overwritten and the begin position being moved foward one position.
     template<typename T, typename Container, typename Allocator>
     void RingBuffer<T, Container, Allocator>::push_back(const value_type &value) {
-        *mEnd = value;
+        *_end = value;
 
-        if (++mEnd == c.end())
-            mEnd = c.begin();
+        if (++_end == c.end())
+            _end = c.begin();
 
-        if (mEnd == mBegin) {
-            if (++mBegin == c.end())
-                mBegin = c.begin();
+        if (_end == _begin) {
+            if (++_begin == c.end())
+                _begin = c.begin();
         } else
-            ++mSize;
+            ++_size;
     }
 
 
@@ -1162,20 +1162,20 @@ namespace fermat {
     template<typename T, typename Container, typename Allocator>
     typename RingBuffer<T, Container, Allocator>::reference
     RingBuffer<T, Container, Allocator>::push_back() {
-        // We don't do the following assignment, as the value at mEnd is already constructed;
+        // We don't do the following assignment, as the value at _end is already constructed;
         // it is merely possibly not default-constructed. However, the spirit of push_back
         // is that the user intends to do an assignment or data modification after the
         // push_back call. The user can always execute *back() = value_type() if he wants.
-        //*mEnd = value_type();
+        //*_end = value_type();
 
-        if (++mEnd == c.end())
-            mEnd = c.begin();
+        if (++_end == c.end())
+            _end = c.begin();
 
-        if (mEnd == mBegin) {
-            if (++mBegin == c.end())
-                mBegin = c.begin();
+        if (_end == _begin) {
+            if (++_begin == c.end())
+                _begin = c.begin();
         } else
-            ++mSize;
+            ++_size;
 
         return back();
     }
@@ -1183,58 +1183,58 @@ namespace fermat {
 
     template<typename T, typename Container, typename Allocator>
     void RingBuffer<T, Container, Allocator>::pop_back() {
-        KCHECK(mEnd != mBegin); // We assume that size() > 0 and thus that there is something to pop.
+        KCHECK(_end != _begin); // We assume that size() > 0 and thus that there is something to pop.
 
-        if (TURBO_UNLIKELY(mEnd == c.begin()))
-            mEnd = c.end();
-        --mEnd;
-        --mSize;
+        if (TURBO_UNLIKELY(_end == c.begin()))
+            _end = c.end();
+        --_end;
+        --_size;
     }
 
 
     template<typename T, typename Container, typename Allocator>
     void RingBuffer<T, Container, Allocator>::push_front(const value_type &value) {
-        if (TURBO_UNLIKELY(mBegin == c.begin()))
-            mBegin = c.end();
+        if (TURBO_UNLIKELY(_begin == c.begin()))
+            _begin = c.end();
 
-        if (--mBegin == mEnd) {
-            if (TURBO_UNLIKELY(mEnd == c.begin()))
-                mEnd = c.end();
-            --mEnd;
+        if (--_begin == _end) {
+            if (TURBO_UNLIKELY(_end == c.begin()))
+                _end = c.end();
+            --_end;
         } else
-            ++mSize;
+            ++_size;
 
-        *mBegin = value;
+        *_begin = value;
     }
 
 
     template<typename T, typename Container, typename Allocator>
     typename RingBuffer<T, Container, Allocator>::reference
     RingBuffer<T, Container, Allocator>::push_front() {
-        if (TURBO_UNLIKELY(mBegin == c.begin()))
-            mBegin = c.end();
+        if (TURBO_UNLIKELY(_begin == c.begin()))
+            _begin = c.end();
 
-        if (--mBegin == mEnd) {
-            if (TURBO_UNLIKELY(mEnd == c.begin()))
-                mEnd = c.end();
-            --mEnd;
+        if (--_begin == _end) {
+            if (TURBO_UNLIKELY(_end == c.begin()))
+                _end = c.end();
+            --_end;
         } else
-            ++mSize;
+            ++_size;
 
         // See comments above in push_back for why we don't execute this:
-        // *mBegin = value_type();
+        // *_begin = value_type();
 
-        return *mBegin; // Same as return front();
+        return *_begin; // Same as return front();
     }
 
 
     template<typename T, typename Container, typename Allocator>
     void RingBuffer<T, Container, Allocator>::pop_front() {
-        KCHECK(mBegin != mEnd); // We assume that mEnd > mBegin and thus that there is something to pop.
+        KCHECK(_begin != _end); // We assume that _end > _begin and thus that there is something to pop.
 
-        if (++mBegin == c.end())
-            mBegin = c.begin();
-        --mSize;
+        if (++_begin == c.end())
+            _begin = c.begin();
+        --_size;
     }
 
 
@@ -1276,7 +1276,7 @@ namespace fermat {
 
         ++afterEnd;
 
-        if (afterEnd.mContainerIterator == mBegin) // If we are at full capacity...
+        if (afterEnd.mContainerIterator == _begin) // If we are at full capacity...
             --beforeEnd;
         else
             push_back();
@@ -1375,9 +1375,9 @@ namespace fermat {
     template<typename T, typename Container, typename Allocator>
     void RingBuffer<T, Container, Allocator>::clear() {
         // Don't clear the container; we use its valid data for our elements.
-        mBegin = c.begin();
-        mEnd = c.begin();
-        mSize = 0;
+        _begin = c.begin();
+        _end = c.begin();
+        _size = 0;
     }
 
 

@@ -22,6 +22,7 @@ set(SRC
         io/sysio.cc
         io/writer.cc
         memory/arena.cc
+        memory/malloc.cc
         memory/resource_pool.cc
 )
 kmcmake_cc_library(

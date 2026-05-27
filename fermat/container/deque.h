@@ -252,7 +252,7 @@ namespace fermat {
     ///
 #define DEQUE_DEFAULT_SUBARRAY_SIZE(T) ((sizeof(T) <= 4) ? 64 : ((sizeof(T) <= 8) ? 32 : ((sizeof(T) <= 16) ? 16 : ((sizeof(T) <= 32) ? 8 : 4))))
 
-    template<typename T, typename Allocator = BasicAllocator<T, 0>, unsigned kDequeSubarraySize = 64>
+    template<typename T, typename Allocator = BasicAllocator<T, 0>, unsigned kDequeSubarraySize = 256>
     class Deque : public DequeBase<T, Allocator, kDequeSubarraySize> {
     public:
         typedef DequeBase<T, Allocator, kDequeSubarraySize> base_type;

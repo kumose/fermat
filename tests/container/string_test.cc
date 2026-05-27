@@ -60,7 +60,7 @@ namespace {
     }
 
     template<class String>
-    void randomString(String *toFill, unsigned int maxSize = 1000) {
+    void randomString(String *toFill, uint32_t maxSize = 1000) {
         assert(toFill);
         auto r = random(0, maxSize);
         toFill->resize(r);
@@ -76,7 +76,7 @@ namespace {
         str = String(tmp.begin(), tmp.end());
     }
 
-    std::list<char> RandomList(unsigned int maxSize) {
+    std::list<char> RandomList(uint32_t maxSize) {
         std::list<char> lst(random(0u, maxSize));
         std::list<char>::iterator i = lst.begin();
         for (; i != lst.end(); ++i) {
@@ -1423,7 +1423,7 @@ TEST(KString, testFixedBugsD4355440) {
 
     EXPECT_EQ(
         str.capacity(),
-        Malloc::good_alloc_size(3840) - sizeof(char));
+        str.get_allocator().good_size(3840) - sizeof(char));
 }
 
 TEST(KString, findWithNpos) {

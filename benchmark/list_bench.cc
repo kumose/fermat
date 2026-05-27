@@ -13,7 +13,7 @@
 
 /// Alias for fermat::List with default alignment.
 template <typename T>
-using FermatList = fermat::List<T, alignof(T)>;
+using FermatList = fermat::List<T>;
 
 /// POD structure for testing.
 struct Pod3Int {

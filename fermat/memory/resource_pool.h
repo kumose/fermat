@@ -400,12 +400,12 @@ namespace fermat {
 
         // Allocate block and meta (omitted for brevity, same as before)
         size_t block_size = sizeof(ResourceBlock<T, SlotSize>);
-        void *block_mem = Malloc::good_alloc(&block_size);
+        void *block_mem = Malloc::good_alloc(block_size);
         if (!block_mem) throw std::bad_alloc();
         auto *new_block = new(block_mem) ResourceBlock<T, SlotSize>();
 
         size_t meta_size = sizeof(ResourceMeta<SlotSize>);
-        void *meta_mem = Malloc::good_alloc(&meta_size);
+        void *meta_mem = Malloc::good_alloc(meta_size);
         if (!meta_mem) {
             Malloc::good_free(block_mem);
             return false;

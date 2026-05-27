@@ -30,7 +30,7 @@ option(KMCMAKE_USE_CXX11_ABI "use cxx11 abi or not" ON)
 
 option(KMCMAKE_BUILD_TEST "enable project test or not" ON)
 
-option(KMCMAKE_BUILD_BENCHMARK "enable project benchmark or not" OFF)
+option(KMCMAKE_BUILD_BENCHMARK "enable project benchmark or not" ON)
 
 option(KMCMAKE_BUILD_EXAMPLES "enable project examples or not" OFF)
 

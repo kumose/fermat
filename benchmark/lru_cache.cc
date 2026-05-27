@@ -31,7 +31,7 @@ static std::vector<std::string> GenerateKeys(size_t n, size_t key_len = 8) {
 }
 
 using ValueType = int;
-using FermatStringList = fermat::List<std::string, alignof(std::string)>;
+using FermatStringList = fermat::List<std::string>;
 
 /// ---------------------------------------------------------------------------
 /// Four cache types (2x2 matrix)

@@ -172,7 +172,7 @@ namespace fermat {
     ///     MemoryPool myPool(sizeof(WidgetList::node_type), 100); // Make a pool of 100 Widget nodes.
     ///     WidgetList myList(&myPool);                            // Create a List that uses the pool.
     ///
-    template<typename T, size_t Alignment = 0, typename Allocator = BasicAllocator<ListNode<T>, Alignment> >
+    template<typename T, size_t Alignment = 0, typename Allocator = AlignedAllocator<ListNode<T>, Alignment> >
     class List : public ListBase<T, Alignment, Allocator> {
         typedef ListBase<T, Alignment, Allocator> base_type;
         typedef List<T, Alignment, Allocator> this_type;
@@ -667,7 +667,8 @@ namespace fermat {
 
     template<typename T, size_t Alignment, typename Allocator>
     inline void ListBase<T, Alignment, Allocator>::set_allocator(const allocator_type &allocator) {
-        if ((internal_allocator() != allocator) && (static_cast<node_type *>(internal_node()._next) != &internal_node()))
+        if ((internal_allocator() != allocator) && (
+                static_cast<node_type *>(internal_node()._next) != &internal_node()))
             throw std::logic_error("List::set_allocator -- cannot change allocator after allocations have been made.");
         internal_allocator() = allocator;
     }
@@ -676,8 +677,7 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     inline typename ListBase<T, Alignment, Allocator>::node_type *
     ListBase<T, Alignment, Allocator>::do_allocate_node() {
-        size_t n = 1;
-        node_type *pNode = internal_allocator().allocate(&n);
+        node_type *pNode = internal_allocator().allocate(1);
         return pNode;
     }
 
@@ -702,7 +702,9 @@ namespace fermat {
         while (p != &internal_node()) {
             auto *pTemp = static_cast<node_type *>(p);
             p = p->_next;
-            pTemp->~node_type();
+            if constexpr (!std::is_trivially_destructible_v<value_type>) {
+                pTemp->~node_type();
+            }
             internal_allocator().deallocate(pTemp, 1);
         }
     }
@@ -1664,7 +1666,10 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Allocator>
     inline void List<T, Alignment, Allocator>::do_erase(ListNodeBase *pNode) {
         pNode->remove();
-        ((node_type *) pNode)->~node_type();
+        if constexpr (!std::is_trivially_destructible_v<value_type>) {
+            ((node_type *) pNode)->~node_type();
+        }
+
         do_free_node(((node_type *) pNode));
         --_size;
     }

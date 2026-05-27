@@ -76,14 +76,15 @@ BENCHMARK_TEMPLATE(BM_AppendBackSmall, fermat::Buffer<int>)->RangeMultiplier(2)-
 
 // 3. Emplace back (construct in place)
 // no emplace
-// 4. Sequential iteration (read)
+// 4. Sequential iteration (read) – measure only iteration, not construction
 template<typename Vec>
 static void BM_IterationSmall(benchmark::State& state) {
     size_t n = state.range(0);
     auto data = GenerateData(n);
+    // Construct once outside the loop
+    Vec v(data.begin(), data.end());
     volatile long sum = 0;
     for (auto _ : state) {
-        Vec v(data.begin(), data.end());
         for (const auto& x : v) sum += x;
         benchmark::DoNotOptimize(sum);
     }
