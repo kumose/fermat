@@ -75,10 +75,10 @@ namespace fermat {
         template<typename, typename, typename, unsigned>
         friend struct DequeIterator;
 
-        template<typename, typename, unsigned>
+        template<typename, typename, typename, unsigned>
         friend struct DequeBase;
 
-        template<typename, typename, unsigned>
+        template<typename, size_t, typename, typename, typename, unsigned>
         friend class Deque;
 
         template<typename U, typename PointerA, typename ReferenceA, typename PointerB, typename ReferenceB, unsigned
@@ -166,10 +166,11 @@ namespace fermat {
     /// See VectorBase (class vector) for an explanation of why we
     /// create this separate base class.
     ///
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
+    template<typename T, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
     struct DequeBase {
         typedef T value_type;
         typedef Allocator allocator_type;
+        typedef ArrayAllocator array_allocator_type;
         typedef size_t size_type; // See config.h for the definition of size_t, which defaults to size_t.
         typedef ptrdiff_t difference_type;
         typedef DequeIterator<T, T *, T &, kDequeSubarraySize> iterator;
@@ -198,6 +199,7 @@ namespace fermat {
         iterator _it_begin; // Where within the subarrays is our beginning.
         iterator _it_end; // Where within the subarrays is our end.
         allocator_type _allocator; // To do: Use base class optimization to make this go away.
+        array_allocator_type _array_allocator;
 
     public:
         DequeBase(const allocator_type &allocator);
@@ -221,9 +223,9 @@ namespace fermat {
 
         void DoFreeSubarrays(T **pBegin, T **pEnd);
 
-        T **do_allocate_ptr_array(size_type *n);
+        T **do_allocate_ptr_array(size_type n);
 
-        void do_free_ptr_array(T **p, size_t n);
+        void do_free_ptr_array(T **p, size_type n);
 
         iterator do_realloc_subarray(size_type nAdditionalCapacity, Side allocationSide);
 
@@ -252,11 +254,14 @@ namespace fermat {
     ///
 #define DEQUE_DEFAULT_SUBARRAY_SIZE(T) ((sizeof(T) <= 4) ? 64 : ((sizeof(T) <= 8) ? 32 : ((sizeof(T) <= 16) ? 16 : ((sizeof(T) <= 32) ? 8 : 4))))
 
-    template<typename T, typename Allocator = BasicAllocator<T, 0>, unsigned kDequeSubarraySize = 256>
-    class Deque : public DequeBase<T, Allocator, kDequeSubarraySize> {
+    template<typename T, size_t Alignment = 64, typename Policy = TimesPolicy<2, 1>,
+        typename Allocator = AlignedAllocator<T, Alignment, Policy>,
+        typename ArrayAllocator = AlignedAllocator<T *, Alignment, Policy>,
+        unsigned kDequeSubarraySize = 512>
+    class Deque : public DequeBase<T, Allocator, ArrayAllocator, kDequeSubarraySize> {
     public:
-        typedef DequeBase<T, Allocator, kDequeSubarraySize> base_type;
-        typedef Deque<T, Allocator, kDequeSubarraySize> this_type;
+        typedef DequeBase<T, Allocator, ArrayAllocator, kDequeSubarraySize> base_type;
+        typedef Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize> this_type;
         typedef T value_type;
         typedef T *pointer;
         typedef const T *const_pointer;
@@ -283,6 +288,7 @@ namespace fermat {
         using base_type::_it_begin;
         using base_type::_it_end;
         using base_type::_allocator;
+        using base_type::_array_allocator;
         using base_type::do_allocate_subarray;
         using base_type::DoFreeSubarray;
         using base_type::DoFreeSubarrays;
@@ -488,8 +494,8 @@ namespace fermat {
     // DequeBase
     ///////////////////////////////////////////////////////////////////////
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    DequeBase<T, Allocator, kDequeSubarraySize>::DequeBase(const allocator_type &allocator)
+    template<typename T, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    DequeBase<T, Allocator, ArrayAllocator, kDequeSubarraySize>::DequeBase(const allocator_type &allocator)
         : _ptr_array(nullptr),
           _ptr_array_size(0),
           _it_begin(),
@@ -499,8 +505,8 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    DequeBase<T, Allocator, kDequeSubarraySize>::DequeBase(size_type n)
+    template<typename T, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    DequeBase<T, Allocator, ArrayAllocator, kDequeSubarraySize>::DequeBase(size_type n)
         : _ptr_array(nullptr),
           _ptr_array_size(0),
           _it_begin(),
@@ -513,8 +519,8 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    DequeBase<T, Allocator, kDequeSubarraySize>::DequeBase(size_type n, const allocator_type &allocator)
+    template<typename T, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    DequeBase<T, Allocator, ArrayAllocator, kDequeSubarraySize>::DequeBase(size_type n, const allocator_type &allocator)
         : _ptr_array(nullptr),
           _ptr_array_size(0),
           _it_begin(),
@@ -527,8 +533,8 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    DequeBase<T, Allocator, kDequeSubarraySize>::~DequeBase() {
+    template<typename T, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    DequeBase<T, Allocator, ArrayAllocator, kDequeSubarraySize>::~DequeBase() {
         if (_ptr_array) {
             DoFreeSubarrays(_it_begin._current_array_ptr, _it_end._current_array_ptr + 1);
             do_free_ptr_array(_ptr_array, _ptr_array_size);
@@ -537,27 +543,27 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    const typename DequeBase<T, Allocator, kDequeSubarraySize>::allocator_type &
-    DequeBase<T, Allocator, kDequeSubarraySize>::get_allocator() const noexcept {
+    template<typename T, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    const typename DequeBase<T, Allocator, ArrayAllocator, kDequeSubarraySize>::allocator_type &
+    DequeBase<T, Allocator, ArrayAllocator, kDequeSubarraySize>::get_allocator() const noexcept {
         return _allocator;
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename DequeBase<T, Allocator, kDequeSubarraySize>::allocator_type &
-    DequeBase<T, Allocator, kDequeSubarraySize>::get_allocator() noexcept {
+    template<typename T, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename DequeBase<T, Allocator, ArrayAllocator, kDequeSubarraySize>::allocator_type &
+    DequeBase<T, Allocator, ArrayAllocator, kDequeSubarraySize>::get_allocator() noexcept {
         return _allocator;
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    void DequeBase<T, Allocator, kDequeSubarraySize>::set_allocator(const allocator_type &allocator) {
+    template<typename T, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    void DequeBase<T, Allocator, ArrayAllocator, kDequeSubarraySize>::set_allocator(const allocator_type &allocator) {
         // The only time you can set an allocator is with an empty unused container, such as right after construction.
         if (TURBO_LIKELY(_allocator != allocator)) {
             // our Deque implementation always has allocations for _ptr_array. this set_allocator() is unlike other container's set_allocator() member function
             // in that it actually frees allocations when assigning the allocator. this lack of consistency is unfortunate.
-            if (TURBO_LIKELY(_ptr_array && (_it_begin._current == _it_end._current))) // is the container empty?
+            if (TURBO_LIKELY(_ptr_array && (_it_end - _it_begin) == 0)) // is the container empty?
             {
                 DoFreeSubarrays(_it_begin._current_array_ptr, _it_end._current_array_ptr + 1);
                 do_free_ptr_array(_ptr_array, _ptr_array_size);
@@ -571,10 +577,9 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    T *DequeBase<T, Allocator, kDequeSubarraySize>::do_allocate_subarray() {
-        size_type n = kDequeSubarraySize;
-        T *p = _allocator.allocate(&n);
+    template<typename T, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    T *DequeBase<T, Allocator, ArrayAllocator, kDequeSubarraySize>::do_allocate_subarray() {
+        T *p = _allocator.allocate(kDequeSubarraySize);
         KCHECK(p != nullptr) << "the behaviour of std::allocators that return nullptr is not defined.";
 
 #if FERMAT_DEBUG
@@ -585,21 +590,21 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    void DequeBase<T, Allocator, kDequeSubarraySize>::DoFreeSubarray(T *p) {
+    template<typename T, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    void DequeBase<T, Allocator, ArrayAllocator, kDequeSubarraySize>::DoFreeSubarray(T *p) {
         if (p)
             _allocator.deallocate(p, kDequeSubarraySize);
     }
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    void DequeBase<T, Allocator, kDequeSubarraySize>::DoFreeSubarrays(T **pBegin, T **pEnd) {
+    template<typename T, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    void DequeBase<T, Allocator, ArrayAllocator, kDequeSubarraySize>::DoFreeSubarrays(T **pBegin, T **pEnd) {
         while (pBegin < pEnd)
             DoFreeSubarray(*pBegin++);
     }
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    T **DequeBase<T, Allocator, kDequeSubarraySize>::do_allocate_ptr_array(size_type *n) {
-        T **pp = (T **) BasicAllocator<T *, 0>().allocate(n);
+    template<typename T, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    T **DequeBase<T, Allocator, ArrayAllocator, kDequeSubarraySize>::do_allocate_ptr_array(size_type n) {
+        T **pp = _array_allocator.allocate(n);
         KCHECK(pp != nullptr) << "the behaviour of std::allocators that return nullptr is not defined.";
 
 #if FERMAT_DEBUG
@@ -610,17 +615,16 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    void DequeBase<T, Allocator, kDequeSubarraySize>::do_free_ptr_array(T **pp, size_t n) {
+    template<typename T, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    void DequeBase<T, Allocator, ArrayAllocator, kDequeSubarraySize>::do_free_ptr_array(T **pp, size_type n) {
         if (pp)
-            BasicAllocator<T *, 0>().deallocate(pp, n);
+            _array_allocator.deallocate(pp, n);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename DequeBase<T, Allocator, kDequeSubarraySize>::iterator
-    DequeBase<T, Allocator,
-        kDequeSubarraySize>::do_realloc_subarray(size_type nAdditionalCapacity, Side allocationSide) {
+    template<typename T, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename DequeBase<T, Allocator, ArrayAllocator, kDequeSubarraySize>::iterator
+    DequeBase<T, Allocator, ArrayAllocator, kDequeSubarraySize>::do_realloc_subarray(size_type nAdditionalCapacity, Side allocationSide) {
         // nAdditionalCapacity refers to the amount of additional space we need to be
         // able to store in this Deque. Typically this function is called as part of
         // an insert or append operation. This is the function that makes sure there
@@ -676,8 +680,8 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    void DequeBase<T, Allocator, kDequeSubarraySize>::DoReallocPtrArray(size_type nAdditionalCapacity,
+    template<typename T, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    void DequeBase<T, Allocator, ArrayAllocator, kDequeSubarraySize>::DoReallocPtrArray(size_type nAdditionalCapacity,
                                                                         Side allocationSide) {
         // This function is not called unless the capacity is known to require a resize.
         //
@@ -731,8 +735,9 @@ namespace fermat {
         } else {
             // In this case we will have to do a reallocation.
             size_type nNewPtrArraySize = _ptr_array_size + std::max(_ptr_array_size, nAdditionalCapacity) + 2;
+            nNewPtrArraySize = _array_allocator.good_size(nNewPtrArraySize);
             // Allocate extra capacity.
-            value_type **const pNewPtrArray = do_allocate_ptr_array(&nNewPtrArraySize);
+            value_type **const pNewPtrArray = do_allocate_ptr_array(nNewPtrArraySize);
 
             pPtrArrayBegin = pNewPtrArray + (_it_begin._current_array_ptr - _ptr_array) + ((allocationSide ==
                                      kSideFront)
@@ -751,13 +756,17 @@ namespace fermat {
         }
 
         // We need to reset the begin and end iterators, as code that calls this expects them to *not* be invalidated.
+        const difference_type nBeginOffset = _it_begin._current - _it_begin._begin;
+        const difference_type nEndOffset = _it_end._current - _it_end._begin;
         _it_begin.set_subarray(pPtrArrayBegin);
+        _it_begin._current = _it_begin._begin + nBeginOffset;
         _it_end.set_subarray((pPtrArrayBegin + nUsedPtrCount) - 1);
+        _it_end._current = _it_end._begin + nEndOffset;
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    void DequeBase<T, Allocator, kDequeSubarraySize>::do_init(size_type n) {
+    template<typename T, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    void DequeBase<T, Allocator, ArrayAllocator, kDequeSubarraySize>::do_init(size_type n) {
         // This code is disabled because it doesn't currently work properly.
         // We are trying to make it so that a Deque can have a zero allocation
         // initial empty state, but we (OK, I) am having a hard time making
@@ -768,8 +777,8 @@ namespace fermat {
         // Always have at least one, even if n is zero.
         const size_type kMinPtrArraySize_ = kMinPtrArraySize;
 
-        _ptr_array_size = std::max(kMinPtrArraySize_, (nNewPtrArraySize + 2));
-        _ptr_array = do_allocate_ptr_array(&_ptr_array_size);
+        _ptr_array_size = _array_allocator.good_size(std::max(kMinPtrArraySize_, (nNewPtrArraySize + 2)));
+        _ptr_array = do_allocate_ptr_array(_ptr_array_size);
 
         value_type **const pPtrArrayBegin = (_ptr_array + ((_ptr_array_size - nNewPtrArraySize) / 2));
         // Try to place it in the middle.
@@ -783,8 +792,10 @@ namespace fermat {
         _it_begin.set_subarray(pPtrArrayBegin);
         _it_begin._current = _it_begin._begin;
 
-        _it_end.set_subarray(pPtrArrayEnd - 1);
-        _it_end._current = _it_end._begin + (difference_type) (n % kDequeSubarraySize);
+        const difference_type endSubarrayIndex =
+            static_cast<difference_type>(n / kDequeSubarraySize);
+        _it_end.set_subarray(pPtrArrayBegin + endSubarrayIndex);
+        _it_end._current = _it_end._begin + static_cast<difference_type>(n % kDequeSubarraySize);
     }
 
 
@@ -947,15 +958,43 @@ namespace fermat {
     typename DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::this_type
     DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::move(const iterator &first, const iterator &last,
                                                                    std::true_type) {
-        // To do: Implement this as a loop which does memcpys between subarrays appropriately.
-        //        Currently we only do memcpy if the entire operation occurs within a single subarray.
-        if ((first._begin == last._begin) && (first._begin == _begin))
-        // If all operations are within the same subarray, implement the operation as a memmove.
-        {
-            memmove(_current, first._current, (size_t) ((uintptr_t) last._current - (uintptr_t) first._current));
-            return *this + (last._current - first._current);
+        const difference_type nRemaining = last - first;
+        if (nRemaining == 0)
+            return *this;
+
+        if ((first._begin == last._begin) && (first._begin == _begin)) {
+            memmove(_current, first._current, (size_t) nRemaining * sizeof(T));
+            return *this + nRemaining;
         }
-        return std::move(first, last, *this);
+
+        iterator src = first;
+        this_type dst = *this;
+
+        for (difference_type nLeft = nRemaining; nLeft > 0;) {
+            const difference_type srcUntilChunkEnd = (src._begin + kDequeSubarraySize) - src._current;
+            const difference_type dstUntilChunkEnd = (dst._begin + kDequeSubarraySize) - dst._current;
+            difference_type batch = nLeft;
+            if (srcUntilChunkEnd < batch)
+                batch = srcUntilChunkEnd;
+            if (dstUntilChunkEnd < batch)
+                batch = dstUntilChunkEnd;
+
+            memmove(dst._current, src._current, (size_t) batch * sizeof(T));
+
+            nLeft -= batch;
+            src._current += batch;
+            dst._current += batch;
+
+            if (src._current == src._begin + kDequeSubarraySize) {
+                src._begin = *++src._current_array_ptr;
+                src._current = src._begin;
+            }
+            if (dst._current == dst._begin + kDequeSubarraySize) {
+                dst._begin = *++dst._current_array_ptr;
+                dst._current = dst._begin;
+            }
+        }
+        return *this + nRemaining;
     }
 
 
@@ -970,14 +1009,41 @@ namespace fermat {
     template<typename T, typename Pointer, typename Reference, unsigned kDequeSubarraySize>
     void DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::move_backward(
         const iterator &first, const iterator &last, std::true_type) {
-        // To do: Implement this as a loop which does memmoves between subarrays appropriately.
-        //        Currently we only do memcpy if the entire operation occurs within a single subarray.
-        if ((first._begin == last._begin) && (first._begin == _begin))
-            // If all operations are within the same subarray, implement the operation as a memcpy.
-            memmove(_current - (last._current - first._current), first._current,
-                    (size_t) ((uintptr_t) last._current - (uintptr_t) first._current));
-        else
-            std::move_backward(first, last, *this);
+        const difference_type nRemaining = last - first;
+        if (nRemaining == 0)
+            return;
+
+        if ((first._begin == last._begin) && (first._begin == _begin)) {
+            memmove(_current - nRemaining, first._current, (size_t) nRemaining * sizeof(T));
+            return;
+        }
+
+        iterator src = last;
+        this_type dst = *this;
+
+        for (difference_type nLeft = nRemaining; nLeft > 0;) {
+            if (src._current == src._begin) {
+                src._begin = *--src._current_array_ptr;
+                src._current = src._begin + kDequeSubarraySize;
+            }
+            if (dst._current == dst._begin) {
+                dst._begin = *--dst._current_array_ptr;
+                dst._current = dst._begin + kDequeSubarraySize;
+            }
+
+            const difference_type srcUntilChunkBegin = src._current - src._begin;
+            const difference_type dstUntilChunkBegin = dst._current - dst._begin;
+            difference_type batch = nLeft;
+            if (srcUntilChunkBegin < batch)
+                batch = srcUntilChunkBegin;
+            if (dstUntilChunkBegin < batch)
+                batch = dstUntilChunkBegin;
+
+            src._current -= batch;
+            dst._current -= batch;
+            memmove(dst._current, src._current, (size_t) batch * sizeof(T));
+            nLeft -= batch;
+        }
     }
 
 
@@ -1092,67 +1158,67 @@ namespace fermat {
     // Deque
     ///////////////////////////////////////////////////////////////////////
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline Deque<T, Allocator, kDequeSubarraySize>::Deque()
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::Deque()
         : base_type((size_type) 0) {
         // Empty
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline Deque<T, Allocator, kDequeSubarraySize>::Deque(const allocator_type &allocator)
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::Deque(const allocator_type &allocator)
         : base_type((size_type) 0, allocator) {
         // Empty
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline Deque<T, Allocator, kDequeSubarraySize>::Deque(size_type n, const allocator_type &allocator)
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::Deque(size_type n, const allocator_type &allocator)
         : base_type(n, allocator) {
         do_fill_init(value_type());
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline Deque<T, Allocator, kDequeSubarraySize>::Deque(size_type n, const value_type &value,
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::Deque(size_type n, const value_type &value,
                                                           const allocator_type &allocator)
         : base_type(n, allocator) {
         do_fill_init(value);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline Deque<T, Allocator, kDequeSubarraySize>::Deque(const this_type &x)
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::Deque(const this_type &x)
         : base_type(x.size(), x._allocator) {
         std::uninitialized_copy(x._it_begin, x._it_end, _it_begin);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline Deque<T, Allocator, kDequeSubarraySize>::Deque(this_type &&x) noexcept
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::Deque(this_type &&x) noexcept
         : base_type((size_type) 0, x._allocator) {
         swap(x);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline Deque<T, Allocator, kDequeSubarraySize>::Deque(this_type &&x, const allocator_type &allocator)
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::Deque(this_type &&x, const allocator_type &allocator)
         : base_type((size_type) 0, allocator) {
         swap(x); // member swap handles the case that x has a different allocator than our allocator by doing a copy.
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline Deque<T, Allocator, kDequeSubarraySize>::Deque(std::initializer_list<value_type> ilist,
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::Deque(std::initializer_list<value_type> ilist,
                                                           const allocator_type &allocator)
         : base_type(allocator) {
         do_init(ilist.begin(), ilist.end(), std::false_type());
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
     template<typename InputIterator>
-    inline Deque<T, Allocator, kDequeSubarraySize>::Deque(InputIterator first, InputIterator last)
+    inline Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::Deque(InputIterator first, InputIterator last)
         : base_type(allocator_type{})
     // Call the empty base constructor, which does nothing. We need to do all the work in our own do_init.
     {
@@ -1160,16 +1226,16 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline Deque<T, Allocator, kDequeSubarraySize>::~Deque() {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::~Deque() {
         // Call destructors. Parent class will free the memory.
         fermat::destroy(_it_begin, _it_end);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::this_type &
-    Deque<T, Allocator, kDequeSubarraySize>::operator=(const this_type &x) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::this_type &
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::operator=(const this_type &x) {
         // If not assigning to ourselves...
         if (&x != this) {
             do_assign(x.begin(), x.end(), std::false_type());
@@ -1179,9 +1245,9 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline typename Deque<T, Allocator, kDequeSubarraySize>::this_type &
-    Deque<T, Allocator, kDequeSubarraySize>::operator=(this_type &&x) noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::this_type &
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::operator=(this_type &&x) noexcept {
         if (this != &x) {
             this_type temp(_allocator);
             swap(temp);
@@ -1192,22 +1258,22 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline typename Deque<T, Allocator, kDequeSubarraySize>::this_type &
-    Deque<T, Allocator, kDequeSubarraySize>::operator=(std::initializer_list<value_type> ilist) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::this_type &
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::operator=(std::initializer_list<value_type> ilist) {
         do_assign(ilist.begin(), ilist.end(), std::false_type());
         return *this;
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline void Deque<T, Allocator, kDequeSubarraySize>::assign(size_type n, const value_type &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::assign(size_type n, const value_type &value) {
         do_assign_values(n, value);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline void Deque<T, Allocator, kDequeSubarraySize>::assign(std::initializer_list<value_type> ilist) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::assign(std::initializer_list<value_type> ilist) {
         do_assign(ilist.begin(), ilist.end(), std::false_type());
     }
 
@@ -1215,112 +1281,112 @@ namespace fermat {
     // It turns out that the C++ std::Deque specifies a two argument
     // version of assign that takes (int size, int value). These are not
     // iterators, so we need to do a template compiler trick to do the right thing.
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
     template<typename InputIterator>
-    inline void Deque<T, Allocator, kDequeSubarraySize>::assign(InputIterator first, InputIterator last) {
+    inline void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::assign(InputIterator first, InputIterator last) {
         do_assign(first, last, std::is_integral<InputIterator>());
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline typename Deque<T, Allocator, kDequeSubarraySize>::iterator
-    Deque<T, Allocator, kDequeSubarraySize>::begin() noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::begin() noexcept {
         return _it_begin;
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline typename Deque<T, Allocator, kDequeSubarraySize>::const_iterator
-    Deque<T, Allocator, kDequeSubarraySize>::begin() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::const_iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::begin() const noexcept {
         return _it_begin;
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline typename Deque<T, Allocator, kDequeSubarraySize>::const_iterator
-    Deque<T, Allocator, kDequeSubarraySize>::cbegin() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::const_iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::cbegin() const noexcept {
         return _it_begin;
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline typename Deque<T, Allocator, kDequeSubarraySize>::iterator
-    Deque<T, Allocator, kDequeSubarraySize>::end() noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::end() noexcept {
         return _it_end;
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::const_iterator
-    Deque<T, Allocator, kDequeSubarraySize>::end() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::const_iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::end() const noexcept {
         return _it_end;
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline typename Deque<T, Allocator, kDequeSubarraySize>::const_iterator
-    Deque<T, Allocator, kDequeSubarraySize>::cend() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::const_iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::cend() const noexcept {
         return _it_end;
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline typename Deque<T, Allocator, kDequeSubarraySize>::reverse_iterator
-    Deque<T, Allocator, kDequeSubarraySize>::rbegin() noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::reverse_iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::rbegin() noexcept {
         return reverse_iterator(_it_end);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline typename Deque<T, Allocator, kDequeSubarraySize>::const_reverse_iterator
-    Deque<T, Allocator, kDequeSubarraySize>::rbegin() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::const_reverse_iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::rbegin() const noexcept {
         return const_reverse_iterator(_it_end);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline typename Deque<T, Allocator, kDequeSubarraySize>::const_reverse_iterator
-    Deque<T, Allocator, kDequeSubarraySize>::crbegin() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::const_reverse_iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::crbegin() const noexcept {
         return const_reverse_iterator(_it_end);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline typename Deque<T, Allocator, kDequeSubarraySize>::reverse_iterator
-    Deque<T, Allocator, kDequeSubarraySize>::rend() noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::reverse_iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::rend() noexcept {
         return reverse_iterator(_it_begin);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline typename Deque<T, Allocator, kDequeSubarraySize>::const_reverse_iterator
-    Deque<T, Allocator, kDequeSubarraySize>::rend() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::const_reverse_iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::rend() const noexcept {
         return const_reverse_iterator(_it_begin);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline typename Deque<T, Allocator, kDequeSubarraySize>::const_reverse_iterator
-    Deque<T, Allocator, kDequeSubarraySize>::crend() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::const_reverse_iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::crend() const noexcept {
         return const_reverse_iterator(_it_begin);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline bool Deque<T, Allocator, kDequeSubarraySize>::empty() const noexcept {
-        return _it_begin._current == _it_end._current;
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline bool Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::empty() const noexcept {
+        return size() == 0;
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::size_type
-    inline Deque<T, Allocator, kDequeSubarraySize>::size() const noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::size_type
+    inline Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::size() const noexcept {
         return (size_type) (_it_end - _it_begin);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline void Deque<T, Allocator, kDequeSubarraySize>::resize(size_type n, const value_type &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::resize(size_type n, const value_type &value) {
         const size_type nSizeCurrent = size();
 
         if (n > nSizeCurrent) // We expect that more often than not, resizes will be upsizes.
@@ -1330,21 +1396,21 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline void Deque<T, Allocator, kDequeSubarraySize>::resize(size_type n) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::resize(size_type n) {
         resize(n, value_type());
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline void Deque<T, Allocator, kDequeSubarraySize>::shrink_to_fit() {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::shrink_to_fit() {
         this_type x(std::make_move_iterator(begin()), std::make_move_iterator(end()));
         swap(x);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline void Deque<T, Allocator, kDequeSubarraySize>::set_capacity(size_type n) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::set_capacity(size_type n) {
         // Currently there isn't a way to remove all allocations from a Deque, as it
         // requires a single starting allocation for the subarrays. So we can't just
         // free all memory without leaving it in a bad state. So the best means of
@@ -1363,9 +1429,9 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::reference
-    Deque<T, Allocator, kDequeSubarraySize>::operator[](size_type n) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::reference
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::operator[](size_type n) {
         // See DequeIterator::operator+=() for an explanation of the code below.
         iterator it(_it_begin);
 
@@ -1377,9 +1443,9 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::const_reference
-    Deque<T, Allocator, kDequeSubarraySize>::operator[](size_type n) const {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::const_reference
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::operator[](size_type n) const {
         // See DequeIterator::operator+=() for an explanation of the code below.
         iterator it(_it_begin);
 
@@ -1391,90 +1457,90 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::reference
-    Deque<T, Allocator, kDequeSubarraySize>::at(size_type n) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::reference
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::at(size_type n) {
         return *(_it_begin.operator+((difference_type) n));
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::const_reference
-    Deque<T, Allocator, kDequeSubarraySize>::at(size_type n) const {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::const_reference
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::at(size_type n) const {
         return *(_it_begin.operator+((difference_type) n));
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::reference
-    Deque<T, Allocator, kDequeSubarraySize>::front() {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::reference
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::front() {
         return *_it_begin;
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::const_reference
-    Deque<T, Allocator, kDequeSubarraySize>::front() const {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::const_reference
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::front() const {
         return *_it_begin;
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::reference
-    Deque<T, Allocator, kDequeSubarraySize>::back() {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::reference
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::back() {
         return *iterator(_it_end, typename iterator::Decrement());
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::const_reference
-    Deque<T, Allocator, kDequeSubarraySize>::back() const {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::const_reference
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::back() const {
         return *iterator(_it_end, typename iterator::Decrement());
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    void Deque<T, Allocator, kDequeSubarraySize>::push_front(const value_type &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::push_front(const value_type &value) {
         emplace_front(value);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    void Deque<T, Allocator, kDequeSubarraySize>::push_front(value_type &&value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::push_front(value_type &&value) {
         emplace_front(std::move(value));
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::reference
-    Deque<T, Allocator, kDequeSubarraySize>::push_front() {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::reference
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::push_front() {
         emplace_front(value_type());
         return *_it_begin; // Same as return front();
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    void Deque<T, Allocator, kDequeSubarraySize>::push_back(const value_type &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::push_back(const value_type &value) {
         emplace_back(value);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    void Deque<T, Allocator, kDequeSubarraySize>::push_back(value_type &&value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::push_back(value_type &&value) {
         emplace_back(std::move(value));
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::reference
-    Deque<T, Allocator, kDequeSubarraySize>::push_back() {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::reference
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::push_back() {
         emplace_back(value_type());
         return *iterator(_it_end, typename iterator::Decrement()); // Same thing as return back();
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    void Deque<T, Allocator, kDequeSubarraySize>::pop_front() {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::pop_front() {
         if ((_it_begin._current + 1) != _it_begin._begin + kDequeSubarraySize) // If the operation is very simple...
             fermat::destroy_at(_it_begin._current++);
         else {
@@ -1496,8 +1562,8 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    void Deque<T, Allocator, kDequeSubarraySize>::pop_back() {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::pop_back() {
         if (_it_end._current != _it_end._begin) // If the operation is very simple...
             fermat::destroy_at(--_it_end._current);
         else {
@@ -1521,10 +1587,10 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
     template<class... Args>
-    typename Deque<T, Allocator, kDequeSubarraySize>::iterator
-    Deque<T, Allocator, kDequeSubarraySize>::emplace(const_iterator position, Args &&... args) {
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::emplace(const_iterator position, Args &&... args) {
         if (TURBO_UNLIKELY(position._current == _it_end._current)) // If we are doing the same thing as push_back...
         {
             emplace_back(std::forward<Args>(args)...);
@@ -1572,9 +1638,9 @@ namespace fermat {
         return itPosition;
     }
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
     template<class... Args>
-    typename Deque<T, Allocator, kDequeSubarraySize>::reference Deque<T, Allocator, kDequeSubarraySize>::emplace_front(
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::reference Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::emplace_front(
         Args &&... args) {
         if (_it_begin._current != _it_begin._begin)
         // If we have room in the first subarray... we hope that usually this 'new' pathway gets executed, as it is slightly faster.
@@ -1598,9 +1664,9 @@ namespace fermat {
         return *_it_begin; // Same as return front();
     }
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
     template<class... Args>
-    typename Deque<T, Allocator, kDequeSubarraySize>::reference Deque<T, Allocator, kDequeSubarraySize>::emplace_back(
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::reference Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::emplace_back(
         Args &&... args) {
         if ((_it_end._current + 1) != _it_end._begin + kDequeSubarraySize)
         // If we have room in the last subarray... we hope that usually this 'new' pathway gets executed, as it is slightly faster.
@@ -1627,48 +1693,48 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::iterator
-    Deque<T, Allocator, kDequeSubarraySize>::insert(const_iterator position, const value_type &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::insert(const_iterator position, const value_type &value) {
         return emplace(position, value);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::iterator
-    Deque<T, Allocator, kDequeSubarraySize>::insert(const_iterator position, value_type &&value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::insert(const_iterator position, value_type &&value) {
         return emplace(position, std::move(value));
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::iterator
-    Deque<T, Allocator, kDequeSubarraySize>::insert(const_iterator position, size_type n, const value_type &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::insert(const_iterator position, size_type n, const value_type &value) {
         return do_insert_values(position, n, value);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
     template<typename InputIterator>
-    typename Deque<T, Allocator, kDequeSubarraySize>::iterator
-    Deque<T, Allocator, kDequeSubarraySize>::insert(const_iterator position, InputIterator first, InputIterator last) {
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::insert(const_iterator position, InputIterator first, InputIterator last) {
         return do_insert(position, first, last, std::is_integral<InputIterator>());
         // The C++ standard requires this sort of behaviour, as InputIterator might actually be Integer and 'first' is really 'count' and 'last' is really 'value'.
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::iterator
-    Deque<T, Allocator, kDequeSubarraySize>::insert(const_iterator position, std::initializer_list<value_type> ilist) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::insert(const_iterator position, std::initializer_list<value_type> ilist) {
         const difference_type i(position - _it_begin);
         do_insert(position, ilist.begin(), ilist.end(), std::false_type());
         return (_it_begin + i);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::iterator
-    Deque<T, Allocator, kDequeSubarraySize>::erase(const_iterator position) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::erase(const_iterator position) {
         iterator itPosition(position, typename iterator::FromConst());
         iterator itNext(itPosition, typename iterator::Increment());
         const difference_type i(itPosition - _it_begin);
@@ -1687,9 +1753,9 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::iterator
-    Deque<T, Allocator, kDequeSubarraySize>::erase(const_iterator first, const_iterator last) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::erase(const_iterator first, const_iterator last) {
         iterator itFirst(first, typename iterator::FromConst());
         iterator itLast(last, typename iterator::FromConst());
 
@@ -1731,16 +1797,16 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::reverse_iterator
-    Deque<T, Allocator, kDequeSubarraySize>::erase(reverse_iterator position) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::reverse_iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::erase(reverse_iterator position) {
         return reverse_iterator(erase((++position).base()));
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::reverse_iterator
-    Deque<T, Allocator, kDequeSubarraySize>::erase(reverse_iterator first, reverse_iterator last) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::reverse_iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::erase(reverse_iterator first, reverse_iterator last) {
         // Version which erases in order from first to last.
         // difference_type i(first.base() - last.base());
         // while(i--)
@@ -1752,8 +1818,8 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    void Deque<T, Allocator, kDequeSubarraySize>::clear() {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::clear() {
         // Destroy all values and all subarrays they belong to, except for the first one,
         // as we need to reserve some space for a valid _it_begin/_it_end.
         if (_it_begin._current_array_ptr != _it_end._current_array_ptr) {
@@ -1776,7 +1842,7 @@ namespace fermat {
 
 
     //template <typename T, typename Allocator, unsigned kDequeSubarraySize>
-    //void Deque<T, Allocator, kDequeSubarraySize>::reset_lose_memory()
+    //void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::reset_lose_memory()
     //{
     //    // The reset_lose_memory function is a special extension function which unilaterally
     //    // resets the container to an empty state without freeing the memory of
@@ -1793,31 +1859,31 @@ namespace fermat {
     //}
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    void Deque<T, Allocator, kDequeSubarraySize>::swap(Deque &x) noexcept {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::swap(Deque &x) noexcept {
         do_swap(x);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
     template<typename Integer>
-    void Deque<T, Allocator, kDequeSubarraySize>::do_init(Integer n, Integer value, std::true_type) {
+    void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::do_init(Integer n, Integer value, std::true_type) {
         base_type::do_init(n); // Call the base uninitialized init function.
         do_fill_init(value);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
     template<typename InputIterator>
-    void Deque<T, Allocator, kDequeSubarraySize>::do_init(InputIterator first, InputIterator last, std::false_type) {
+    void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::do_init(InputIterator first, InputIterator last, std::false_type) {
         typedef typename std::iterator_traits<InputIterator>::iterator_category IC;
         do_init_from_iterator(first, last, IC());
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
     template<typename InputIterator>
-    void Deque<T, Allocator, kDequeSubarraySize>::do_init_from_iterator(InputIterator first, InputIterator last,
+    void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::do_init_from_iterator(InputIterator first, InputIterator last,
                                                                         std::input_iterator_tag) {
         base_type::do_init(0); // Call the base uninitialized init function, but don't actually allocate any values.
 
@@ -1834,9 +1900,9 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
     template<typename ForwardIterator>
-    void Deque<T, Allocator, kDequeSubarraySize>::do_init_from_iterator(ForwardIterator first, ForwardIterator last,
+    void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::do_init_from_iterator(ForwardIterator first, ForwardIterator last,
                                                                         std::forward_iterator_tag) {
         typedef typename std::remove_const<ForwardIterator>::type non_const_iterator_type;
         // If T is a const type (e.g. const int) then we need to initialize it as if it were non-const.
@@ -1866,8 +1932,8 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    void Deque<T, Allocator, kDequeSubarraySize>::do_fill_init(const value_type &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::do_fill_init(const value_type &value) {
         value_type **pPtrArrayCurrent = _it_begin._current_array_ptr;
 
         while (pPtrArrayCurrent < _it_end._current_array_ptr) {
@@ -1878,18 +1944,18 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
     template<typename Integer>
-    void Deque<T, Allocator, kDequeSubarraySize>::do_assign(Integer n, Integer value, std::true_type)
+    void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::do_assign(Integer n, Integer value, std::true_type)
     // std::false_type means this is the integer version instead of iterator version.
     {
         do_assign_values(static_cast<size_type>(n), static_cast<value_type>(value));
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
     template<typename InputIterator>
-    void Deque<T, Allocator, kDequeSubarraySize>::do_assign(InputIterator first, InputIterator last, std::false_type) {
+    void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::do_assign(InputIterator first, InputIterator last, std::false_type) {
         // std::false_type means this is the iterator version instead of integer version.
 
         // Actually, the implementation below requires first/last to be a ForwardIterator and not just an InputIterator.
@@ -1914,8 +1980,8 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    void Deque<T, Allocator, kDequeSubarraySize>::do_assign_values(size_type n, const value_type &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::do_assign_values(size_type n, const value_type &value) {
         const size_type nSize = size();
 
         if (n > nSize) // If we are increasing the size...
@@ -1929,28 +1995,28 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
     template<typename Integer>
-    typename Deque<T, Allocator, kDequeSubarraySize>::iterator
-    Deque<T, Allocator, kDequeSubarraySize>::do_insert(const const_iterator &position, Integer n, Integer value,
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::do_insert(const const_iterator &position, Integer n, Integer value,
                                                        std::true_type) {
         return do_insert_values(position, (size_type) n, (value_type) value);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
     template<typename InputIterator>
-    typename Deque<T, Allocator, kDequeSubarraySize>::iterator
-    Deque<T, Allocator, kDequeSubarraySize>::do_insert(const const_iterator &position, const InputIterator &first,
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::do_insert(const const_iterator &position, const InputIterator &first,
                                                        const InputIterator &last, std::false_type) {
         typedef typename std::iterator_traits<InputIterator>::iterator_category IC;
         return do_insert_from_iterator(position, first, last, IC());
     }
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
     template<typename InputIterator>
-    typename Deque<T, Allocator, kDequeSubarraySize>::iterator
-    Deque<T, Allocator, kDequeSubarraySize>::do_insert_from_iterator(const_iterator position,
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::do_insert_from_iterator(const_iterator position,
                                                                      const InputIterator &first,
                                                                      const InputIterator &last,
                                                                      std::input_iterator_tag) {
@@ -1970,10 +2036,10 @@ namespace fermat {
         return begin() + index;
     }
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
     template<typename ForwardIterator>
-    typename Deque<T, Allocator, kDequeSubarraySize>::iterator
-    Deque<T, Allocator, kDequeSubarraySize>::do_insert_from_iterator(const_iterator position,
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::do_insert_from_iterator(const_iterator position,
                                                                      const ForwardIterator &first,
                                                                      const ForwardIterator &last,
                                                                      std::forward_iterator_tag) {
@@ -2069,9 +2135,9 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    typename Deque<T, Allocator, kDequeSubarraySize>::iterator
-    Deque<T, Allocator, kDequeSubarraySize>::do_insert_values(const_iterator position, size_type n,
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::iterator
+    Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::do_insert_values(const_iterator position, size_type n,
                                                               const value_type &value) {
         // This implementation is nearly identical to do_insert_from_iterator above.
         // If you make a bug fix to one, you will likely want to fix the other.
@@ -2163,18 +2229,19 @@ namespace fermat {
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline void Deque<T, Allocator, kDequeSubarraySize>::do_swap(this_type &x) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline void Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::do_swap(this_type &x) {
         std::swap(_ptr_array, x._ptr_array);
         std::swap(_ptr_array_size, x._ptr_array_size);
         std::swap(_it_begin, x._it_begin);
         std::swap(_it_end, x._it_end);
         std::swap(_allocator, x._allocator);
+        std::swap(_array_allocator, x._array_allocator);
     }
 
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline bool Deque<T, Allocator, kDequeSubarraySize>::validate() const {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline bool Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::validate() const {
         // To do: More detailed validation.
         // To do: Try to make the validation resistant to crashes if the data is invalid.
         if ((end() - begin()) < 0)
@@ -2187,44 +2254,44 @@ namespace fermat {
     // global operators
     ///////////////////////////////////////////////////////////////////////
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline bool operator==(const Deque<T, Allocator, kDequeSubarraySize> &a,
-                           const Deque<T, Allocator, kDequeSubarraySize> &b) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline bool operator==(const Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize> &a,
+                           const Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize> &b) {
         return ((a.size() == b.size()) && std::equal(a.begin(), a.end(), b.begin()));
     }
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline bool operator!=(const Deque<T, Allocator, kDequeSubarraySize> &a,
-                           const Deque<T, Allocator, kDequeSubarraySize> &b) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline bool operator!=(const Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize> &a,
+                           const Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize> &b) {
         return ((a.size() != b.size()) || !std::equal(a.begin(), a.end(), b.begin()));
     }
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline bool operator<(const Deque<T, Allocator, kDequeSubarraySize> &a,
-                          const Deque<T, Allocator, kDequeSubarraySize> &b) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline bool operator<(const Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize> &a,
+                          const Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize> &b) {
         return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
     }
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline bool operator>(const Deque<T, Allocator, kDequeSubarraySize> &a,
-                          const Deque<T, Allocator, kDequeSubarraySize> &b) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline bool operator>(const Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize> &a,
+                          const Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize> &b) {
         return b < a;
     }
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline bool operator<=(const Deque<T, Allocator, kDequeSubarraySize> &a,
-                           const Deque<T, Allocator, kDequeSubarraySize> &b) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline bool operator<=(const Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize> &a,
+                           const Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize> &b) {
         return !(b < a);
     }
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline bool operator>=(const Deque<T, Allocator, kDequeSubarraySize> &a,
-                           const Deque<T, Allocator, kDequeSubarraySize> &b) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline bool operator>=(const Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize> &a,
+                           const Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize> &b) {
         return !(a < b);
     }
 
-    template<typename T, typename Allocator, unsigned kDequeSubarraySize>
-    inline void swap(Deque<T, Allocator, kDequeSubarraySize> &a, Deque<T, Allocator, kDequeSubarraySize> &b) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator, unsigned kDequeSubarraySize>
+    inline void swap(Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize> &a, Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize> &b) {
         a.swap(b);
     }
 
@@ -2233,26 +2300,30 @@ namespace fermat {
     //
     // https://en.cppreference.com/w/cpp/container/Deque/erase2
     ///////////////////////////////////////////////////////////////////////
-    template<class T, class Allocator, class U>
-    typename Deque<T, Allocator>::size_type erase(Deque<T, Allocator> &c, const U &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator,
+        unsigned kDequeSubarraySize, typename U>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::size_type erase(
+        Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize> &c, const U &value) {
         // Erases all elements that compare equal to value from the container.
         auto origEnd = c.end();
         auto newEnd = std::remove(c.begin(), origEnd, value);
         auto numRemoved = std::distance(newEnd, origEnd);
         c.erase(newEnd, origEnd);
 
-        return static_cast<typename Deque<T, Allocator>::size_type>(numRemoved);
+        return static_cast<typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::size_type>(numRemoved);
     }
 
-    template<class T, class Allocator, class Predicate>
-    typename Deque<T, Allocator>::size_type erase_if(Deque<T, Allocator> &c, Predicate predicate) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator,
+        unsigned kDequeSubarraySize, typename Predicate>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::size_type erase_if(
+        Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize> &c, Predicate predicate) {
         // Erases all elements that satisfy the predicate pred from the container.
         auto origEnd = c.end();
         auto newEnd = std::remove_if(c.begin(), origEnd, predicate);
         auto numRemoved = std::distance(newEnd, origEnd);
         c.erase(newEnd, origEnd);
 
-        return static_cast<typename Deque<T, Allocator>::size_type>(numRemoved);
+        return static_cast<typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::size_type>(numRemoved);
     }
 
 
@@ -2270,9 +2341,10 @@ namespace fermat {
     // Complexity: Linear
     //
     ///////////////////////////////////////////////////////////////////////
-    template<class T, class Allocator, unsigned SubArraySize, class U>
-    typename Deque<T, Allocator, SubArraySize>::size_type erase_unsorted(
-        Deque<T, Allocator, SubArraySize> &c, const U &value) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator,
+        unsigned kDequeSubarraySize, typename U>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::size_type erase_unsorted(
+        Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize> &c, const U &value) {
         auto itRemove = c.begin();
         auto ritMove = c.rbegin();
 
@@ -2298,7 +2370,7 @@ namespace fermat {
         c.erase(itRemove, origEnd);
 
 
-        return static_cast<typename Deque<T, Allocator>::size_type>(numRemoved);
+        return static_cast<typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::size_type>(numRemoved);
     }
 
     ///////////////////////////////////////////////////////////////////////
@@ -2315,9 +2387,10 @@ namespace fermat {
     // Complexity: Linear
     //
     ///////////////////////////////////////////////////////////////////////
-    template<class T, class Allocator, class Predicate, unsigned SubArraySize>
-    typename Deque<T, Allocator, SubArraySize>::size_type erase_unsorted_if(
-        Deque<T, Allocator, SubArraySize> &c, Predicate predicate) {
+    template<typename T, size_t Alignment, typename Policy, typename Allocator, typename ArrayAllocator,
+        unsigned kDequeSubarraySize, typename Predicate>
+    typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::size_type erase_unsorted_if(
+        Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize> &c, Predicate predicate) {
         // Erases all elements that satisfy predicate from the container.
         auto itRemove = c.begin();
         auto ritMove = c.rbegin();
@@ -2342,6 +2415,6 @@ namespace fermat {
         auto numRemoved = distance(itRemove, origEnd);
         c.erase(itRemove, origEnd);
 
-        return static_cast<typename Deque<T, Allocator>::size_type>(numRemoved);
+        return static_cast<typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::size_type>(numRemoved);
     }
 } // namespace fermat
