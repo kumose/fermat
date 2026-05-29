@@ -504,7 +504,7 @@ namespace fermat {
                 AlignedBytesAllocator<T, 1, Alignment>::set_tsl_limit(n);
             } else if (slot <= kTinySize) {
                 AlignedBytesAllocator<T, kTinySize, Alignment>::set_tsl_limit(n);
-            }else if (slot <= kMiniSize) {
+            } else if (slot <= kMiniSize) {
                 AlignedBytesAllocator<T, kMiniSize, Alignment>::set_tsl_limit(n);
             } else if (slot <= kSmallSize) {
                 AlignedBytesAllocator<T, kSmallSize, Alignment>::set_tsl_limit(n);
@@ -538,7 +538,7 @@ namespace fermat {
                 AlignedBytesAllocator<T, 1, Alignment>::release_tsl(precent_to_save);
             } else if (slot <= kTinySize) {
                 AlignedBytesAllocator<T, kTinySize, Alignment>::release_tsl(precent_to_save);
-            }else if (slot <= kMiniSize) {
+            } else if (slot <= kMiniSize) {
                 AlignedBytesAllocator<T, kMiniSize, Alignment>::release_tsl(precent_to_save);
             } else if (slot <= kSmallSize) {
                 AlignedBytesAllocator<T, kSmallSize, Alignment>::release_tsl(precent_to_save);
@@ -572,7 +572,7 @@ namespace fermat {
                 return AlignedBytesAllocator<T, 1, Alignment>::tls_stats();
             } else if (n <= kTinySize) {
                 return AlignedBytesAllocator<T, kTinySize, Alignment>::tls_stats();
-            }else if (n <= kMiniSize) {
+            } else if (n <= kMiniSize) {
                 return AlignedBytesAllocator<T, kMiniSize, Alignment>::tls_stats();
             } else if (n <= kSmallSize) {
                 return AlignedBytesAllocator<T, kSmallSize, Alignment>::tls_stats();
@@ -610,7 +610,7 @@ namespace fermat {
                 return AlignedBytesAllocator<T, 1, Alignment>::collect_tsl();
             } else if (n <= kTinySize) {
                 return AlignedBytesAllocator<T, kTinySize, Alignment>::collect_tsl();
-            }else if (n <= kMiniSize) {
+            } else if (n <= kMiniSize) {
                 return AlignedBytesAllocator<T, kMiniSize, Alignment>::collect_tsl();
             } else if (n <= kSmallSize) {
                 return AlignedBytesAllocator<T, kSmallSize, Alignment>::collect_tsl();
@@ -653,7 +653,7 @@ namespace fermat {
                 AlignedBytesAllocator<T, kTinySize, Alignment>::apply_tsl(objs);
             } else if (objs.n == AlignedBytesAllocator<T, kMiniSize, Alignment>::good_size()) {
                 AlignedBytesAllocator<T, kMiniSize, Alignment>::apply_tsl(objs);
-            }else if (objs.n == AlignedBytesAllocator<T, kSmallSize, Alignment>::good_size()) {
+            } else if (objs.n == AlignedBytesAllocator<T, kSmallSize, Alignment>::good_size()) {
                 AlignedBytesAllocator<T, kSmallSize, Alignment>::apply_tsl(objs);
             } else if (objs.n == AlignedBytesAllocator<T, kMediumSize, Alignment>::good_size()) {
                 AlignedBytesAllocator<T, kMediumSize, Alignment>::apply_tsl(objs);
@@ -668,6 +668,60 @@ namespace fermat {
             } else {
                 KCHECK(false) << "unknown size:" << objs.n;
             }
+        }
+
+        static void apply_tsl(std::vector<ObjectGuard<Alignment> > &objs) {
+            for (auto &it: objs) {
+                apply_tsl(it);
+            }
+        }
+    };
+
+
+    template<typename T, size_t Alignment, size_t N>
+    struct FixedAllocator {
+        template<typename U>
+        struct rebind {
+            using other = FixedAllocator<U, Alignment, N>;
+        };
+
+
+        static T *pooled_alloc(size_t n) {
+            T *ptr = reinterpret_cast<T *>(AlignedBytesAllocator<T, N, Alignment>::allocate());
+            if (!ptr) {
+                throw std::length_error("");
+            }
+
+            return ptr;
+        }
+
+        static size_t pooled_alloc_size(size_t n) {
+            return N;
+        }
+
+        static void pooled_free(T *ptr, size_t n) {
+            AlignedBytesAllocator<T, N, Alignment>::deallocate(ptr);
+        }
+
+        static void set_tsl_limit(size_t n) {
+            AlignedBytesAllocator<T, N, Alignment>::set_tsl_limit(n);
+        }
+
+        static void release_tsl(float precent_to_save) {
+            AlignedBytesAllocator<T, N, Alignment>::release_tsl(precent_to_save);
+        }
+
+        static std::optional<PoolStats> tls_stats() {
+            return AlignedBytesAllocator<T, N, Alignment>::tls_stats();
+
+        }
+
+        static ObjectGuard<Alignment> collect_tsl() {
+            return AlignedBytesAllocator<T, N, Alignment>::collect_tsl();
+        }
+
+        static void apply_tsl(ObjectGuard<Alignment> &objs) {
+            AlignedBytesAllocator<T, N, Alignment>::apply_tsl(objs);
         }
 
         static void apply_tsl(std::vector<ObjectGuard<Alignment> > &objs) {

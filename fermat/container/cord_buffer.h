@@ -23,6 +23,7 @@
 #include <turbo/log/logging.h>
 #include <memory>
 #include <new>
+#include <deque>
 
 /// 10g may enough for a single CordBuffer
 #ifndef MAX_SINGLE_CORD_SIZE

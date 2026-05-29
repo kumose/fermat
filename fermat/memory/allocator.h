@@ -21,14 +21,20 @@
 
 
 namespace fermat {
-
-
     template<size_t Numerator, size_t Denominator>
     struct TimesPolicy {
         static_assert(Denominator > 0, "Denominator must be greater than zero");
         static constexpr float Delta = float(Numerator) / float(Denominator);
+
         size_t get_new_size(size_t current_size, size_t added, size_t align) noexcept {
             return static_cast<size_t>((current_size + added) * Delta);
+        }
+    };
+
+    template<size_t N>
+    struct FixedPolicy {
+        constexpr size_t get_new_size(size_t current_size, size_t added, size_t align) noexcept {
+            return N;
         }
     };
 
@@ -88,10 +94,12 @@ namespace fermat {
     /// @brief STL compatible allocator using mimalloc with explicit alignment.
     /// @tparam T Element type.
     /// @tparam Alignment Must be a power of 2, defaults to kDefaultAlignedSize (64).
-    template<typename T, size_t Alignment = kDefaultAlignedSize, typename GrowPolicy = TimesPolicy<2,1>, typename Operator = TieredAllocator<T, Alignment>>
+    template<typename T, size_t Alignment = kDefaultAlignedSize, typename GrowPolicy = TimesPolicy<2, 1>, typename
+        Operator = TieredAllocator<T, Alignment> >
     class AlignedAllocator : GrowPolicy {
     private:
         static_assert(Malloc::is_valid_alignment<Alignment>(), "alignment not valid");
+
     public:
         using value_type = T;
         using pointer = T *;
@@ -132,13 +140,13 @@ namespace fermat {
         /// @brief Rebind convenience for STL containers.
         template<typename U>
         struct rebind {
-            using other = AlignedAllocator<U, Alignment, GrowPolicy,typename Operator::template rebind<U>::other>;
+            using other = AlignedAllocator<U, Alignment, GrowPolicy, typename Operator::template rebind<U>::other>;
         };
 
         AlignedAllocator() noexcept = default;
 
         template<typename U>
-        constexpr AlignedAllocator(const AlignedAllocator<U, Alignment, GrowPolicy,Operator> &) noexcept {
+        constexpr AlignedAllocator(const AlignedAllocator<U, Alignment, GrowPolicy, Operator> &) noexcept {
         }
 
         /// @brief Returns the actual address of x.
@@ -156,7 +164,7 @@ namespace fermat {
         }
 
         /// @brief Maximum number of elements that can be allocated.
-       [[nodiscard]] size_type max_size() const noexcept {
+        [[nodiscard]] size_type max_size() const noexcept {
             return std::numeric_limits<size_type>::max() / sizeof(T);
         }
 

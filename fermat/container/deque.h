@@ -908,26 +908,19 @@ namespace fermat {
     typename DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::this_type &
     DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::operator+=(difference_type n) {
         const difference_type subarrayPosition = (_current - _begin) + n;
+        const difference_type kSubarray = (difference_type) kDequeSubarraySize;
 
-        // Cast from signed to unsigned (size_t) in order to obviate the need to compare to < 0.
-        if ((size_t) subarrayPosition < (size_t) kDequeSubarraySize)
-        // If the new position is within the current subarray (i.e. >= 0 && < kSubArraySize)...
+        if (subarrayPosition >= 0 && subarrayPosition < kSubarray) {
             _current += n;
-        else {
-            // This implementation is a branchless version which works by offsetting
-            // the math to always be in the positive range. Much of the values here
-            // reduce to constants and both the multiplication and division are of
-            // power of two sizes and so this calculation ends up compiling down to
-            // just one addition, one shift and one subtraction. This algorithm has
-            // a theoretical weakness in that on 32 bit systems it will fail if the
-            // value of n is >= (2^32 - 2^24) or 4,278,190,080 of if kDequeSubarraySize
-            // is >= 2^24 or 16,777,216.
+        } else {
             static_assert((kDequeSubarraySize & (kDequeSubarraySize - 1)) == 0, "Verify that it is a power of 2.");
-            const difference_type subarrayIndex =
-                    subarrayPosition / (difference_type) kDequeSubarraySize;
+            // Floor division: C++ truncates toward zero, but backward iteration needs toward -infinity.
+            const difference_type subarrayIndex = (subarrayPosition >= 0)
+                                                      ? subarrayPosition / kSubarray
+                                                      : -(((-subarrayPosition) + kSubarray - 1) / kSubarray);
 
             set_subarray(_current_array_ptr + subarrayIndex);
-            _current = _begin + (subarrayPosition - (subarrayIndex * (difference_type) kDequeSubarraySize));
+            _current = _begin + (subarrayPosition - subarrayIndex * kSubarray);
         }
         return *this;
     }
@@ -958,19 +951,23 @@ namespace fermat {
     typename DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::this_type
     DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::move(const iterator &first, const iterator &last,
                                                                    std::true_type) {
-        const difference_type nRemaining = last - first;
-        if (nRemaining == 0)
+        const difference_type nElementCount = last - first;
+        if (nElementCount <= 0)
             return *this;
 
-        if ((first._begin == last._begin) && (first._begin == _begin)) {
-            memmove(_current, first._current, (size_t) nRemaining * sizeof(T));
-            return *this + nRemaining;
+        if ((first._begin == last._begin) && (first._begin == _begin) &&
+            (first._current_array_ptr == last._current_array_ptr) &&
+            (first._current_array_ptr == _current_array_ptr) &&
+            (last._current >= first._current)) {
+            const size_t nBytes = (size_t) ((uintptr_t) last._current - (uintptr_t) first._current);
+            memmove(_current, first._current, nBytes);
+            return *this + (last._current - first._current);
         }
 
         iterator src = first;
         this_type dst = *this;
 
-        for (difference_type nLeft = nRemaining; nLeft > 0;) {
+        for (difference_type nLeft = nElementCount; nLeft > 0;) {
             const difference_type srcUntilChunkEnd = (src._begin + kDequeSubarraySize) - src._current;
             const difference_type dstUntilChunkEnd = (dst._begin + kDequeSubarraySize) - dst._current;
             difference_type batch = nLeft;
@@ -978,6 +975,8 @@ namespace fermat {
                 batch = srcUntilChunkEnd;
             if (dstUntilChunkEnd < batch)
                 batch = dstUntilChunkEnd;
+            if (batch == 0)
+                break;
 
             memmove(dst._current, src._current, (size_t) batch * sizeof(T));
 
@@ -994,7 +993,7 @@ namespace fermat {
                 dst._current = dst._begin;
             }
         }
-        return *this + nRemaining;
+        return *this + nElementCount;
     }
 
 
@@ -1009,19 +1008,24 @@ namespace fermat {
     template<typename T, typename Pointer, typename Reference, unsigned kDequeSubarraySize>
     void DequeIterator<T, Pointer, Reference, kDequeSubarraySize>::move_backward(
         const iterator &first, const iterator &last, std::true_type) {
-        const difference_type nRemaining = last - first;
-        if (nRemaining == 0)
+        const difference_type nElementCount = last - first;
+        if (nElementCount <= 0)
             return;
 
-        if ((first._begin == last._begin) && (first._begin == _begin)) {
-            memmove(_current - nRemaining, first._current, (size_t) nRemaining * sizeof(T));
+        if ((first._begin == last._begin) && (first._begin == _begin) &&
+            (first._current_array_ptr == last._current_array_ptr) &&
+            (first._current_array_ptr == _current_array_ptr) &&
+            (last._current >= first._current)) {
+            const difference_type nSameChunk = last._current - first._current;
+            const size_t nBytes = (size_t) ((uintptr_t) last._current - (uintptr_t) first._current);
+            memmove(_current - nSameChunk, first._current, nBytes);
             return;
         }
 
         iterator src = last;
         this_type dst = *this;
 
-        for (difference_type nLeft = nRemaining; nLeft > 0;) {
+        for (difference_type nLeft = nElementCount; nLeft > 0;) {
             if (src._current == src._begin) {
                 src._begin = *--src._current_array_ptr;
                 src._current = src._begin + kDequeSubarraySize;
@@ -1038,6 +1042,8 @@ namespace fermat {
                 batch = srcUntilChunkBegin;
             if (dstUntilChunkBegin < batch)
                 batch = dstUntilChunkBegin;
+            if (batch == 0)
+                break;
 
             src._current -= batch;
             dst._current -= batch;
@@ -1775,7 +1781,7 @@ namespace fermat {
 
                 DoFreeSubarrays(pPtrArrayBegin, itNewBegin._current_array_ptr);
 
-                // _it_begin = itNewBegin; <-- Not necessary, as the above loop makes it so already.
+                _it_begin = itNewBegin;
             } else {
                 // Else we will be moving back entries backward.
                 iterator itNewEnd(_it_end - n);
@@ -2112,7 +2118,7 @@ namespace fermat {
                 // We need to reset this value because the reallocation above can invalidate iterators.
 
                 // We have a problem here: we would like to use move instead of copy, but it may be that the range to be inserted comes from
-                // this container and comes from the segment we need to move. So we can't use move operations unless we are careful to handle
+                // this container and comes from the segment to move. So we can't use move operations unless we are careful to handle
                 // that situation. The newly inserted contents must be contents that were moved to and not moved from. To do: solve this.
                 if (nPushedCount > (difference_type) n) {
                     const iterator itUCopyEnd(_it_end - (difference_type) n);
@@ -2177,8 +2183,8 @@ namespace fermat {
 
             if (nInsertionIndex < (difference_type) (nSize / 2)) {
                 // If the insertion index is in the front half of the Deque... grow the Deque at the front.
-                const iterator itNewBegin(do_realloc_subarray(n, kSideFront));
-                const iterator itOldBegin(_it_begin);
+                iterator itNewBegin(do_realloc_subarray(n, kSideFront));
+                iterator itOldBegin(_it_begin);
                 const iterator itPosition(_it_begin + nInsertionIndex);
                 // We need to reset this value because the reallocation above can invalidate iterators.
 
@@ -2186,14 +2192,24 @@ namespace fermat {
                     // If the newly inserted items will be entirely within the old area...
                     iterator itUCopyEnd(_it_begin + (difference_type) n);
 
-                    std::uninitialized_move(_it_begin, itUCopyEnd, itNewBegin); // This can throw.
-                    itUCopyEnd = std::move(itUCopyEnd, itPosition, itOldBegin);
+                    if constexpr (std::is_trivially_copyable_v<value_type>) {
+                        itNewBegin.move(_it_begin, itUCopyEnd, std::true_type{}); // This can throw.
+                        itUCopyEnd = itOldBegin.move(itUCopyEnd, itPosition, std::true_type{});
+                    } else {
+                        fermat::uninitialized_move(_it_begin, itUCopyEnd, itNewBegin); // This can throw.
+                        itUCopyEnd = std::move(itUCopyEnd, itPosition, itOldBegin);
+                    }
                     // Recycle 'itUCopyEnd' to mean something else.
                     std::fill(itUCopyEnd, itPosition, valueSaved);
                 } else {
                     // Else the newly inserted items are going within the newly allocated area at the front.
-                    fermat::uninitialized_fill(_it_begin, itPosition, itNewBegin, _it_begin, valueSaved);
-                    // This can throw.
+                    if constexpr (std::is_trivially_copyable_v<value_type>) {
+                        itNewBegin.move(_it_begin, itPosition, std::true_type{}); // This can throw.
+                    } else {
+                        fermat::uninitialized_move(_it_begin, itPosition, itNewBegin); // This can throw.
+                    }
+                    fermat::uninitialized_fill(itNewBegin + nInsertionIndex, itNewBegin + (difference_type) n,
+                                               valueSaved);
                     std::fill(itOldBegin, itPosition, valueSaved);
                 }
                 _it_begin = itNewBegin;
@@ -2201,8 +2217,8 @@ namespace fermat {
                 return iterator(_it_begin + nInsertionIndex);
             } else {
                 // Else the insertion index is in the back half of the Deque, so grow the Deque at the back.
-                const iterator itNewEnd(do_realloc_subarray(n, kSideBack));
-                const iterator itOldEnd(_it_end);
+                iterator itNewEnd(do_realloc_subarray(n, kSideBack));
+                iterator itOldEnd(_it_end);
                 const difference_type nPushedCount = (difference_type) nSize - nInsertionIndex;
                 const iterator itPosition(_it_end - nPushedCount);
                 // We need to reset this value because the reallocation above can invalidate iterators.
@@ -2211,14 +2227,26 @@ namespace fermat {
                     // If the newly inserted items will be entirely within the old area...
                     iterator itUCopyEnd(_it_end - (difference_type) n);
 
-                    std::uninitialized_move(itUCopyEnd, _it_end, _it_end); // This can throw.
-                    itUCopyEnd = std::move_backward(itPosition, itUCopyEnd, itOldEnd);
+                    if constexpr (std::is_trivially_copyable_v<value_type>) {
+                        iterator itWrite(_it_end);
+                        itWrite.move(itUCopyEnd, _it_end, std::true_type{}); // This can throw.
+                        itOldEnd.move_backward(itPosition, itUCopyEnd, std::true_type{});
+                    } else {
+                        fermat::uninitialized_move(itUCopyEnd, _it_end, _it_end); // This can throw.
+                        std::move_backward(itPosition, itUCopyEnd, itOldEnd);
+                    }
                     // Recycle 'itUCopyEnd' to mean something else.
                     std::fill(itPosition, itUCopyEnd, valueSaved);
                 } else {
                     // Else the newly inserted items are going within the newly allocated area at the back.
-                    std::uninitialized_move(_it_end, itPosition + (difference_type) n, valueSaved, itPosition, _it_end);
-                    // This can throw.
+                    fermat::uninitialized_fill(_it_end, itPosition + (difference_type) n, valueSaved);
+                    if constexpr (std::is_trivially_copyable_v<value_type>) {
+                        iterator itTailDest(_it_end + ((difference_type) n - nPushedCount));
+                        itTailDest.move(itPosition, _it_end, std::true_type{});
+                    } else {
+                        fermat::uninitialized_move(itPosition, _it_end,
+                                                   _it_end + ((difference_type) n - nPushedCount));
+                    }
                     std::fill(itPosition, itOldEnd, valueSaved);
                 }
                 _it_end = itNewEnd;
@@ -2365,8 +2393,8 @@ namespace fermat {
 
         // now all elements in the range [itRemove, c.end()) are either to be removed or have already been moved from.
 
-        auto origEnd = end(c);
-        auto numRemoved = distance(itRemove, origEnd);
+        auto origEnd = c.end();
+        auto numRemoved = std::distance(itRemove, origEnd);
         c.erase(itRemove, origEnd);
 
 
@@ -2400,7 +2428,7 @@ namespace fermat {
             if (itRemove == ritMove.base()) // any elements to remove?
                 break;
 
-            ritMove = std::find_if(ritMove, std::make_reverse_iterator(itRemove), not_fn(predicate));
+            ritMove = std::find_if(ritMove, std::make_reverse_iterator(itRemove), std::not_fn(predicate));
             if (itRemove == ritMove.base()) // any elements that can be moved into place?
                 break;
 
@@ -2411,8 +2439,8 @@ namespace fermat {
 
         // now all elements in the range [itRemove, c.end()) are either to be removed or have already been moved from.
 
-        auto origEnd = end(c);
-        auto numRemoved = distance(itRemove, origEnd);
+        auto origEnd = c.end();
+        auto numRemoved = std::distance(itRemove, origEnd);
         c.erase(itRemove, origEnd);
 
         return static_cast<typename Deque<T, Alignment, Policy, Allocator, ArrayAllocator, kDequeSubarraySize>::size_type>(numRemoved);

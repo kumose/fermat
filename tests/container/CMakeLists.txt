@@ -30,6 +30,22 @@ kmcmake_cc_test(
 )
 
 kmcmake_cc_test(
+        NAME deque_test
+        MODULE con
+        SOURCES
+        deque_test.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        GTest::gtest
+        GTest::gtest_main
+        ${KMCMAKE_DEPS_LINK}
+)
+
+kmcmake_cc_test(
         NAME vector_test
         MODULE con
         SOURCES

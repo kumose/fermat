@@ -706,6 +706,7 @@ namespace fermat {
 
         Char *seize(size_type *size, size_type *capacity) noexcept;
 
+        void  reset_lose_memory() noexcept;
     private:
         typedef std::basic_istream<value_type, traits_type> istream_type;
 
@@ -1160,6 +1161,13 @@ namespace fermat {
         store_.size_ = size;
         store_._capacity.first() = capacity - 1;
         store_._data[store_.size_] = '\0';
+    }
+
+    template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
+    void  BasicString<Char, Alignment, T, Policy, A, S>::reset_lose_memory() noexcept {
+        store_._data = nullptr;
+        store_.size_ = 0;
+        store_._capacity.first() = 0;
     }
 
     template<typename Char, size_t Alignment,  typename T, typename Policy, typename A, typename S>
