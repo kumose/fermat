@@ -304,6 +304,22 @@ kmcmake_cc_test(
 )
 
 kmcmake_cc_test(
+        NAME sorted_queue_test
+        MODULE con
+        SOURCES
+        sorted_queue_test.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        GTest::gtest
+        GTest::gtest_main
+        ${KMCMAKE_DEPS_LINK}
+)
+
+kmcmake_cc_test(
         NAME heap_test
         MODULE con
         SOURCES

@@ -61,6 +61,22 @@ static void BM_PushBackSmall(benchmark::State& state) {
 BENCHMARK_TEMPLATE(BM_PushBackSmall, std::vector<int>)->RangeMultiplier(2)->Range(4, 1024);
 BENCHMARK_TEMPLATE(BM_PushBackSmall, fermat::Vector<int>)->RangeMultiplier(2)->Range(4, 1024);
 
+// 2b. Push back with growth – no reserve, measures reallocation + push_back
+template<typename Vec>
+static void BM_PushBackGrow(benchmark::State& state) {
+    size_t n = state.range(0);
+    for (auto _ : state) {
+        Vec v;
+        for (size_t i = 0; i < n; ++i) {
+            v.push_back(static_cast<int>(i));
+        }
+        benchmark::DoNotOptimize(v);
+    }
+    state.SetItemsProcessed(n * state.iterations());
+}
+BENCHMARK_TEMPLATE(BM_PushBackGrow, std::vector<int>)->RangeMultiplier(2)->Range(4, 1024);
+BENCHMARK_TEMPLATE(BM_PushBackGrow, fermat::Vector<int>)->RangeMultiplier(2)->Range(4, 1024);
+
 // 3. Emplace back (construct in place)
 template<typename Vec>
 static void BM_EmplaceBackSmall(benchmark::State& state) {
@@ -194,6 +210,22 @@ static void BM_PushBack(benchmark::State& state) {
 
 BENCHMARK_TEMPLATE(BM_PushBack, std::vector<int>)->Arg(1000)->Arg(10000)->Arg(100000);
 BENCHMARK_TEMPLATE(BM_PushBack, fermat::Vector<int>)->Arg(1000)->Arg(10000)->Arg(100000);
+
+// 1b. Push back with growth – no reserve
+template<typename Vec>
+static void BM_PushBackGrowLarge(benchmark::State& state) {
+    for (auto _ : state) {
+        Vec v;
+        for (int i = 0; i < state.range(0); ++i) {
+            v.push_back(i);
+        }
+        benchmark::DoNotOptimize(v);
+    }
+    state.SetItemsProcessed(state.range(0) * state.iterations());
+}
+
+BENCHMARK_TEMPLATE(BM_PushBackGrowLarge, std::vector<int>)->Arg(1000)->Arg(10000)->Arg(100000);
+BENCHMARK_TEMPLATE(BM_PushBackGrowLarge, fermat::Vector<int>)->Arg(1000)->Arg(10000)->Arg(100000);
 
 // -----------------------------------------------------------------------------
 // 2. Emplace back (with construction)

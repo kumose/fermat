@@ -58,8 +58,9 @@ namespace fermat {
     ///
     ///////////////////////////////////////////////////////////////////
 
-    template<typename T, size_t Alignment, typename Container = fermat::Vector<T, Alignment>, typename Compare = std::less<typename
-        Container::value_type> >
+    template<typename T, size_t Alignment, typename Container = fermat::Vector<T, Alignment>, typename Compare =
+        std::less<typename
+            Container::value_type> >
     class PriorityQueue {
     public:
         typedef PriorityQueue<T, Alignment, Container, Compare> this_type;
@@ -155,7 +156,7 @@ namespace fermat {
 
         void push(const value_type &value);
 
-        void push(value_type &&x);
+        void push(value_type &&x) noexcept;
 
         template<class... Args>
         void emplace(Args &&... args);
@@ -176,8 +177,9 @@ namespace fermat {
         const container_type &get_container() const;
 
         void swap(this_type &x) noexcept(
-            (std::is_nothrow_swappable<typename this_type::container_type>::value && std::is_nothrow_swappable<typename this_type::
-                compare_type>::value));
+            (std::is_nothrow_swappable<typename this_type::container_type>::value && std::is_nothrow_swappable<typename
+                 this_type::
+                 compare_type>::value));
 
         bool validate() const;
     }; // class PriorityQueue
@@ -205,14 +207,16 @@ namespace fermat {
 
 
     template<typename T, size_t Alignment, typename Container, typename Compare>
-    inline PriorityQueue<T, Alignment, Container, Compare>::PriorityQueue(const compare_type &compare, const container_type &x)
+    inline PriorityQueue<T, Alignment, Container, Compare>::PriorityQueue(
+        const compare_type &compare, const container_type &x)
         : c(x), comp(compare) {
         fermat::make_heap(c.begin(), c.end(), comp);
     }
 
 
     template<typename T, size_t Alignment, typename Container, typename Compare>
-    inline PriorityQueue<T, Alignment, Container, Compare>::PriorityQueue(const compare_type &compare, container_type &&x)
+    inline PriorityQueue<T, Alignment, Container, Compare>::PriorityQueue(
+        const compare_type &compare, container_type &&x)
         : c(std::move(x)), comp(compare) {
         fermat::make_heap(c.begin(), c.end(), comp);
     }
@@ -220,7 +224,7 @@ namespace fermat {
 
     template<typename T, size_t Alignment, typename Container, typename Compare>
     inline PriorityQueue<T, Alignment, Container, Compare>::PriorityQueue(std::initializer_list<value_type> ilist,
-                                                                 const compare_type &compare)
+                                                                          const compare_type &compare)
         : c(), comp(compare) {
         c.insert(c.end(), ilist.begin(), ilist.end());
         fermat::make_heap(c.begin(), c.end(), comp);
@@ -238,7 +242,7 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Container, typename Compare>
     template<typename InputIterator>
     inline PriorityQueue<T, Alignment, Container, Compare>::PriorityQueue(InputIterator first, InputIterator last,
-                                                                 const compare_type &compare)
+                                                                          const compare_type &compare)
         : c(first, last), comp(compare) {
         fermat::make_heap(c.begin(), c.end(), comp);
     }
@@ -247,7 +251,8 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Container, typename Compare>
     template<typename InputIterator>
     inline PriorityQueue<T, Alignment, Container, Compare>::PriorityQueue(InputIterator first, InputIterator last,
-                                                                 const compare_type &compare, const container_type &x)
+                                                                          const compare_type &compare,
+                                                                          const container_type &x)
         : c(x), comp(compare) {
         c.insert(c.end(), first, last);
         fermat::make_heap(c.begin(), c.end(), comp);
@@ -257,7 +262,8 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Container, typename Compare>
     template<typename InputIterator>
     inline PriorityQueue<T, Alignment, Container, Compare>::PriorityQueue(InputIterator first, InputIterator last,
-                                                                 const compare_type &compare, container_type &&x)
+                                                                          const compare_type &compare,
+                                                                          container_type &&x)
         : c(std::move(x)), comp(compare) {
         c.insert(c.end(), first, last);
         fermat::make_heap(c.begin(), c.end(), comp);
@@ -280,46 +286,21 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Container, typename Compare>
     inline typename PriorityQueue<T, Alignment, Container, Compare>::const_reference
     PriorityQueue<T, Alignment, Container, Compare>::top() const {
-#if FERMAT_ASSERT_ENABLED && FERMAT_EMPTY_REFERENCE_ASSERT_ENABLED
-        if (FERMAT_UNLIKELY(c.empty()))
-            FERMAT_FAIL_MSG("PriorityQueue::top -- empty container");
-#endif
-
         return c.front();
     }
 
 
     template<typename T, size_t Alignment, typename Container, typename Compare>
     inline void PriorityQueue<T, Alignment, Container, Compare>::push(const value_type &value) {
-#if FERMAT_EXCEPTIONS_ENABLED
-        try {
-            c.push_back(value);
-            fermat::push_heap(c.begin(), c.end(), comp);
-        } catch (...) {
-            c.clear();
-            throw;
-        }
-#else
         c.push_back(value);
         fermat::push_heap(c.begin(), c.end(), comp);
-#endif
     }
 
 
     template<typename T, size_t Alignment, typename Container, typename Compare>
-    inline void PriorityQueue<T, Alignment, Container, Compare>::push(value_type &&value) {
-#if FERMAT_EXCEPTIONS_ENABLED
-        try {
-            c.push_back(std::move(value));
-            fermat::push_heap(c.begin(), c.end(), comp);
-        } catch (...) {
-            c.clear();
-            throw;
-        }
-#else
+    inline void PriorityQueue<T, Alignment, Container, Compare>::push(value_type &&value) noexcept {
         c.push_back(std::move(value));
         fermat::push_heap(c.begin(), c.end(), comp);
-#endif
     }
 
 
@@ -333,46 +314,21 @@ namespace fermat {
 
     template<typename T, size_t Alignment, typename Container, typename Compare>
     inline void PriorityQueue<T, Alignment, Container, Compare>::pop() {
-#if FERMAT_ASSERT_ENABLED
-        if (FERMAT_UNLIKELY(c.empty()))
-            FERMAT_FAIL_MSG("PriorityQueue::pop -- empty container");
-#endif
-
-#if FERMAT_EXCEPTIONS_ENABLED
-        try {
-            fermat::pop_heap(c.begin(), c.end(), comp);
-            c.pop_back();
-        } catch (...) {
-            c.clear();
-            throw;
-        }
-#else
         fermat::pop_heap(c.begin(), c.end(), comp);
         c.pop_back();
-#endif
     }
 
 
     template<typename T, size_t Alignment, typename Container, typename Compare>
     inline void PriorityQueue<T, Alignment, Container, Compare>::pop(value_type &value) {
-#if FERMAT_ASSERT_ENABLED
-        if (FERMAT_UNLIKELY(c.empty()))
-            FERMAT_FAIL_MSG("PriorityQueue::pop -- empty container");
-#endif
-
         value = std::move(c.front()); // To consider: value = move_if_noexcept_assignable(c.front());
         pop();
     }
 
 
     template<typename T, size_t Alignment, typename Container, typename Compare>
-    inline void PriorityQueue<T, Alignment, Container, Compare>::change(size_type n)
-    // This function is not in the STL std::PriorityQueue.
-    {
-#if FERMAT_ASSERT_ENABLED
-        if (FERMAT_UNLIKELY(n >= c.size()))
-            FERMAT_FAIL_MSG("PriorityQueue::change -- out of range");
-#endif
+    inline void PriorityQueue<T, Alignment, Container, Compare>::change(size_type n) {
+        // This function is not in the STL std::PriorityQueue.
 
         fermat::change_heap(c.begin(), c.size(), n, comp);
     }
@@ -380,13 +336,8 @@ namespace fermat {
 
     template<typename T, size_t Alignment, typename Container, typename Compare>
     inline void PriorityQueue<T, Alignment, Container, Compare>::remove(size_type n)
-    // This function is not in the STL std::PriorityQueue.
     {
-#if FERMAT_ASSERT_ENABLED
-        if (FERMAT_UNLIKELY(n >= c.size()))
-            FERMAT_FAIL_MSG("PriorityQueue::remove -- out of range");
-#endif
-
+        // This function is not in the STL std::PriorityQueue.
         fermat::remove_heap(c.begin(), c.size(), n, comp);
         c.pop_back();
     }
@@ -409,7 +360,7 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Container, typename Compare>
     inline void PriorityQueue<T, Alignment, Container, Compare>::swap(this_type &x) noexcept (
         (std::is_nothrow_swappable<typename this_type::container_type>::value &&
-            std::is_nothrow_swappable<typename this_type::compare_type>::value)) {
+         std::is_nothrow_swappable<typename this_type::compare_type>::value)) {
         using std::swap;
         swap(c, x.c);
         swap(comp, x.comp);
@@ -428,12 +379,14 @@ namespace fermat {
     ///////////////////////////////////////////////////////////////////////
 
     template<typename T, size_t Alignment, typename Container, typename Compare>
-    bool operator==(const PriorityQueue<T, Alignment, Container, Compare> &a, const PriorityQueue<T, Alignment, Container, Compare> &b) {
+    bool operator==(const PriorityQueue<T, Alignment, Container, Compare> &a,
+                    const PriorityQueue<T, Alignment, Container, Compare> &b) {
         return (a.c == b.c);
     }
 
     template<typename T, size_t Alignment, typename Container, typename Compare>
-    bool operator<(const PriorityQueue<T, Alignment, Container, Compare> &a, const PriorityQueue<T, Alignment, Container, Compare> &b) {
+    bool operator<(const PriorityQueue<T, Alignment, Container, Compare> &a,
+                   const PriorityQueue<T, Alignment, Container, Compare> &b) {
         return (a.c < b.c);
     }
 
@@ -463,9 +416,10 @@ namespace fermat {
 
 
     template<class T, size_t Alignment, class Container, class Compare>
-    inline void swap(PriorityQueue<T, Alignment, Container, Compare> &a, PriorityQueue<T, Alignment, Container, Compare> &b) noexcept(
+    inline void swap(PriorityQueue<T, Alignment, Container, Compare> &a,
+                     PriorityQueue<T, Alignment, Container, Compare> &b) noexcept(
         (std::is_nothrow_swappable<typename PriorityQueue<T, Alignment, Container, Compare>::container_type>::value &&
-            std::is_nothrow_swappable<typename PriorityQueue<T, Alignment, Container, Compare>::compare_type>::value))
+         std::is_nothrow_swappable<typename PriorityQueue<T, Alignment, Container, Compare>::compare_type>::value))
     // EDG has a bug and won't let us use Container in this noexcept statement
     {
         a.swap(b);

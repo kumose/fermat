@@ -496,6 +496,8 @@ TEST(VectorCapacityTest, Reserve) {
     fermat::Vector<int> v;
     v.reserve(100);
     EXPECT_GE(v.capacity(), 100u);
+    const size_t expected_cap = fermat::TieredAllocator<int, 0>::pooled_alloc_size(100u);
+    EXPECT_EQ(v.capacity(), expected_cap);
     EXPECT_EQ(0u, v.size());
 
     // reserve less than current capacity should do nothing

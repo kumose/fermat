@@ -16,6 +16,9 @@
 #pragma once
 
 #include <memory>
+#include <new>
+#include <type_traits>
+#include <utility>
 
 namespace fermat {
 
@@ -30,18 +33,76 @@ namespace fermat {
     using std::uninitialized_value_construct_n;
     using std::uninitialized_fill_n;
 
+namespace container_internal {
 
-#if __cplusplus >= 202002L
-    using std::construct_at;
-#endif
+    template<typename T, typename Enabler = void>
+    struct construct_default;
 
+    template<typename T>
+    struct construct_default<T, std::enable_if_t<std::is_trivially_default_constructible_v<T> &&
+                                                 std::is_assignable_v<T &, const T &>>> {
+        static inline const T value{};
 
-#if __cplusplus < 202002L
-    template <typename T, typename... Args>
-    constexpr T* construct_at(T* p, Args&&... args) {
-        return ::new (static_cast<void*>(p)) T(std::forward<Args>(args)...);
+        static constexpr T *apply(T *p) noexcept {
+            *p = value;
+            return p;
+        }
+    };
+
+    template<typename T>
+    struct construct_default<T, std::enable_if_t<!(std::is_trivially_default_constructible_v<T> &&
+                                                    std::is_assignable_v<T &, const T &>)>> {
+        static constexpr T *apply(T *p) {
+            return ::new (static_cast<void *>(p)) T();
+        }
+    };
+
+    template<typename T, typename Arg, typename Enabler = void>
+    struct construct_one;
+
+    template<typename T, typename Arg>
+    struct construct_one<T, Arg,
+            std::enable_if_t<std::is_trivially_constructible_v<T, Arg> &&
+                             std::is_assignable_v<T &, Arg>>> {
+        static constexpr T *apply(T *p, Arg &&arg) noexcept(std::is_nothrow_assignable_v<T &, Arg>) {
+            *p = std::forward<Arg>(arg);
+            return p;
+        }
+    };
+
+    template<typename T, typename Arg>
+    struct construct_one<T, Arg,
+            std::enable_if_t<!(std::is_trivially_constructible_v<T, Arg> &&
+                               std::is_assignable_v<T &, Arg>)>> {
+        template<typename U>
+        static constexpr T *apply(T *p, U &&arg) {
+            return ::new (static_cast<void *>(p)) T(std::forward<U>(arg));
+        }
+    };
+
+    template<typename T>
+    constexpr T *construct_at_dispatch(T *p) {
+        return construct_default<T>::apply(p);
     }
-#endif
+
+    template<typename T, typename Arg>
+    constexpr T *construct_at_dispatch(T *p, Arg &&arg) {
+        return construct_one<T, Arg>::apply(p, std::forward<Arg>(arg));
+    }
+
+    template<typename T, typename Arg0, typename Arg1, typename... Rest>
+    constexpr T *construct_at_dispatch(T *p, Arg0 &&a0, Arg1 &&a1, Rest &&... rest) {
+        return ::new (static_cast<void *>(p)) T(
+            std::forward<Arg0>(a0), std::forward<Arg1>(a1), std::forward<Rest>(rest)...);
+    }
+
+} // namespace container_internal
+
+    template<typename T, typename... Args>
+    constexpr T *construct_at(T *p, Args &&... args)
+        noexcept(std::is_nothrow_constructible_v<T, Args...>) {
+        return container_internal::construct_at_dispatch(p, std::forward<Args>(args)...);
+    }
 
     /// uninitialized_copy_copy
     ///
@@ -58,23 +119,23 @@ namespace fermat {
         return std::uninitialized_copy(first2, last2, mid);
     }
 
-    template <typename T>
-    constexpr void destroy_at(T * p) {
-        if constexpr (!std::is_trivially_destructible<T>::value) {
+    template<typename T>
+    constexpr void destroy_at(T *p) {
+        if constexpr (!std::is_trivially_destructible_v<T>) {
             ::std::destroy_at(p);
         }
     }
 
-    template <typename ForwardIterator>
+    template<typename ForwardIterator>
     constexpr void destroy(ForwardIterator first, ForwardIterator last) {
-        if constexpr (!std::is_trivially_destructible<typename std::iterator_traits<ForwardIterator>::value_type>::value) {
+        if constexpr (!std::is_trivially_destructible_v<
+                          typename std::iterator_traits<ForwardIterator>::value_type>) {
             ::std::destroy(first, last);
         }
     }
 
     template<typename ForwardIterator, typename T>
-    inline void uninitialized_fill(ForwardIterator first, ForwardIterator last,
-               const T& x) {
+    inline void uninitialized_fill(ForwardIterator first, ForwardIterator last, const T &x) {
         if constexpr (std::is_trivial_v<T>) {
             for (; first != last; ++first) {
                 *first = x;
@@ -83,4 +144,4 @@ namespace fermat {
             std::uninitialized_fill(first, last, x);
         }
     }
-}  // namespace fermat
+} // namespace fermat

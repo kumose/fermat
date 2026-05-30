@@ -734,8 +734,10 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Policy, typename Allocator>
     void Vector<T, Alignment, Policy, Allocator>::reserve(size_type n) {
         // If the user wants to reduce the reserved memory, there is the set_capacity function.
-        if (n > size_type(_capacity_end.first() - _begin)) // If n > capacity ...
-            DoGrow(n);
+        if (n > size_type(_capacity_end.first() - _begin)) { // If n > capacity ...
+            const size_type nn = _capacity_end.second().good_size(n);
+            DoGrow(nn);
+        }
     }
 
 

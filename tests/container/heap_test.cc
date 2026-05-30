@@ -20,7 +20,9 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
+#include <functional>
 #include <memory>
+#include <queue>
 #include <random>
 #include <vector>
 
@@ -38,6 +40,41 @@ using fermat::sort_heap;
 using fermat::Vector;
 
 using IntPriorityQueue = PriorityQueue<int, 0>;
+
+template<typename Compare>
+bool RefPushPop(std::priority_queue<int, std::vector<int>, Compare> &pq, size_t n, int value) {
+    if (n == 0)
+        return false;
+
+    if (pq.size() >= n) {
+        Compare comp;
+        if (comp(value, pq.top()))
+            return false;
+        pq.pop();
+    }
+
+    pq.push(value);
+    return true;
+}
+
+template<typename PQ>
+std::vector<int> SortedMultiset(const PQ &pq) {
+    std::vector<int> sorted(pq.get_container().begin(), pq.get_container().end());
+    std::sort(sorted.begin(), sorted.end());
+    return sorted;
+}
+
+template<typename Compare>
+std::vector<int> SortedMultisetFromRef(std::priority_queue<int, std::vector<int>, Compare> pq) {
+    std::vector<int> elements;
+    while (!pq.empty()) {
+        elements.push_back(pq.top());
+        pq.pop();
+    }
+    std::sort(elements.begin(), elements.end());
+    return elements;
+}
+
 
 void VerifyHeaps(uint32_t *pArray2, uint32_t *pArray3, uint32_t nArraySize) {
     ASSERT_TRUE(is_heap(pArray2, pArray2 + nArraySize));
