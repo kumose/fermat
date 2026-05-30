@@ -217,17 +217,18 @@ namespace fermat {
         /// The returned 64-bit ID includes shard, block, slot, and version.
         static T *get_uninitialize(uint64_t &rid_out) {
             auto &pool = instance();
-
+            KLOG(INFO)<<1;
             /// Obtain a free slot index (32-bit short ID containing shard|block|slot).
             uint32_t short_id;
             if (!pool.acquire_free_slot(short_id)) {
+                KLOG(INFO)<<5;
                 return nullptr;
             }
             /// Decode the short ID into component fields using the dedicated helper.
             uint8_t shard_id, block_id;
             uint16_t slot_id;
             ResourceId::decode_short(short_id, shard_id, block_id, slot_id);
-
+            KLOG(INFO)<<2;
             auto &shard = pool._shards[shard_id];
             auto &ver_atom = shard.metas[block_id]->version[slot_id];
 
@@ -292,28 +293,46 @@ namespace fermat {
             put_raw(rid);
         }
 
+        /// @brief Get the thread-local cache instance.
+        static std::vector<uint32_t>* get_cache() {
+            if (TURBO_LIKELY(ResourcePool::_tls_free_list)) {
+                return ResourcePool::_tls_free_list;
+            }
+            auto ptr = new std::vector<uint32_t>();
+            ResourcePool::_tls_free_list = ptr;
+            ResourcePool::_tls_free_list->reserve(TlsCache);
+            turbo::thread_atexit(ResourcePool::delete_local_pool, ResourcePool::_tls_free_list);
+
+            return ResourcePool::_tls_free_list;
+        }
+
     private:
         ResourcePool() = default;
 
+        static void delete_local_pool(void *arg) {
+            auto ptr = reinterpret_cast<std::vector<uint32_t> *>(arg);
+            delete ptr;
+        }
         /// Attempts to obtain a free short ID (shard|block|slot) from this shard.
         /// First tries the thread-local cache; if empty, refills from the global free list.
         /// Returns true if a slot was acquired, false if none available (and cannot create new block).
         bool acquire_free_slot(uint32_t &out_idx) {
             /// 1. Fast path: thread-local cache has available slots.
-            if (!tls_free_list_.empty()) {
-                out_idx = tls_free_list_.back();
-                tls_free_list_.pop_back();
+            auto cache = get_cache();
+            if (!cache->empty()) {
+                out_idx = cache->back();
+                cache->pop_back();
                 return true;
             }
-
+            KLOG(INFO)<<4;
             /// 2. Refill TLS from global free list.
             if (!fetch_to_tls()) {
                 return false; // No free slots globally and cannot create new block.
             }
 
             /// 3. After refill, TLS must have at least one slot.
-            out_idx = tls_free_list_.back();
-            tls_free_list_.pop_back();
+            out_idx = cache->back();
+            cache->pop_back();
             return true;
         }
 
@@ -328,18 +347,19 @@ namespace fermat {
                     return false;
                 }
             }
-
+            auto cache = get_cache();
             size_t batch_size = std::min(Batch, shard.free_list.size());
             for (size_t i = 0; i < batch_size; ++i) {
-                tls_free_list_.push_back(shard.free_list.back());
+                cache->push_back(shard.free_list.back());
                 shard.free_list.pop_back();
             }
-            return !tls_free_list_.empty();
+            return !cache->empty();
         }
 
         void release_slot(uint32_t idx) {
-            if (tls_free_list_.size() < TlsCache) {
-                tls_free_list_.push_back(idx);
+            auto cache = get_cache();
+            if (cache->size() < TlsCache) {
+                cache->push_back(idx);
                 return;
             }
 
@@ -350,21 +370,21 @@ namespace fermat {
                 std::lock_guard lock(shard.blocks_mutex);
                 shard.free_list.push_back(idx);
                 for (size_t i = 0; i < hf_cache_size; ++i) {
-                    auto id = tls_free_list_.back();
+                    auto id = cache->back();
                     shard.free_list.push_back(id);
-                    tls_free_list_.pop_back();
+                    cache->pop_back();
                 }
             }
         }
 
     private:
         std::array<ResourceShard<T, BlockSize, SlotSize>, 256> _shards;
-        static thread_local std::vector<uint32_t> tls_free_list_;
+        static thread_local std::vector<uint32_t>* _tls_free_list;
         static thread_local uint8_t tls_shard_id;
     };
 
     template<typename T, uint8_t B, uint16_t S, size_t C, size_t BT>
-    thread_local std::vector<uint32_t> ResourcePool<T, B, S, C, BT>::tls_free_list_;
+    thread_local std::vector<uint32_t>* ResourcePool<T, B, S, C, BT>::_tls_free_list{nullptr};
 
     template<typename T, uint8_t BlockSize, uint16_t SlotSize>
     ResourceShard<T, BlockSize, SlotSize>::ResourceShard() {

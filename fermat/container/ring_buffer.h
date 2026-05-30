@@ -176,7 +176,8 @@ namespace fermat {
     ///     debugLogText.push_front();
     ///     debugLogText.front() = "Player fired weapon";
     ///
-    template<typename T, typename Container = fermat::Vector<T>, typename Allocator = typename Container::allocator_type>
+    template<typename T, typename Container = fermat::Vector<T>, typename Allocator = typename
+        Container::allocator_type>
     class RingBuffer {
     public:
         typedef RingBuffer<T, Container, Allocator> this_type;
@@ -231,6 +232,8 @@ namespace fermat {
         this_type &operator=(std::initializer_list<value_type> ilist);
 
         this_type &operator=(this_type &&x) noexcept;
+
+        void assign(std::initializer_list<value_type> ilist);
 
         template<typename InputIterator>
         void assign(InputIterator first, InputIterator last);
@@ -670,7 +673,7 @@ namespace fermat {
 
     template<typename T, typename Container, typename Allocator>
     RingBuffer<T, Container, Allocator>::RingBuffer(std::initializer_list<value_type> ilist,
-                                                      const allocator_type &allocator)
+                                                    const allocator_type &allocator)
         : c(allocator) {
         c.resize(ilist.size() + 1);
         _begin = c.begin();
@@ -713,6 +716,11 @@ namespace fermat {
     RingBuffer<T, Container, Allocator>::operator=(std::initializer_list<value_type> ilist) {
         assign(ilist.begin(), ilist.end());
         return *this;
+    }
+
+    template<typename T, typename Container, typename Allocator>
+    void RingBuffer<T, Container, Allocator>::assign(std::initializer_list<value_type> ilist) {
+        assign(ilist.begin(), ilist.end());
     }
 
 
@@ -952,44 +960,6 @@ namespace fermat {
         };
     } // namespace Internal
 
-
-    ///////////////////////////////////////////////////////////////
-    // ContainerTemporary
-    //
-    // Helper type which prevents utilizing excessive stack space
-    // when creating temporaries when swapping/copying the underlying
-    // RingBuffer container type.
-    //
-    template<typename Container, bool UseHeapTemporary = (sizeof(Container) >= 4000)>
-    struct ContainerTemporary {
-        Container mContainer;
-
-        ContainerTemporary(Container &parentContainer)
-            : mContainer(Internal::GetFixedContainerCtorAllocator<Container>{}(parentContainer)) {
-        }
-
-        Container &get() { return mContainer; }
-    };
-
-    template<typename Container>
-    struct ContainerTemporary<Container, true> {
-        typename Container::allocator_type *mAllocator;
-        Container *mContainer;
-
-        ContainerTemporary(Container &parentContainer)
-            : mAllocator(&parentContainer.get_allocator())
-              , mContainer(new(mAllocator->allocate(sizeof(Container))) Container) {
-        }
-
-        ~ContainerTemporary() {
-            mContainer->~Container();
-            mAllocator->deallocate(mContainer, sizeof(Container));
-        }
-
-        Container &get() { return *mContainer; }
-    };
-
-
     template<typename T, typename Container, typename Allocator>
     void RingBuffer<T, Container, Allocator>::resize(size_type n) {
         // Note that if n > size(), we just move the end position out to
@@ -1016,18 +986,17 @@ namespace fermat {
             // To do: This code needs to be amended to deal with possible exceptions
             // that could occur during the resize call below.
 
-            ContainerTemporary<Container> cTemp(c);
-            cTemp.get().resize(n + 1);
-            std::copy(begin(), end(), cTemp.get().begin());
-            std::swap(c, cTemp.get());
+            Container cTemp(c);
+            cTemp.resize(n + 1);
+            std::copy(begin(), end(), cTemp.begin());
+            std::swap(c, cTemp);
 
             _begin = c.begin();
             _end = _begin;
             std::advance(_end, n);
             // We can do a simple advance algorithm on this because we know that _end will not wrap around.
-        } else
-        // We could do a check here for n != size(), but that would be costly and people don't usually resize things to their same size.
-        {
+        } else {
+            // We could do a check here for n != size(), but that would be costly and people don't usually resize things to their same size.
             _end = _begin;
 
             // std::advance(_end, n); // We *cannot* use this because there may be wraparound involved.
@@ -1058,10 +1027,10 @@ namespace fermat {
     void RingBuffer<T, Container, Allocator>::set_capacity(size_type n) {
         const size_type capacity = (c.size() - 1);
 
-        if (n != capacity) // If we need to change capacity...
-        {
-            ContainerTemporary<Container> cTemp(c);
-            cTemp.get().resize(n + 1);
+        if (n != capacity) {
+            // If we need to change capacity...
+            Container cTemp(c);
+            cTemp.resize(n + 1);
 
             iterator itCopyBegin = begin();
 
@@ -1071,9 +1040,9 @@ namespace fermat {
                 _size = n;
             }
 
-            std::copy(itCopyBegin, end(), cTemp.get().begin());
+            std::copy(itCopyBegin, end(), cTemp.begin());
             // The begin-end range may in fact be larger than n, in which case values will be overwritten.
-            std::swap(c, cTemp.get());
+            std::swap(c, cTemp);
 
             _begin = c.begin();
             _end = _begin;
@@ -1088,13 +1057,12 @@ namespace fermat {
         // We follow the pattern of vector and only do something if n > capacity.
         KCHECK(c.size() >= 1);
 
-        if (n > (c.size() - 1))
-        // If we need to grow in capacity... // (c.size() - 1) == capacity(); we are attempting to reduce function calls.
-        {
-            ContainerTemporary<Container> cTemp(c);
-            cTemp.get().resize(n + 1);
-            std::copy(begin(), end(), cTemp.get().begin());
-            std::swap(c, cTemp.get());
+        if (n > (c.size() - 1)) {
+            // If we need to grow in capacity... // (c.size() - 1) == capacity(); we are attempting to reduce function calls.
+            Container cTemp(c);
+            cTemp.resize(n + 1);
+            std::copy(begin(), end(), cTemp.begin());
+            std::swap(c, cTemp);
 
             _begin = c.begin();
             _end = _begin;

@@ -207,3 +207,115 @@ kmcmake_cc_test(
         ${KMCMAKE_DEPS_LINK}
 )
 
+kmcmake_cc_test(
+        NAME buffer_test
+        MODULE con
+        SOURCES
+        buffer_test.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        GTest::gtest
+        GTest::gtest_main
+        ${KMCMAKE_DEPS_LINK}
+)
+kmcmake_cc_test(
+        NAME ring_buffer_test
+        MODULE con
+        SOURCES
+        ring_buffer_test.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        GTest::gtest
+        GTest::gtest_main
+        ${KMCMAKE_DEPS_LINK}
+)
+
+
+kmcmake_cc_test(
+        NAME lru_cache_test
+        MODULE con
+        SOURCES
+        lru_cache_test.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        GTest::gtest
+        GTest::gtest_main
+        ${KMCMAKE_DEPS_LINK}
+)
+
+kmcmake_cc_test(
+        NAME expected_test
+        MODULE con
+        SOURCES
+        expected_test.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        GTest::gtest
+        GTest::gtest_main
+        ${KMCMAKE_DEPS_LINK}
+)
+
+kmcmake_cc_test(
+        NAME bitset_test
+        MODULE con
+        SOURCES
+        bitset_test.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        GTest::gtest
+        GTest::gtest_main
+        ${KMCMAKE_DEPS_LINK}
+)
+
+kmcmake_cc_test(
+        NAME list_test
+        MODULE con
+        SOURCES
+        list_test.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        GTest::gtest
+        GTest::gtest_main
+        ${KMCMAKE_DEPS_LINK}
+)
+
+kmcmake_cc_test(
+        NAME heap_test
+        MODULE con
+        SOURCES
+        heap_test.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        GTest::gtest
+        GTest::gtest_main
+        ${KMCMAKE_DEPS_LINK}
+)
+

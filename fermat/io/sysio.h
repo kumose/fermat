@@ -62,7 +62,7 @@ namespace fermat {
     /// @param buf Source buffer.
     /// @param count Maximum number of bytes to write.
     /// @return Number of bytes written on success, or a status error.
-    turbo::Result<size_t> sys_pwrite(PlatformHandle h, size_t offset, void *buf, size_t count) noexcept;
+    turbo::Result<size_t> sys_pwrite(PlatformHandle h, size_t offset, const void *buf, size_t count) noexcept;
 
     /// Scatter‑gather read (readv). Reads data into multiple buffers.
     /// @param h The handle.

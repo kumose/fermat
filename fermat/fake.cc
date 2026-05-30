@@ -8,3 +8,5 @@
 #include <fermat/container/cord_output_stream.h>
 #include <fermat/container/cord_input_stream.h>
 //#include <fermat/container/fixed_vector.h>
+#include <fermat/container/reference_ptr.h>
+#include <fermat/container/expected.h>

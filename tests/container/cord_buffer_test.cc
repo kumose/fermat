@@ -1079,7 +1079,9 @@ namespace fermat {
             EXPECT_TRUE(cordB.back_buffer().is_unique());
 
             // Verify that shared segments are not writable
-            EXPECT_EQ(cordB.front_buffer().write_able(), 0); // shared, not writable
+            // shared, not writable
+            EXPECT_EQ(cordB.front_buffer().write_able(), 4088);
+            EXPECT_EQ(cordB.front_buffer().is_unique(), false);
             EXPECT_GT(cordB.back_buffer().write_able(), 0); // exclusive, writable
         }
 

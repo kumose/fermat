@@ -347,6 +347,23 @@ kmcmake_cc_bm(
 
 
 
+kmcmake_cc_bm(
+        NAME reference_ptr_bench
+        MODULE mem
+        SOURCES
+        reference_ptr_bench.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        benchmark::benchmark_main
+        benchmark::benchmark
+        ${KMCMAKE_DEPS_LINK}
+)
+
+
 #[[
 kmcmake_cc_bm(
         NAME find_char_bench

@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-#[[
+
 kmcmake_cc_test(
-        NAME iobuf_test
+        NAME io_test
         MODULE io
         SOURCES
-        iobuf_test.cc
+        io_test.cc
         CXXOPTS
         ${KMCMAKE_CXX_OPTIONS}
         -fno-access-control
@@ -28,4 +28,3 @@ kmcmake_cc_test(
         GTest::gtest_main
         ${KMCMAKE_DEPS_LINK}
 )
-]]

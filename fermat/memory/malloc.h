@@ -50,7 +50,7 @@ namespace fermat {
 
         /// @brief Check if the size is a multiple of the template Alignment.
         /// @param n The size to check.
-        static bool is_aligned_size(size_t n, size_t align) noexcept {
+        static bool is_aligned_size(size_t align, size_t n) noexcept {
             return (n & (align - 1)) == 0;
         }
 

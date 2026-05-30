@@ -58,7 +58,7 @@ namespace fermat {
 
         template<typename T>
         struct HasAppend<T, std::void_t<decltype(std::declval<T>().append(std::declval<const char *>(),
-                                                                     std::declval<size_t>()))> >
+                                                                          std::declval<size_t>()))> >
                 : std::true_type {
         };
 
@@ -271,6 +271,9 @@ namespace fermat {
     struct is_contiguous_string_visitor<std::vector<char> > : std::true_type {
         static constexpr size_t kAlignment = 0;
     };
+
+    template<typename T>
+    using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T> >;
 
     namespace detail {
         template<typename, typename = void>

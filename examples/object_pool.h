@@ -123,30 +123,45 @@ namespace fermat {
         size_t n{0};
     };
 
-    template<class T, size_t Alignment = 0, size_t MaxFree = 512>
+    template<class T, size_t Alignment = 0, size_t MaxFree = 1024>
     class ObjectPool {
     private:
+        /// @brief Internal manager to handle thread-local storage and cleanup.
+        struct ThreadLocalCache {
+            size_t limited;
+            size_t tls_alloc{0};
+            size_t tls_freed{0};
+            size_t glb_alloc{0};
+            size_t glb_freed{0};
+
+            ThreadLocalCache() {
+                /// Pre-allocate capacity to avoid reallocations during push_back.
+                limited = MaxFree;
+            }
+
+            ~ThreadLocalCache() {
+                /// Thread is exiting: return all cached memory to mimalloc.
+                /// Using sized-deallocation for maximum performance.
+            }
+        };
+
         struct ThreadLocalInitializer {
             ThreadLocalInitializer() {
-
+                auto ptr = new std::vector<void *>();
+                ObjectPool::cache = ptr;
+                ObjectPool::cache->reserve(MaxFree);
+                turbo::thread_atexit(ObjectPool::delete_local_pool, ObjectPool::cache);
             }
         };
 
         /// @brief Get the thread-local cache instance.
-        static std::vector<void *> *get_cache() {
-            if (TURBO_LIKELY(ObjectPool::cache)) {
-                return ObjectPool::cache;
-            }
-            auto ptr = new std::vector<void *>();
-            ObjectPool::cache = ptr;
-            ObjectPool::cache->reserve(MaxFree);
-            turbo::thread_atexit(ObjectPool::delete_local_pool, ObjectPool::cache);
-
-            return ObjectPool::cache;
+        static ThreadLocalCache &get_tls() {
+            static ThreadLocalInitializer ins;
+            return *tls;
         }
 
         static void delete_local_pool(void *arg) {
-            auto cache_ptr = reinterpret_cast<std::vector<void *> *>(arg);
+            auto cache_ptr = reinterpret_cast<std::vector<void *>*>(arg);
             size_t rn;
             if constexpr (Alignment == 0) {
                 rn = Malloc::good_alloc_size(sizeof(T));
@@ -171,10 +186,10 @@ namespace fermat {
         /// @brief Acquire an uninitialized memory block for type T.
         /// @return Pointer to the memory block.
         static T *get_uninitialize() {
-            auto tls = get_cache();
-            if (tls->empty()) {
+            auto &tls = get_tls();
+            if (tls.cache.empty()) {
                 size_t n = sizeof(T);
-                ++glb_alloc;
+                ++tls.glb_alloc;
                 /// Fetch from mimalloc if local cache is empty.
                 if constexpr (Alignment == 0) {
                     return static_cast<T *>(Malloc::good_alloc(n));
@@ -183,9 +198,9 @@ namespace fermat {
                 }
             }
             /// LIFO: Best for CPU cache locality.
-            T *ptr = reinterpret_cast<T *>(tls->back());
-            tls->pop_back();
-            ++tls_alloc;
+            T *ptr = reinterpret_cast<T *>(tls.cache.back());
+            tls.cache.pop_back();
+            ++tls.tls_alloc;
             return ptr;
         }
 
@@ -204,9 +219,9 @@ namespace fermat {
         static void put_raw(T *ptr) {
             if (ptr == nullptr) return;
 
-            auto tls = get_cache();
-            if (tls->size() >= limited) {
-                ++glb_freed;
+            auto &tls = get_tls();
+            if (tls.cache.size() >= tls.limited) {
+                ++tls.glb_freed;
                 /// Cache is full: return to mimalloc to prevent memory bloat.
                 if constexpr (Alignment == 0) {
                     Malloc::good_free(ptr, kGoodSize);
@@ -216,20 +231,20 @@ namespace fermat {
 
                 return;
             }
-            ++tls_freed;
-            tls->push_back(ptr);
+            ++tls.tls_freed;
+            tls.cache.push_back(ptr);
         }
 
         static void set_tsl_limit(size_t n) {
-            auto tls = get_cache();
-            limited = n;
-            if (tls->capacity() < limited) {
-                tls->reserve(limited);
+            auto &tls = get_tls();
+            tls.limited = n;
+            if (tls.cache.capacity() < tls.limited) {
+                tls.cache.reserve(tls.limited);
                 return;
             }
-            while (tls->size() > limited) {
-                auto *ptr = tls->back();
-                tls->pop_back();
+            while (tls.cache.size() > tls.limited) {
+                auto *ptr = tls.cache.back();
+                tls.cache.pop_back();
                 /// Cache is full: return to mimalloc to prevent memory bloat.
                 if constexpr (Alignment == 0) {
                     Malloc::good_free(ptr);
@@ -240,15 +255,15 @@ namespace fermat {
         }
 
         static size_t release_tsl(float precent_to_save) {
-            auto tls = get_cache();
-            auto n = static_cast<size_t>(tls->size() * precent_to_save);
-            if (n >= tls->size()) {
+            auto &tls = get_tls();
+            auto n = static_cast<size_t>(tls.cache.size() * precent_to_save);
+            if (n >= tls.size()) {
                 return 0;
             }
-            auto old_size = tls->size();
-            while (tls->size() > n) {
-                auto *ptr = tls->back();
-                tls->pop_back();
+            auto old_size = tls.cache.size();
+            while (tls.cache.size() > n) {
+                auto *ptr = tls.cache.back();
+                tls.cache.pop_back();
                 /// Cache is full: return to mimalloc to prevent memory bloat.
                 if constexpr (Alignment == 0) {
                     Malloc::good_free(ptr, kGoodSize);
@@ -260,26 +275,26 @@ namespace fermat {
         }
 
         static ObjectGuard<Alignment> collect_tsl() {
-            auto tls = get_cache();
+            auto &tls = get_tls();
             ObjectGuard<Alignment> ret;
-            ret.ptrs.swap(*tls);
+            ret.ptrs.swap(tls.cache);
             ret.n = kGoodSize;
             return std::move(ret);
         }
 
         static void apply_tls(ObjectGuard<Alignment> &objs) {
-            auto tls = get_cache();
-            objs.release_to(*tls);
+            auto &tls = get_tls();
+            objs.release_to(tls.cache);
         }
 
         static PoolStats tls_stats() {
             PoolStats st;
-            auto tls = get_cache();
-            st.cached = tls->size();
-            st.tls_alloc = tls_alloc;
-            st.tls_freed = tls_freed;
-            st.glb_alloc = glb_alloc;
-            st.glb_freed = glb_freed;
+            auto &tls = get_tls();
+            st.cached = tls.cache.size();
+            st.tls_alloc = tls.tls_alloc;
+            st.tls_freed = tls.tls_freed;
+            st.glb_alloc = tls.glb_alloc;
+            st.glb_freed = tls.glb_freed;
             return st;
         }
 
@@ -291,14 +306,8 @@ namespace fermat {
         }
 
     private:
-
-        static thread_local std::vector<void *> *cache;
-
-        static thread_local size_t limited;
-        static thread_local size_t tls_alloc;
-        static thread_local size_t tls_freed;
-        static thread_local size_t glb_alloc;
-        static thread_local size_t glb_freed;
+        static __thread ThreadLocalCache *tls;
+        static __thread std::vector<void *>* cache;
 
     private:
         /// @brief Helper to destroy and return an object.
@@ -310,18 +319,9 @@ namespace fermat {
     };
 
     template<class T, size_t Alignment, size_t MaxFree>
-    thread_local std::vector<void *> *ObjectPool<T, Alignment, MaxFree>::cache = nullptr;
-
+    __thread typename ObjectPool<T, Alignment, MaxFree>::ThreadLocalCache *ObjectPool<T, Alignment, MaxFree>::tls = nullptr;
     template<class T, size_t Alignment, size_t MaxFree>
-    thread_local size_t ObjectPool<T, Alignment, MaxFree>::limited{MaxFree};
-    template<class T, size_t Alignment, size_t MaxFree>
-    thread_local size_t ObjectPool<T, Alignment, MaxFree>::tls_alloc{0};
-    template<class T, size_t Alignment, size_t MaxFree>
-    thread_local size_t ObjectPool<T, Alignment, MaxFree>::tls_freed{0};
-    template<class T, size_t Alignment, size_t MaxFree>
-    thread_local size_t ObjectPool<T, Alignment, MaxFree>::glb_alloc{0};
-    template<class T, size_t Alignment, size_t MaxFree>
-    thread_local size_t ObjectPool<T, Alignment, MaxFree>::glb_freed{0};
+    __thread std::vector<void *> *ObjectPool<T, Alignment, MaxFree>::cache = nullptr;
 
     template<class T, size_t Alignment, size_t MaxFree>
     const size_t ObjectPool<T, Alignment, MaxFree>::kGoodSize = Malloc::good_type_size<Alignment, T>();

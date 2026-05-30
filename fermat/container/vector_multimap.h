@@ -118,7 +118,7 @@ namespace fermat {
     template<typename Key, typename T, typename Compare = std::less<Key>,
         typename RandomAccessContainer = fermat::Vector<std::pair<Key, T> > >
     class VectorMultimap : protected multimap_value_compare<Key, std::pair<Key, T>, Compare>,
-                            public RandomAccessContainer {
+                           public RandomAccessContainer {
     public:
         typedef RandomAccessContainer base_type;
         typedef VectorMultimap<Key, T, Compare, RandomAccessContainer> this_type;
@@ -424,7 +424,7 @@ namespace fermat {
 
     template<typename K, typename T, typename C, typename RAC>
     inline VectorMultimap<K, T, C, RAC>::VectorMultimap(std::initializer_list<value_type> ilist,
-                                                          const key_compare &compare)
+                                                        const key_compare &compare)
         : value_compare(compare), base_type() {
         insert(ilist.begin(), ilist.end());
     }
@@ -441,7 +441,7 @@ namespace fermat {
     template<typename K, typename T, typename C, typename RAC>
     template<typename InputIterator>
     inline VectorMultimap<K, T, C, RAC>::VectorMultimap(InputIterator first, InputIterator last,
-                                                          const key_compare &compare)
+                                                        const key_compare &compare)
         : value_compare(compare), base_type() {
         insert(first, last);
     }

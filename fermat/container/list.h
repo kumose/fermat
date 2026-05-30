@@ -1515,7 +1515,7 @@ namespace fermat {
                 return lowest;
             }
             default:
-                TURBO_UNREACHABLE();
+                break;
         }
 
         // Divide the range into two parts are recursively sort each part. Upon return we will have

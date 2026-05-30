@@ -238,11 +238,10 @@ namespace fermat {
 
         void pop_back();
 
-        iterator insert(const_iterator position, const value_type &value);
+        iterator insert(const_iterator position, value_type value);
 
-        iterator insert(const_iterator position, size_type n, const value_type &value);
+        iterator insert(const_iterator position, size_type n, value_type value);
 
-        iterator insert(const_iterator position, value_type &&value);
 
         iterator insert(const_iterator position, std::initializer_list<value_type> ilist);
 
@@ -348,7 +347,7 @@ namespace fermat {
         void DoInsertFromIterator(const_iterator position, BidirectionalIterator first, BidirectionalIterator last,
                                   std::bidirectional_iterator_tag);
 
-        void DoInsertValues(const_iterator position, size_type n, const value_type &value);
+        void do_insert_values(const_iterator position, size_type n, const value_type &value);
 
         void do_insert_values_end(size_type n); // Default constructs n values
         void do_insert_values_end(size_type n, const value_type &value);
@@ -980,7 +979,7 @@ namespace fermat {
 
     template<typename T, size_t Alignment, typename Policy, typename Allocator>
     inline typename Buffer<T, Alignment, Policy, Allocator>::iterator
-    Buffer<T, Alignment, Policy, Allocator>::insert(const_iterator position, const value_type &value) {
+    Buffer<T, Alignment, Policy, Allocator>::insert(const_iterator position, value_type value) {
         if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
             KCHECK(false) << "Buffer::insert -- invalid position";
 
@@ -1000,16 +999,9 @@ namespace fermat {
 
     template<typename T, size_t Alignment, typename Policy, typename Allocator>
     inline typename Buffer<T, Alignment, Policy, Allocator>::iterator
-    Buffer<T, Alignment, Policy, Allocator>::insert(const_iterator position, value_type &&value) {
-        return emplace(position, std::move(value));
-    }
-
-
-    template<typename T, size_t Alignment, typename Policy, typename Allocator>
-    inline typename Buffer<T, Alignment, Policy, Allocator>::iterator
-    Buffer<T, Alignment, Policy, Allocator>::insert(const_iterator position, size_type n, const value_type &value) {
+    Buffer<T, Alignment, Policy, Allocator>::insert(const_iterator position, size_type n, value_type value) {
         const ptrdiff_t p = position - _begin; // Save this because we might reallocate.
-        DoInsertValues(position, n, value);
+        do_insert_values(position, n, value);
         return _begin + p;
     }
 
@@ -1374,7 +1366,7 @@ namespace fermat {
         container_internal::AssertValueFitsInType<size_type>(
             n, "Attempting to insert more elements than can can fit in size_type!");
 
-        DoInsertValues(position, static_cast<size_type>(n), static_cast<value_type>(value));
+        do_insert_values(position, static_cast<size_type>(n), static_cast<value_type>(value));
     }
 
 
@@ -1469,7 +1461,7 @@ namespace fermat {
 
     template<typename T, size_t Alignment, typename Policy, typename Allocator>
     void Buffer<T, Alignment, Policy,
-        Allocator>::DoInsertValues(const_iterator position, size_type n, const value_type &value) {
+        Allocator>::do_insert_values(const_iterator position, size_type n, const value_type &value) {
         //if (TURBO_UNLIKELY((position < _begin) || (position > _end)))
         //    KCHECK(false) << "Buffer::insert -- invalid position";
 
@@ -1747,10 +1739,16 @@ namespace fermat {
     template<typename T, size_t Alignment, typename Policy, typename Allocator>
     void Buffer<T, Alignment, Policy, Allocator>::bestow(T *data, size_type size, size_type capacity) noexcept {
         // 1. Pre-condition: Buffer must be empty to avoid accidental data loss.
-        if (TURBO_UNLIKELY(_begin != nullptr || data == nullptr)) {
-            KCHECK(_begin == nullptr) << "Buffer::bestow -- buffer is not empty";
+        if (TURBO_UNLIKELY(_begin != nullptr)) {
+            KCHECK(false) << "Buffer::bestow -- buffer is not empty";
             return;
         }
+
+        if (TURBO_UNLIKELY(data == nullptr)) {
+            KCHECK(false) << "Buffer::bestow -- data is nullptr";
+            return;
+        }
+
         if constexpr (Alignment != 0) {
             // 2. Alignment check: Ensure the external pointer meets hardware/SIMD requirements.
             KCHECK(reinterpret_cast<uintptr_t>(data) % Alignment == 0)

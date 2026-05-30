@@ -38,13 +38,39 @@ namespace fermat {
             uint32_t length{0};
         };
 
+        static constexpr size_t kTlsCacheCapacity = 8192;
+
         BufferRef() = default;
+
+        ~BufferRef() = default;
+
+        BufferRef(const BufferRef &rhs) = default;
+
+        BufferRef &operator=(const BufferRef &rhs) = default;
+
+        BufferRef(BufferRef &&rhs) noexcept {
+            buffer = std::move(rhs.buffer);
+            range = rhs.range;
+            rhs.range = {};
+            rhs.buffer.reset();
+        }
+
+        BufferRef &operator=(BufferRef &&rhs) noexcept {
+            if (this == &rhs) {
+                return *this;
+            }
+            buffer = std::move(rhs.buffer);
+            range = rhs.range;
+            rhs.range = {};
+            rhs.buffer.reset();
+            return *this;
+        }
 
         static BufferRef create_write_able(size_t n) {
             BufferRef ref;
-            auto ptr = std::make_shared<Buffer<char, Alignment> >();
-            ptr->resize_uninitialized(n);
-            ref.buffer = std::move(ptr);
+            ref.buffer = std::make_shared<Buffer<char, Alignment> >();
+            ref.buffer->resize_uninitialized(n);
+
             return ref;
         }
 
@@ -83,9 +109,10 @@ namespace fermat {
         }
 
         [[nodiscard]] size_t write_able() const {
+            /*
             if (TURBO_UNLIKELY(buffer.use_count() > 1)) {
                 return 0;
-            }
+            }*/
             return buffer->size() - range.length - range.offset;
         }
 
@@ -114,11 +141,13 @@ namespace fermat {
 
         bool borrow(void **out, int *size) {
             if (TURBO_UNLIKELY(buffer.use_count() > 1)) {
+                KLOG(INFO) << buffer.use_count();
                 return false;
             }
 
             *size = buffer->size() - range.length - range.offset;
             if (TURBO_UNLIKELY(*size == 0)) {
+                KLOG(INFO) << "*size:" << *size;
                 return false;
             }
             *out = buffer->data() + range.offset + range.length;
@@ -624,7 +653,7 @@ namespace fermat {
 
     protected:
         static const BufferRef<Alignment> kZeroBuffer;
-        BufferRef<Alignment> *_write_buffer{const_cast<BufferRef<Alignment> *>(&kZeroBuffer)};
+        mutable BufferRef<Alignment> *_write_buffer{const_cast<BufferRef<Alignment> *>(&kZeroBuffer)};
         ///< All block views (including Umount ones).
         vector_type _views;
         ///< Total logical bytes stored.
@@ -706,7 +735,7 @@ namespace fermat {
 
 
     template<size_t Alignment, size_t BlockSize>
-    template<typename String, std::enable_if_t<is_contiguous_string_receiver<String>::value, int>>
+    template<typename String, std::enable_if_t<is_contiguous_string_receiver<String>::value, int> >
     String CordBufferBase<Alignment, BlockSize>::flatten() const {
         String result;
         result.reserve(_total_size);
@@ -869,7 +898,7 @@ namespace fermat {
         rhs._total_size = 0;
         rhs._write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
         const auto &last = _views.back();
-        if (_views.back().write_able()) {
+        if (_views.back().is_unique() && _views.back().write_able()) {
             _write_buffer = &_views.back();
         } else {
             _write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
@@ -902,9 +931,11 @@ namespace fermat {
         // Clear rhs to a valid empty state.
         rhs._views.clear();
         rhs._total_size = 0;
-        rhs._write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
-        if (empty && _views.back().write_able()) {
+
+        if (empty && _views.back().is_unique() && _views.back().write_able()) {
             _write_buffer = &_views.back();
+        } else {
+            rhs._write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
         }
     }
 
@@ -921,6 +952,7 @@ namespace fermat {
         result._total_size = _total_size;
         // Shared copy must not write into the original buffers; reset the writable pointer.
         result._write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
+        this->_write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
         return result;
     }
 
@@ -1249,10 +1281,10 @@ namespace fermat {
             }
         }
         _total_size -= n;
-        if (_views.empty() || !_views.back().write_able()) {
-            _write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
-        } else {
+        if (!_views.empty() && _views.back().is_unique() && _views.back().write_able()) {
             _write_buffer = &_views.back();
+        } else {
+            _write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
         }
     }
 
@@ -1264,10 +1296,10 @@ namespace fermat {
         const auto &back = _views.back();
         _total_size -= back.range.length;
         _views.pop_back();
-        if (_views.empty() || !_views.back().write_able()) {
-            _write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
-        } else {
+        if (!_views.empty() && _views.back().is_unique() && _views.back().write_able()) {
             _write_buffer = &_views.back();
+        } else {
+            _write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
         }
     }
 

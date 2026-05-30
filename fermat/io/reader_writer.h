@@ -23,7 +23,7 @@ namespace fermat {
     struct IOVec {
         IOVec() = default;
 
-        virtual ~IOVec() = default;
+        ~IOVec() = default;
 
         IOVec(void *d, size_t len) : iov_base(d), iov_len(len) {
         }

@@ -14,7 +14,7 @@
 //
 #pragma once
 
-#include <list>
+#include <fermat/container/intrusive_list.h>
 #include <turbo/container/flat_hash_map.h>
 #include <optional>
 #include <utility> // for pair
@@ -99,16 +99,18 @@ namespace fermat {
 		/// If key already exists, no change is made and the return value is false.
 		/// If the key doesn't exist, the data is added to the map and the return value is true.
 		bool insert(const key_type &k, const value_type &v) {
-			if (m_map.find(k) == m_map.end()) {
-				make_space();
-
-				m_list.push_front(k);
-				m_map[k] = data_container_type(v, m_list.begin());
-
-				return true;
-			} else {
+			if (m_map.find(k) != m_map.end()) {
 				return false;
 			}
+			if (m_capacity == 0) {
+				return false;
+			}
+			make_space();
+
+			m_list.push_front(k);
+			m_map[k] = data_container_type(v, m_list.begin());
+
+			return true;
 		}
 
 		/// emplace
@@ -119,16 +121,22 @@ namespace fermat {
 		template<typename... Args>
 		std::pair<iterator, bool> emplace(const key_type &k, Args &&... args) {
 			auto it = m_map.find(k);
-			if (it == m_map.end()) {
-				make_space();
-
-				m_list.push_front(k);
-				return m_map.emplace(k, data_container_type(value_type{},
-				                                            std::forward_as_tuple(std::forward<Args>(args)...),
-				                                            make_tuple(m_list.begin())));
-			} else {
-				return make_pair(it, false);
+			if (it != m_map.end()) {
+				return {it, false};
 			}
+			if (m_capacity == 0) {
+				return {m_map.end(), false};
+			}
+			make_space();
+
+			m_list.push_front(k);
+			return m_map.emplace(
+				std::piecewise_construct,
+				std::forward_as_tuple(k),
+				std::forward_as_tuple(
+					std::piecewise_construct,
+					std::forward_as_tuple(std::forward<Args>(args)...),
+					std::forward_as_tuple(m_list.begin())));
 		}
 
 		/// insert_or_assign
@@ -176,14 +184,18 @@ namespace fermat {
 			if (iter != m_map.end()) {
 				touch(k);
 				return iter->second.first;
-			} else // The entry doesn't exist in the cache, so create one
-			{
-				// Add the entry to the map
-				insert(k, m_create_callback ? m_create_callback(k) : value_type());
-
-				// return the new data
-				return m_map[k].first;
 			}
+
+			if (m_capacity == 0) {
+				if (!m_discard.has_value()) {
+					m_discard.emplace();
+				}
+				return *m_discard;
+			}
+
+			insert(k, m_create_callback ? m_create_callback(k) : value_type());
+			iter = m_map.find(k);
+			return iter->second.first;
 		}
 
 		/// Equivalent to get(k)
@@ -212,6 +224,9 @@ namespace fermat {
 		///
 		/// Removes the oldest entry from the cache.
 		void erase_oldest() {
+			if (m_list.empty()) {
+				return;
+			}
 			auto key = m_list.back();
 			m_list.pop_back();
 
@@ -312,10 +327,11 @@ namespace fermat {
 		void setDeleteCallback(delete_callback_type callback) { m_delete_callback = callback; }
 
 		/// Does not reset the callbacks
+		/*
 		void reset_lose_memory() noexcept {
 			m_map.reset_lose_memory();
 			m_list.reset_lose_memory();
-		}
+		}*/
 
 	private:
 		inline void map_erase(map_iterator pos) {
@@ -338,7 +354,7 @@ namespace fermat {
 		}
 
 		void make_space() {
-			if (size() == m_capacity) {
+			if (m_capacity > 0 && size() == m_capacity) {
 				erase_oldest();
 			}
 		}
@@ -349,6 +365,7 @@ namespace fermat {
 		size_type m_capacity;
 		create_callback_type m_create_callback;
 		delete_callback_type m_delete_callback;
+		mutable std::optional<value_type> m_discard;
 	};
 }
 

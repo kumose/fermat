@@ -77,7 +77,8 @@ namespace fermat {
             std::swap(_capacity, rhs._capacity);
         }
 
-        // In C++11 data() and c_str() are 100% equivalent.
+
+        /// In C++11 data() and c_str() are 100% equivalent.
         [[nodiscard]] const Char *data() const { return _data; }
 
         Char *data() { return _data; }
