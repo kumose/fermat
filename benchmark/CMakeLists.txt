@@ -208,6 +208,22 @@ kmcmake_cc_bm(
         ${KMCMAKE_DEPS_LINK}
 )
 
+kmcmake_cc_bm(
+        NAME k_queue_bench
+        MODULE mem
+        SOURCES
+        k_queue_bench.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        benchmark::benchmark_main
+        benchmark::benchmark
+        ${KMCMAKE_DEPS_LINK}
+)
+
 
 
 kmcmake_cc_bm(

@@ -18,12 +18,12 @@
 
 #include <fermat/container/vector.h>
 #include <fermat/container/heap.h>
+#include <algorithm>
 #include <functional>
 #include <initializer_list>
 #include <cstddef>
 
 namespace fermat {
-
     /// PriorityQueue
     ///
     /// The behaviour of this class is just like the std::PriorityQueue
@@ -335,8 +335,7 @@ namespace fermat {
 
 
     template<typename T, size_t Alignment, typename Container, typename Compare>
-    inline void PriorityQueue<T, Alignment, Container, Compare>::remove(size_type n)
-    {
+    inline void PriorityQueue<T, Alignment, Container, Compare>::remove(size_type n) {
         // This function is not in the STL std::PriorityQueue.
         fermat::remove_heap(c.begin(), c.size(), n, comp);
         c.pop_back();
@@ -422,6 +421,242 @@ namespace fermat {
          std::is_nothrow_swappable<typename PriorityQueue<T, Alignment, Container, Compare>::compare_type>::value))
     // EDG has a bug and won't let us use Container in this noexcept statement
     {
+        a.swap(b);
+    }
+
+
+    /// MaxKQueue – maintains the largest K elements.
+    /// Uses a min‑heap (Compare = std::greater) so that the smallest among the K largest is at the top.
+    /// @tparam T        element type
+    /// @tparam Compare  comparison functor (default = std::greater<T>)
+    /// @tparam Alignment memory alignment for underlying vector
+    /// @tparam Container underlying container type (must support random access, default = fermat::Vector<T, Alignment>)
+    template<typename T,
+        typename Compare = std::greater<T>,
+        size_t Alignment = 0,
+        typename Container = fermat::Vector<T, Alignment> >
+    class MaxKQueue {
+    public:
+        using value_type = T;
+        using compare_type = Compare;
+        using container_type = Container;
+        using size_type = typename container_type::size_type;
+
+        MaxKQueue() = default;
+
+        /// Constructor with capacity K.
+        explicit MaxKQueue(size_type k, const compare_type &comp = compare_type())
+            : _capacity(k), _comp(comp) {
+            // Pre-allocate memory to avoid reallocation
+            _container.reserve(k);
+        }
+
+        void set_capacity(size_type k) {
+            _capacity = k;
+            _container.reserve(k);
+            while (_container.size() > _capacity) {
+                pop();
+            }
+        }
+
+        /// Pushes a value into the queue.
+        void push(const value_type &value) {
+            if (_container.size() < _capacity) {
+                _container.push_back(value);
+                if (_container.size() == 1) return;
+                // Adjust the heap bottom-up using push_heap
+                fermat::push_heap(_container.begin(), _container.end(), _comp);
+            } else if (!_container.empty() && _comp(value, _container.front())) {
+                pop();
+                push(value);
+            }
+        }
+
+        /// Pushes a value (move version).
+        void push(value_type &&value) {
+            if (_container.size() < _capacity) {
+                _container.push_back(std::move(value));
+                if (_container.size() == 1) return;
+                fermat::push_heap(_container.begin(), _container.end(), _comp);
+            } else if (_comp(value, _container.front())) {
+                pop();
+                push(std::move(value));
+            }
+        }
+
+        /// Returns the smallest element among the K largest (top of the min‑heap).
+        const value_type &top() const {
+            // Assumes non-empty
+            return _container.front();
+        }
+
+        /// Removes the smallest element among the K largest.
+        void pop() {
+            fermat::pop_heap(_container.begin(), _container.end(), _comp);
+            _container.pop_back();
+        }
+
+        /// Checks if the queue is empty.
+        [[nodiscard]] bool empty() const { return _container.empty(); }
+
+        /// Returns the current number of stored elements.
+        size_type size() const { return _container.size(); }
+
+        /// Returns the maximum number of elements that can be stored.
+        size_type capacity() const { return _capacity; }
+
+        /// Provides direct access to the underlying container.
+        container_type &get_container() { return _container; }
+
+        /// Provides const access to the underlying container.
+        const container_type &get_container() const { return _container; }
+
+        /// Swaps two MaxKQueue objects.
+        void swap(MaxKQueue &other) noexcept {
+            using std::swap;
+            swap(_container, other._container);
+            swap(_capacity, other._capacity);
+            swap(_comp, other._comp);
+        }
+
+        /// Moves out the underlying container sorted ascending by _comp.
+        container_type aes() && {
+            container_type c = std::move(_container);
+            _capacity = 0;
+            fermat::sort_heap(c.begin(), c.end(), _comp);
+            return c;
+        }
+
+        /// Moves out the underlying container sorted descending by _comp.
+        container_type des() && {
+            container_type c = std::move(_container);
+            _capacity = 0;
+            fermat::sort_heap(c.begin(), c.end(), _comp);
+            std::reverse(c.begin(), c.end());
+            return c;
+        }
+
+    private:
+        container_type _container;
+        size_type _capacity;
+        compare_type _comp;
+    };
+
+    /// MinKQueue – maintains the smallest K elements.
+    /// Uses a max‑heap (Compare = std::less) so that the largest among the K smallest is at the top.
+    /// @tparam T        element type
+    /// @tparam Compare  comparison functor (default = std::less<T>)
+    /// @tparam Alignment memory alignment for underlying vector
+    /// @tparam Container underlying container type
+    template<typename T,
+        typename Compare = std::less<T>,
+        size_t Alignment = 0,
+        typename Container = fermat::Vector<T, Alignment> >
+    class MinKQueue {
+    public:
+        using value_type = T;
+        using compare_type = Compare;
+        using container_type = Container;
+        using size_type = typename container_type::size_type;
+
+        MinKQueue() = default;
+
+        /// Constructor with capacity K.
+        explicit MinKQueue(size_type k, const compare_type &comp = compare_type())
+            : _capacity(k), _comp(comp) {
+            _container.reserve(k);
+        }
+
+        void set_capacity(size_type k) {
+            _capacity = k;
+            _container.reserve(k);
+            while (_container.size() > _capacity) {
+                pop();
+            }
+        }
+
+        /// Pushes a value into the queue.
+        void push(const value_type &value) {
+            if (_container.size() < _capacity) {
+                _container.push_back(value);
+                if (_container.size() == 1) return;
+                fermat::push_heap(_container.begin(), _container.end(), _comp);
+            } else if (_comp(value, _container.front())) {
+                pop();
+                push(value);
+            }
+        }
+
+        /// Pushes a value (move version).
+        void push(value_type &&value) {
+            if (_container.size() < _capacity) {
+                _container.push_back(std::move(value));
+                if (_container.size() == 1) return;
+                fermat::push_heap(_container.begin(), _container.end(), _comp);
+            } else if (!_container.empty() && _comp(value, _container.front())) {
+                pop();
+                push(std::move(value));
+            }
+        }
+
+        /// Returns the largest element among the K smallest (top of the max‑heap).
+        const value_type &top() const {
+            return _container.front();
+        }
+
+        /// Removes the largest element among the K smallest.
+        void pop() {
+            fermat::pop_heap(_container.begin(), _container.end(), _comp);
+            _container.pop_back();
+        }
+
+        [[nodiscard]] bool empty() const { return _container.empty(); }
+        size_type size() const { return _container.size(); }
+        size_type capacity() const { return _capacity; }
+
+        container_type &get_container() { return _container; }
+        const container_type &get_container() const { return _container; }
+
+        void swap(MinKQueue &other) noexcept {
+            using std::swap;
+            swap(_container, other._container);
+            swap(_capacity, other._capacity);
+            swap(_comp, other._comp);
+        }
+
+        /// Moves out the underlying container sorted ascending by _comp.
+        container_type aes() && {
+            container_type c = std::move(_container);
+            _capacity = 0;
+            fermat::sort_heap(c.begin(), c.end(), _comp);
+            return c;
+        }
+
+        /// Moves out the underlying container sorted descending by _comp.
+        container_type des() && {
+            container_type c = std::move(_container);
+            _capacity = 0;
+            fermat::sort_heap(c.begin(), c.end(), _comp);
+            std::reverse(c.begin(), c.end());
+            return c;
+        }
+
+    private:
+        container_type _container;
+        size_type _capacity;
+        compare_type _comp;
+    };
+
+    // Free swap functions
+    template<typename T, typename Compare, size_t Alignment, typename Container>
+    void swap(MaxKQueue<T, Compare, Alignment, Container> &a,
+              MaxKQueue<T, Compare, Alignment, Container> &b) noexcept {
+        a.swap(b);
+    }
+
+    template<typename T, typename Compare, size_t Alignment, typename Container>
+    void swap(MinKQueue<T, Compare, Alignment, Container> &a,
+              MinKQueue<T, Compare, Alignment, Container> &b) noexcept {
         a.swap(b);
     }
 } // namespace fermat
