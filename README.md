@@ -22,20 +22,20 @@ fermat aims to provide **significant** performance gains (>20%) in its sweet spo
 
 | Component | Advantageous operations | Typical speedup |
 |-----------|-------------------------|------------------|
-| `KString` | construction, copy, move, append | 1.2x – 3x (>20%) |
-| `Buffer<T>` | construction (all sizes), small push/iteration/middle insert‑erase, clear (Release) | 2x – 5x |
-| `Vector<T>` | same allocation path as `Buffer`; random access on par or faster than `std` in Release | 2x – 5x |
-| `Deque<T, Alloc, kSubarray>` | construction, push_front/push_back, iteration, random access, middle insert/erase, clear, destruct | 2x – 10x |
-| `List<T>` | all operations | 2x – 20x |
-| `PriorityQueue<T>` | push (50–100k), push/pop (≤2k), construct from iterators, bounded stream | 1.2x – 4x |
-| `Stack<T>` | all operations | 20% – 10x (construction) |
-| `Bitset` | construction, set/reset/flip, count, find series | 1.5x – 5x |
-| `LruCache` (turbo_map + fermat_list) | insert, lookup, update, erase, touch | 20% – 50% |
-| `ObjectPool` / `ResourcePool` | single‑/multi‑threaded alloc/free | 5x – 10x |
-| `RadixSort` | random integer sorting | 5x – 10x |
-| `CordBufferBase` | random chunked append (10 KiB – 100 MiB) | 1.5x – 5x |
-| `CordBinaryStream` | binary serialization write/read/round‑trip | 20% – 100% |
-| `CordStringStream` | text ping‑pong, round‑trip | 20% – 50% |
+| `KString` | construction, copy, move, append | <span style="color: green;">1.2x – 3x (>20%)</span> |
+| `Buffer<T>` | construction (all sizes), small push/iteration/middle insert‑erase, clear (Release) | <span style="color: green;">2x – 5x</span> |
+| `Vector<T>` | same allocation path as `Buffer`; random access on par or faster than `std` in Release | <span style="color: green;">2x – 5x</span> |
+| `Deque<T, Alloc, kSubarray>` | construction, push_front/push_back, iteration, random access, middle insert/erase, clear, destruct | <span style="color: green;">2x – 10x</span> |
+| `List<T>` | all operations | <span style="color: green;">2x – 20x</span> |
+| `PriorityQueue<T>` | push (50–100k), push/pop (≤2k), construct from iterators, bounded stream | <span style="color: green;">1.2x – 4x</span> |
+| `Stack<T>` | all operations | <span style="color: green;">20% – 10x (construction)</span> |
+| `Bitset` | construction, set/reset/flip, count, find series | <span style="color: green;">1.5x – 5x</span> |
+| `LruCache` (turbo_map + fermat_list) | insert, lookup, update, erase, touch | <span style="color: green;">20% – 50%</span> |
+| `ObjectPool` / `ResourcePool` | single‑/multi‑threaded alloc/free | <span style="color: green;">5x – 10x</span> |
+| `RadixSort` | random integer sorting | <span style="color: green;">5x – 10x</span> |
+| `CordBufferBase` | random chunked append (10 KiB – 100 MiB) | <span style="color: green;">1.5x – 5x</span> |
+| `CordBinaryStream` | binary serialization write/read/round‑trip | <span style="color: green;">20% – 100%</span> |
+| `CordStringStream` | text ping‑pong, round‑trip | <span style="color: green;">20% – 50%</span> |
 
 ### ⚠️ Significant disadvantage (prefer `std`)
 
@@ -61,20 +61,20 @@ fermat aims to provide **significant** performance gains (>20%) in its sweet spo
 
 | Scenario | Recommended component | Notes |
 |----------|-----------------------|-------|
-| Many string constructions / copies / moves | `KString` | 1.3–3× faster than `std::string`; short‑string `find` slightly slower |
+| Many string constructions / copies / moves | `KString` | <span style="color: green;">1.3–3×</span> faster than `std::string`; short‑string `find` slightly slower |
 | Streaming large data (logs, network packets) | `CordBufferBase` | extremely high random‑chunk append throughput (best in 10 KiB–100 MiB) |
 | Filling chunked data from disk/network | `CordBufferBase` + `append_by_*` | seamless integration with `IOReader`, zero‑copy |
-| Performance‑sensitive small/medium contiguous arrays | `Buffer<T>` / `Vector<T>` | use `Buffer` for plain POD; `Vector` for full `std::vector` semantics. Release: many ops ≥20% faster; large push_back roughly on par |
+| Performance‑sensitive small/medium contiguous arrays | `Buffer<T>` / `Vector<T>` | use `Buffer` for plain POD; `Vector` for full `std::vector` semantics. Release: many ops <span style="color: green;">≥20% faster</span>; large push_back roughly on par |
 | Frequent push_front / push_back (deque) | `Deque<T, Alloc, kSubarray>` | third template arg `kSubarray` (power of 2, default **256**) sets elements per memory block; larger blocks reduce chunk crossings (better scan/insert); smaller blocks save memory when `size()` is tiny |
-| Ordered read‑only / bulk construction of maps/sets | `VectorMap` / `VectorSet` | ordered insert 3.8× faster, iteration 24× faster; random insert slower, not for frequent modification |
-| Frequent stack operations | `FermatStack` | construction from container ~11× faster, push/pop ~1.2× faster, no disadvantage |
-| Priority queue with priority change/remove | `FermatPriorityQueue` | supports `change`/`remove`; push ~2× at ≤2k, push/pop ~4× at 1k; std pop cliff ~600 on measured platform |
-| Small object pooling (same thread) | `ObjectPool` | 5–10× faster than `new`/`delete` on thread‑local cache |
+| Ordered read‑only / bulk construction of maps/sets | `VectorMap` / `VectorSet` | ordered insert <span style="color: green;">3.8× faster</span>, iteration <span style="color: green;">24× faster</span>; random insert slower, not for frequent modification |
+| Frequent stack operations | `FermatStack` | construction from container <span style="color: green;">~11× faster</span>, push/pop <span style="color: green;">~1.2× faster</span>, no disadvantage |
+| Priority queue with priority change/remove | `FermatPriorityQueue` | supports `change`/`remove`; push <span style="color: green;">~2×</span> at ≤2k, push/pop <span style="color: green;">~4×</span> at 1k; std pop cliff ~600 on measured platform |
+| Small object pooling (same thread) | `ObjectPool` | <span style="color: green;">5–10×</span> faster than `new`/`delete` on thread‑local cache |
 | Producer / consumer threads reuse pooled memory | `ObjectPool` / `BasicAllocator` + `collect_tsl` / `apply_tls` (or `collect_arena` / `apply_arena`) | **Advanced**: strict memory/thread/lifetime control required; see ObjectPool section |
 | High‑concurrency resource reuse (with versioning) | `ResourcePool` | thread‑safe handle lookup; 16 threads ~394 ns/op |
-| Local LRU cache | `LruCache` + `turbo::flat_hash_map` + `fermat::List` | 20–50% faster than `std::map`+`std::list` in all operations |
-| Large integer sorting (random data) | `RadixSort` | 5–10× faster than `std::sort`; for already‑sorted or reverse‑sorted data, `std::sort` is faster |
-| Finding next set bit in a bitset | `fermat::Bitset` | `FindNext` 4× faster than `std::bitset`; bitwise ops slightly slower, avoid heavy use |
+| Local LRU cache | `LruCache` + `turbo::flat_hash_map` + `fermat::List` | <span style="color: green;">20–50% faster</span> than `std::map`+`std::list` in all operations |
+| Large integer sorting (random data) | `RadixSort` | <span style="color: green;">5–10× faster</span> than `std::sort`; for already‑sorted or reverse‑sorted data, `std::sort` is faster |
+| Finding next set bit in a bitset | `fermat::Bitset` | <span style="color: green;">`FindNext` 4× faster</span> than `std::bitset`; bitwise ops slightly slower, avoid heavy use |
 | Bit flags over **existing** memory (no extra allocation) | `BitmapView<true, uint64_t>` | non-owning view via `setup()` / constructor; backing must be **8-byte-aligned** `uint64_t` words — see Bitset section |
 | Synchronous file I/O | `sys_*` / `*ReadFile` / `*WriteFile` | cross‑platform abstraction, error handling with `turbo::Result` |
 | Zero‑copy cross‑block traversal of CordBuffer | `Peeker` | returns `string_view`, no copy |
@@ -103,13 +103,13 @@ Therefore: treat `capacity()` as a **momentary** upper bound on available space;
 
 | Operation | KString | std::string | Speedup |
 |-----------|---------|-------------|---------|
-| Construct (Long) | **14.4 ns** | 41.3 ns | 2.9× |
-| Copy (Long) | **25.8 ns** | 31.6 ns | 1.2× |
-| Move (Long) | **14.9 ns** | 43.7 ns | 2.9× |
-| Append (Medium) | **3.75 ns** | 4.38 ns | 1.2× |
-| Find (Short) | 10.8 ns | **8.13 ns** | slightly slower |
-| Find (Long) | **92.6 ns** | 107 ns | 1.2× |
-| Hash (Long) | **229 ns** | 232 ns | comparable |
+| Construct (Long) | <span style="color: green;">14.4 ns</span> | 41.3 ns | <span style="color: green;">2.9×</span> |
+| Copy (Long) | <span style="color: green;">25.8 ns</span> | 31.6 ns | <span style="color: green;">1.2×</span> |
+| Move (Long) | <span style="color: green;">14.9 ns</span> | 43.7 ns | <span style="color: green;">2.9×</span> |
+| Append (Medium) | <span style="color: green;">3.75 ns</span> | 4.38 ns | <span style="color: green;">1.2×</span> |
+| Find (Short) | 10.8 ns | <span style="color: green;">8.13 ns</span> | slightly slower |
+| Find (Long) | <span style="color: green;">92.6 ns</span> | 107 ns | <span style="color: green;">1.2×</span> |
+| Hash (Long) | <span style="color: green;">229 ns</span> | 232 ns | comparable |
 
 Strategy: conservative growth. For large accumulated data, pre‑`reserve()`.
 
@@ -123,87 +123,87 @@ for (int i = 0; i < 1000000; ++i) s.append("a");
 
 `fermat::Buffer<T>` is a contiguous container specialized for plain data (e.g., `int`, `float`). Its interface is compatible with `std::vector`, but construction and clearing are faster. Release mode performance data (Intel 12‑core @ 4.4 GHz, L3 18 MiB). Better per row in **bold**.
 
-| Operation | Size | std::vector<int> (ns) | fermat::Buffer<int> (ns) | Winner |
-|-----------|------|----------------------|--------------------------|--------|
-| **Construct** | 4 | 14.2 | **4.77** | fermat |
-| | 8 | 14.1 | **4.71** | fermat |
-| | 16 | 13.6 | **4.71** | fermat |
-| | 32 | 13.9 | **4.91** | fermat |
-| | 64 | 14.0 | **5.86** | fermat |
-| | 128 | 14.5 | **6.97** | fermat |
-| | 256 | 15.7 | **8.84** | fermat |
-| | 512 | 39.1 | **12.7** | fermat |
-| | 1024 | 50.0 | **21.4** | fermat |
-| **PushBackSmall** | 4 | 14.5 | **5.61** | fermat |
-| | 8 | 15.3 | **7.81** | fermat |
-| | 16 | 17.4 | **14.0** | fermat |
-| | 32 | **20.7** | 23.5 | std |
-| | 64 | **39.9** | 39.6 | std |
-| | 128 | **65.0** | 69.3 | std |
-| | 256 | 143 | **138** | fermat |
-| | 512 | 286 | **268** | fermat |
-| | 1024 | 571 | **516** | fermat |
-| **IterationSmall** | 4 | 15.9 | **5.57** | fermat |
-| | 8 | 17.9 | **10.1** | fermat |
-| | 16 | 19.5 | **12.9** | fermat |
-| | 32 | **26.8** | 34.0 | std |
-| | 64 | 34.7 | **31.5** | fermat |
-| | 128 | 54.0 | **47.0** | fermat |
-| | 256 | 94.9 | **83.8** | fermat |
-| | 512 | 191 | **152** | fermat |
-| | 1024 | 340 | **305** | fermat |
-| **RandomAccessSmall** | 4 | 181 | **183** | std |
-| | 8 | 186 | **180** | fermat |
-| | 16 | 189 | **178** | fermat |
-| | 32 | 179 | **178** | std |
-| | 64 | 174 | **177** | std |
-| | 128 | 178 | **174** | fermat |
-| | 256 | 179 | **183** | std |
-| | 512 | 177 | **181** | std |
-| | 1024 | 177 | **178** | std |
-| **InsertMiddleSmall** | 4 | 73.5 | **42.9** | fermat |
-| | 8 | 66.3 | **43.9** | fermat |
-| | 16 | 55.1 | **52.7** | fermat |
-| | 32 | 59.4 | **57.2** | fermat |
-| | 64 | 77.3 | **73.2** | fermat |
-| | 128 | 102 | **73.6** | fermat |
-| | 256 | 135 | **110** | fermat |
-| | 512 | 188 | **148** | fermat |
-| | 1024 | 270 | **258** | fermat |
-| **EraseMiddleSmall** | 4 | 20.5 | **11.8** | fermat |
-| | 8 | 28.4 | **22.7** | fermat |
-| | 16 | 46.1 | **41.4** | fermat |
-| | 32 | **52.4** | 53.4 | std |
-| | 64 | 59.7 | **56.0** | fermat |
-| | 128 | 66.2 | **66.4** | std |
-| | 256 | 87.2 | **83.6** | fermat |
-| | 512 | 135 | **107** | fermat |
-| | 1024 | 180 | **165** | fermat |
-| **ClearShrinkSmall** | 4 | 14.5 | **10.2** | fermat |
-| | 8 | 14.5 | **9.83** | fermat |
-| | 16 | 14.3 | **10.1** | fermat |
-| | 32 | 14.9 | **10.9** | fermat |
-| | 64 | 15.1 | **10.7** | fermat |
-| | 128 | 17.4 | **12.8** | fermat |
-| | 256 | 18.6 | **14.6** | fermat |
-| | 512 | 39.4 | **18.3** | fermat |
-| | 1024 | 48.6 | **31.7** | fermat |
-| **PushBack** | 1000 | 489 | **469** | fermat |
-| | 10000 | **4725** | 4711 | std |
-| | 100000 | **54065** | 55949 | std |
-| **Iteration** | 1000 | **247** | 248 | std |
-| | 10000 | 2389 | **2355** | fermat |
-| | 100000 | 23770 | **23646** | fermat |
-| **RandomAccess** | 10000 | 1713 | **1710** | fermat |
-| | 100000 | **1730** | 1758 | std |
-| **InsertMiddle** | 1000 | 1505 | **1503** | fermat |
-| | 10000 | 13498 | **13017** | fermat |
-| **EraseMiddle** | 1000 | 1379 | **1362** | fermat |
-| | 10000 | **462606** | 463187 | std |
-| **Sort** | 10000 | 342928 | **342581** | fermat |
-| | 100000 | 4533225 | **4500183** | fermat |
-| **ClearAndShrink** | 10000 | **686** | 709 | std |
-| | 100000 | 6778 | **6694** | fermat |
+| Operation | Size | std::vector<int> (ns)                     | fermat::Buffer<int> (ns)                   | Winner |
+|-----------|------|-------------------------------------------|--------------------------------------------|--------|
+| **Construct** | 4 | 14.2                                      | <span style="color: green;">4.77</span>    | fermat |
+| | 8 | 14.1                                      | <span style="color: green;">4.71</span>    | fermat |
+| | 16 | 13.6                                      | <span style="color: green;">4.71</span>    | fermat |
+| | 32 | 13.9                                      | <span style="color: green;">4.91</span>    | fermat |
+| | 64 | 14.0                                      | <span style="color: green;">5.86</span>    | fermat |
+| | 128 | 14.5                                      | <span style="color: green;">6.97</span>    | fermat |
+| | 256 | 15.7                                      | <span style="color: green;">8.84</span>    | fermat |
+| | 512 | 39.1                                      | <span style="color: green;">12.7</span>    | fermat |
+| | 1024 | 50.0                                      | <span style="color: green;">21.4</span>    | fermat |
+| **PushBackSmall** | 4 | 14.5                                      | <span style="color: green;">5.61</span>    | fermat |
+| | 8 | 15.3                                      | <span style="color: green;">7.81</span>    | fermat |
+| | 16 | 17.4                                      | <span style="color: green;">14.0</span>    | fermat |
+| | 32 | <span style="color: green;">20.7</span>   | 23.5                                       | std |
+| | 64 | <span style="color: green;">39.9</span>   | 39.6                                       | std |
+| | 128 | <span style="color: green;">65.0</span>   | 69.3                                       | std |
+| | 256 | 143                                       | <span style="color: green;">138</span>     | fermat |
+| | 512 | 286                                       | <span style="color: green;">268</span>     | fermat |
+| | 1024 | 571                                       | <span style="color: green;">516</span>     | fermat |
+| **IterationSmall** | 4 | 15.9                                      | <span style="color: green;">5.57</span>    | fermat |
+| | 8 | 17.9                                      | <span style="color: green;">10.1</span>    | fermat |
+| | 16 | 19.5                                      | <span style="color: green;">12.9</span>    | fermat |
+| | 32 | <span style="color: green;">26.8</span>   | 34.0                                       | std |
+| | 64 | 34.7                                      | <span style="color: green;">31.5</span>    | fermat |
+| | 128 | 54.0                                      | <span style="color: green;">47.0</span>    | fermat |
+| | 256 | 94.9                                      | <span style="color: green;">83.8</span>    | fermat |
+| | 512 | 191                                       | <span style="color: green;">152</span>     | fermat |
+| | 1024 | 340                                       | <span style="color: green;">305</span>     | fermat |
+| **RandomAccessSmall** | 4 | 181                                       | <span style="color: green;">183</span>     | std |
+| | 8 | 186                                       | <span style="color: green;">180</span>     | fermat |
+| | 16 | 189                                       | <span style="color: green;">178</span>     | fermat |
+| | 32 | 179                                       | <span style="color: green;">178</span>     | std |
+| | 64 | 174                                       | <span style="color: green;">177</span>     | std |
+| | 128 | 178                                       | <span style="color: green;">174</span>     | fermat |
+| | 256 | 179                                       | <span style="color: green;">183</span>     | std |
+| | 512 | 177                                       | <span style="color: green;">181</span>     | std |
+| | 1024 | 177                                       | <span style="color: green;">178</span>     | std |
+| **InsertMiddleSmall** | 4 | 73.5                                      | <span style="color: green;">42.9</span>    | fermat |
+| | 8 | 66.3                                      | <span style="color: green;">43.9</span>    | fermat |
+| | 16 | 55.1                                      | <span style="color: green;">52.7</span>    | fermat |
+| | 32 | 59.4                                      | <span style="color: green;">57.2</span>    | fermat |
+| | 64 | 77.3                                      | <span style="color: green;">73.2</span>    | fermat |
+| | 128 | 102                                       | <span style="color: green;">73.6</span>    | fermat |
+| | 256 | 135                                       | <span style="color: green;">110</span>     | fermat |
+| | 512 | 188                                       | <span style="color: green;">148</span>     | fermat |
+| | 1024 | 270                                       | <span style="color: green;">258</span>     | fermat |
+| **EraseMiddleSmall** | 4 | 20.5                                      | <span style="color: green;">11.8</span>    | fermat |
+| | 8 | 28.4                                      | <span style="color: green;">22.7</span>    | fermat |
+| | 16 | 46.1                                      | <span style="color: green;">41.4</span>    | fermat |
+| | 32 | <span style="color: green;">52.4</span>   | 53.4                                       | std |
+| | 64 | 59.7                                      | <span style="color: green;">56.0</span>    | fermat |
+| | 128 | 66.2                                      | <span style="color: green;">66.4</span>    | std |
+| | 256 | 87.2                                      | <span style="color: green;">83.6</span>    | fermat |
+| | 512 | 135                                       | <span style="color: green;">107</span>     | fermat |
+| | 1024 | 180                                       | <span style="color: green;">165</span>     | fermat |
+| **ClearShrinkSmall** | 4 | 14.5                                      | <span style="color: green;">10.2</span>    | fermat |
+| | 8 | 14.5                                      | <span style="color: green;">9.83</span>    | fermat |
+| | 16 | 14.3                                      | <span style="color: green;">10.1</span>    | fermat |
+| | 32 | 14.9                                      | <span style="color: green;">10.9</span>    | fermat |
+| | 64 | 15.1                                      | <span style="color: green;">10.7</span>    | fermat |
+| | 128 | 17.4                                      | <span style="color: green;">12.8</span>    | fermat |
+| | 256 | 18.6                                      | <span style="color: green;">14.6</span>    | fermat |
+| | 512 | 39.4                                      | <span style="color: green;">18.3</span>    | fermat |
+| | 1024 | 48.6                                      | <span style="color: green;">31.7</span>    | fermat |
+| **PushBack** | 1000 | 489                                       | <span style="color: green;">469</span>     | fermat |
+| | 10000 | 4725                                      | <span style="color: green;">4711</span>    | std |
+| | 100000 | <span style="color: green;">54065</span>  | 55949                                      | std |
+| **Iteration** | 1000 | <span style="color: green;">247</span>    | 248                                        | std |
+| | 10000 | 2389                                      | <span style="color: green;">2355</span>    | fermat |
+| | 100000 | 23770                                     | <span style="color: green;">23646</span>   | fermat |
+| **RandomAccess** | 10000 | 1713                                      | <span style="color: green;">1710</span>    | fermat |
+| | 100000 | <span style="color: green;">1730</span>   | 1758                                       | std |
+| **InsertMiddle** | 1000 | 1505                                      | <span style="color: green;">1503</span>    | fermat |
+| | 10000 | 13498                                     | <span style="color: green;">13017</span>   | fermat |
+| **EraseMiddle** | 1000 | 1379                                      | <span style="color: green;">1362</span>    | fermat |
+| | 10000 | <span style="color: green;">462606</span> | 463187                                     | std |
+| **Sort** | 10000 | 342928                                    | <span style="color: green;">342581</span>  | fermat |
+| | 100000 | 4533225                                   | <span style="color: green;">4500183</span> | fermat |
+| **ClearAndShrink** | 10000 | <span style="color: green;">686</span>    | 709                                        | std |
+| | 100000 | 6778                                      | <span style="color: green;">6694</span>    | fermat |
 
 ```cpp
 fermat::Buffer<int> v;
@@ -224,31 +224,31 @@ Benchmark below: `fermat::Deque<int>` vs `std::deque<int>` (`mem_deque_bench`, R
 
 | Benchmark | Size | std::deque&lt;int&gt; | fermat::Deque&lt;int&gt; |
 |-----------|------|----------------------|--------------------------|
-| **ConstructEmpty** | – | 26.1 ns | **7.25 ns** |
-| **ConstructFill** | 8 | 29.6 ns | **9.29 ns** |
-| | 64 | 30.8 ns | **10.8 ns** |
-| | 512 | 79.3 ns | **32.5 ns** |
-| | 4096 | 826 ns | **203 ns** |
-| | 32768 | 10617 ns | **1974 ns** |
-| | 100000 | 69040 ns | **6476 ns** |
-| **PushBack** | 8 | 28.1 ns | **11.5 ns** |
-| | 64 | 63.4 ns | **42.3 ns** |
-| | 512 | 535 ns | **249 ns** |
-| | 4096 | 3899 ns | **1945 ns** |
-| | 32768 | 32319 ns | **17317 ns** |
-| | 100000 | 167878 ns | **54955 ns** |
-| **PushFront** | 8 | 42.5 ns | **12.1 ns** |
-| | 64 | 57.4 ns | **40.5 ns** |
-| | 512 | 303 ns | **268 ns** |
-| | 4096 | 2464 ns | **2002 ns** |
-| | 32768 | 22512 ns | **18141 ns** |
-| | 100000 | 67356 ns | **56549 ns** |
-| **RandomAccess** | – | 1.63 ns | **1.62 ns** |
-| **Iteration** | – | 30287 ns | **29205 ns** |
-| **InsertMiddle** | – | 1488 ns | **882 ns** |
-| **EraseMiddle** | – | 1767 ns | **767 ns** |
-| **Clear** | – | 222 ns | **62.2 ns** |
-| **Destruct** | – | 128 ns | **44.5 ns** |
+| **ConstructEmpty** | – | 26.1 ns | <span style="color: green;">7.25 ns</span> |
+| **ConstructFill** | 8 | 29.6 ns | <span style="color: green;">9.29 ns</span> |
+| | 64 | 30.8 ns | <span style="color: green;">10.8 ns</span> |
+| | 512 | 79.3 ns | <span style="color: green;">32.5 ns</span> |
+| | 4096 | 826 ns | <span style="color: green;">203 ns</span> |
+| | 32768 | 10617 ns | <span style="color: green;">1974 ns</span> |
+| | 100000 | 69040 ns | <span style="color: green;">6476 ns</span> |
+| **PushBack** | 8 | 28.1 ns | <span style="color: green;">11.5 ns</span> |
+| | 64 | 63.4 ns | <span style="color: green;">42.3 ns</span> |
+| | 512 | 535 ns | <span style="color: green;">249 ns</span> |
+| | 4096 | 3899 ns | <span style="color: green;">1945 ns</span> |
+| | 32768 | 32319 ns | <span style="color: green;">17317 ns</span> |
+| | 100000 | 167878 ns | <span style="color: green;">54955 ns</span> |
+| **PushFront** | 8 | 42.5 ns | <span style="color: green;">12.1 ns</span> |
+| | 64 | 57.4 ns | <span style="color: green;">40.5 ns</span> |
+| | 512 | 303 ns | <span style="color: green;">268 ns</span> |
+| | 4096 | 2464 ns | <span style="color: green;">2002 ns</span> |
+| | 32768 | 22512 ns | <span style="color: green;">18141 ns</span> |
+| | 100000 | 67356 ns | <span style="color: green;">56549 ns</span> |
+| **RandomAccess** | – | 1.63 ns | <span style="color: green;">1.62 ns</span> |
+| **Iteration** | – | 30287 ns | <span style="color: green;">29205 ns</span> |
+| **InsertMiddle** | – | 1488 ns | <span style="color: green;">882 ns</span> |
+| **EraseMiddle** | – | 1767 ns | <span style="color: green;">767 ns</span> |
+| **Clear** | – | 222 ns | <span style="color: green;">62.2 ns</span> |
+| **Destruct** | – | 128 ns | <span style="color: green;">44.5 ns</span> |
 
 ### Contiguous container `Vector<T>`
 
@@ -256,22 +256,22 @@ Benchmark below: `fermat::Deque<int>` vs `std::deque<int>` (`mem_deque_bench`, R
 
 | Operation | Size | std::vector<int> (ns) | fermat::Vector<int> (ns) | Winner |
 |-----------|------|----------------------|--------------------------|--------|
-| **Construct** | 4 | 14.6 | **5.31** | fermat |
-| | 1024 | 43.5 | **23.9** | fermat |
-| **PushBackSmall** | 4 | 14.5 | **6.93** | fermat |
-| | 1024 | 488 | **481** | fermat |
-| **IterationSmall** | 4 | 15.4 | **5.70** | fermat |
-| | 1024 | 301 | **273** | fermat |
-| **RandomAccessSmall** | 4 | 174 | **174** | tie |
-| | 1024 | **172** | 180 | std |
-| **RandomAccess** | 10000 | 1739 | **1698** | fermat |
-| | 100000 | 1732 | **1725** | fermat |
-| **PushBack** | 1000 | 487 | **478** | fermat |
-| **EmplaceBack** | 100000 | 54018 | **53590** | fermat |
-| **Iteration** | 100000 | 23576 | **23511** | fermat |
-| **InsertMiddle** | 10000 | 13698 | **12917** | fermat |
-| **EraseMiddle** | 1000 | 1396 | **1367** | fermat |
-| **ClearShrinkSmall** | 1024 | 43.0 | **25.5** | fermat |
+| **Construct** | 4 | 14.6 | <span style="color: green;">5.31</span> | fermat |
+| | 1024 | 43.5 | <span style="color: green;">23.9</span> | fermat |
+| **PushBackSmall** | 4 | 14.5 | <span style="color: green;">6.93</span> | fermat |
+| | 1024 | 488 | <span style="color: green;">481</span> | fermat |
+| **IterationSmall** | 4 | 15.4 | <span style="color: green;">5.70</span> | fermat |
+| | 1024 | 301 | <span style="color: green;">273</span> | fermat |
+| **RandomAccessSmall** | 4 | 174 | <span style="color: green;">174</span> | tie |
+| | 1024 | <span style="color: green;">172</span> | 180 | std |
+| **RandomAccess** | 10000 | 1739 | <span style="color: green;">1698</span> | fermat |
+| | 100000 | 1732 | <span style="color: green;">1725</span> | fermat |
+| **PushBack** | 1000 | 487 | <span style="color: green;">478</span> | fermat |
+| **EmplaceBack** | 100000 | 54018 | <span style="color: green;">53590</span> | fermat |
+| **Iteration** | 100000 | 23576 | <span style="color: green;">23511</span> | fermat |
+| **InsertMiddle** | 10000 | 13698 | <span style="color: green;">12917</span> | fermat |
+| **EraseMiddle** | 1000 | 1396 | <span style="color: green;">1367</span> | fermat |
+| **ClearShrinkSmall** | 1024 | 43.0 | <span style="color: green;">25.5</span> | fermat |
 
 ```cpp
 fermat::Vector<int> v;
@@ -285,9 +285,9 @@ Based on sorted `vector`, very fast ordered insertion and bulk construction, ite
 
 | Operation (1000) | VectorMap | std::map | Speedup |
 |-----------------|-----------|----------|---------|
-| Ordered insert | **9.2 µs** | 35.3 µs | 3.8× |
-| Iteration | **0.15 ns/element** | 3.6 ns/element | ~24× |
-| Random insert | 83.9 µs | **26.3 µs** | slower |
+| Ordered insert | <span style="color: green;">9.2 µs</span> | 35.3 µs | <span style="color: green;">3.8×</span> |
+| Iteration | <span style="color: green;">0.15 ns/element</span> | 3.6 ns/element | <span style="color: green;">~24×</span> |
+| Random insert | 83.9 µs | <span style="color: green;">26.3 µs</span> | slower |
 
 For random insert and frequent erase, use `std::map` / `turbo::flat_hash_map`.
 
@@ -303,9 +303,9 @@ auto it = m.find(1);
 
 | Operation | FermatStack | std::stack | Speedup |
 |-----------|-------------|------------|---------|
-| top() | **0.374 ns** | 0.423 ns | 1.1× |
-| construct from container (1000) | **20.2 ns** | 220 ns | 10.9× |
-| push/pop (1000) | **759 ns** | 919 ns | 1.2× |
+| top() | <span style="color: green;">0.374 ns</span> | 0.423 ns | <span style="color: green;">1.1×</span> |
+| construct from container (1000) | <span style="color: green;">20.2 ns</span> | 220 ns | <span style="color: green;">10.9×</span> |
+| push/pop (1000) | <span style="color: green;">759 ns</span> | 919 ns | <span style="color: green;">1.2×</span> |
 
 ```cpp
 fermat::stack<int, 0> st;
@@ -320,14 +320,14 @@ Supports `change` / `remove` (can modify elements via `get_container()`). Push u
 
 | Operation | Size | FermatPriorityQueue | std::priority_queue | Notes |
 |-----------|------|---------------------|----------------------|-------|
-| **Push** | 1000 | **1853 ns** | 2369 ns | ~1.3× |
-| | 100000 | **980 µs** | 1253 µs | ~1.3× |
-| **Pop** | 1000 | **12.6 µs** | 38.7 µs | std cliff ~600 |
-| | 100000 | **7.10 ms** | 7.25 ms | ~equal |
-| **PushPop** | 1000 | **9.90 µs** | 41.4 µs | ~4.2× |
-| | 100000 | **7.82 ms** | 8.19 ms | ~1.05× |
-| **ConstructFromIterators** | 10000 | **20.2 µs** | 46.9 µs | ~2.3× |
-| **BoundedPushPop** (limit 1000) | – | **13.9 µs** | 33.8 µs | 2000 stream ops |
+| **Push** | 1000 | <span style="color: green;">1853 ns</span> | 2369 ns | <span style="color: green;">~1.3×</span> |
+| | 100000 | <span style="color: green;">980 µs</span> | 1253 µs | <span style="color: green;">~1.3×</span> |
+| **Pop** | 1000 | <span style="color: green;">12.6 µs</span> | 38.7 µs | std cliff ~600 |
+| | 100000 | <span style="color: green;">7.10 ms</span> | 7.25 ms | ~equal |
+| **PushPop** | 1000 | <span style="color: green;">9.90 µs</span> | 41.4 µs | <span style="color: green;">~4.2×</span> |
+| | 100000 | <span style="color: green;">7.82 ms</span> | 8.19 ms | <span style="color: green;">~1.05×</span> |
+| **ConstructFromIterators** | 10000 | <span style="color: green;">20.2 µs</span> | 46.9 µs | <span style="color: green;">~2.3×</span> |
+| **BoundedPushPop** (limit 1000) | – | <span style="color: green;">13.9 µs</span> | 33.8 µs | 2000 stream ops |
 | change/remove (1000) | – | 1.68 µs | not supported | – |
 
 Full size sweep: [`benchmark/README.md`](benchmark/README.md) (Priority queue section).
@@ -347,8 +347,8 @@ pq.remove(idx);
 
 | Operation | ObjectPool | new/delete | Speedup |
 |-----------|------------|------------|---------|
-| single thread | **2.02 ns** | 11.7 ns | 5.8× |
-| 16 threads | **3.77 ns** | 29.0 ns | 7.7× |
+| single thread | <span style="color: green;">2.02 ns</span> | 11.7 ns | <span style="color: green;">5.8×</span> |
+| 16 threads | <span style="color: green;">3.77 ns</span> | 29.0 ns | <span style="color: green;">7.7×</span> |
 
 **Same thread (typical):**
 
@@ -457,24 +457,24 @@ Configurable underlying map and list types. Benchmark compares `turbo::flat_hash
 
 | Operation | Keys | std_map_std_list | std_map_fermat_list | turbo_map_std_list | turbo_map_fermat_list |
 |-----------|------|-------------------|----------------------|---------------------|------------------------|
-| **Insert distinct** | 1000 | 81.0 µs | 59.2 µs | 43.0 µs | **31.5 µs** |
-| | 10000 | 869 µs | 729 µs | 514 µs | **406 µs** |
-| | 100000 | 11.57 ms | 8.28 ms | 6.82 ms | **5.77 ms** |
-| **Lookup high hit** | 1000 | 45.0 ns | 31.0 ns | 28.3 ns | **21.4 ns** |
-| | 10000 | 51.1 ns | 37.2 ns | 31.8 ns | **25.9 ns** |
-| | 100000 | 91.7 ns | 45.7 ns | 40.7 ns | **32.9 ns** |
-| **Lookup low hit** | 1000 | 114 ns | 96.8 ns | 85.8 ns | **72.3 ns** |
-| | 10000 | 126 ns | 107 ns | 106 ns | **90.1 ns** |
-| | 100000 | 149 ns | 118 ns | 127 ns | **114 ns** |
-| **Update (assign)** | 1000 | 33.9 ns | 23.6 ns | 22.6 ns | **16.2 ns** |
-| | 10000 | 42.4 ns | 29.4 ns | 25.6 ns | **21.0 ns** |
-| | 100000 | 66.5 ns | 38.6 ns | 33.3 ns | **27.8 ns** |
-| **Erase all** | 1000 | 73.9 µs | 56.2 µs | 42.8 µs | **29.1 µs** |
-| | 10000 | 808 µs | 717 µs | 485 µs | **398 µs** |
-| | 100000 | 9.88 ms | 8.22 ms | 6.42 ms | **5.56 ms** |
-| **touch** | 1000 | 32.9 ns | 22.6 ns | 21.9 ns | **16.2 ns** |
-| | 10000 | 39.5 ns | 29.6 ns | 25.2 ns | **21.3 ns** |
-| | 100000 | 55.6 ns | 38.7 ns | 31.4 ns | **27.9 ns** |
+| **Insert distinct** | 1000 | 81.0 µs | 59.2 µs | 43.0 µs | <span style="color: green;">31.5 µs</span> |
+| | 10000 | 869 µs | 729 µs | 514 µs | <span style="color: green;">406 µs</span> |
+| | 100000 | 11.57 ms | 8.28 ms | 6.82 ms | <span style="color: green;">5.77 ms</span> |
+| **Lookup high hit** | 1000 | 45.0 ns | 31.0 ns | 28.3 ns | <span style="color: green;">21.4 ns</span> |
+| | 10000 | 51.1 ns | 37.2 ns | 31.8 ns | <span style="color: green;">25.9 ns</span> |
+| | 100000 | 91.7 ns | 45.7 ns | 40.7 ns | <span style="color: green;">32.9 ns</span> |
+| **Lookup low hit** | 1000 | 114 ns | 96.8 ns | 85.8 ns | <span style="color: green;">72.3 ns</span> |
+| | 10000 | 126 ns | 107 ns | 106 ns | <span style="color: green;">90.1 ns</span> |
+| | 100000 | 149 ns | 118 ns | 127 ns | <span style="color: green;">114 ns</span> |
+| **Update (assign)** | 1000 | 33.9 ns | 23.6 ns | 22.6 ns | <span style="color: green;">16.2 ns</span> |
+| | 10000 | 42.4 ns | 29.4 ns | 25.6 ns | <span style="color: green;">21.0 ns</span> |
+| | 100000 | 66.5 ns | 38.6 ns | 33.3 ns | <span style="color: green;">27.8 ns</span> |
+| **Erase all** | 1000 | 73.9 µs | 56.2 µs | 42.8 µs | <span style="color: green;">29.1 µs</span> |
+| | 10000 | 808 µs | 717 µs | 485 µs | <span style="color: green;">398 µs</span> |
+| | 100000 | 9.88 ms | 8.22 ms | 6.42 ms | <span style="color: green;">5.56 ms</span> |
+| **touch** | 1000 | 32.9 ns | 22.6 ns | 21.9 ns | <span style="color: green;">16.2 ns</span> |
+| | 10000 | 39.5 ns | 29.6 ns | 25.2 ns | <span style="color: green;">21.3 ns</span> |
+| | 100000 | 55.6 ns | 38.7 ns | 31.4 ns | <span style="color: green;">27.9 ns</span> |
 
 > **Conclusion**: `turbo::flat_hash_map` + `fermat::List` performs best in all operations and is recommended as the high‑performance LRU cache implementation.
 
@@ -494,7 +494,7 @@ Sorting random `uint32_t` data is ~10× faster than `std::sort`.
 
 | Data size | RadixSort | std::sort | Speedup |
 |-----------|-----------|-----------|---------|
-| 1M random u32 | **5.34 ms** | 53.7 ms | 10.1× |
+| 1M random u32 | <span style="color: green;">5.34 ms</span> | 53.7 ms | <span style="color: green;">10.1×</span> |
 
 ```cpp
 std::vector<uint32_t> data = {5, 2, 8, 1};
@@ -526,7 +526,7 @@ size_t i = bm.find_first();
 
 | Operation (1024 bit) | fermat::Bitset | std::bitset | Speedup |
 |----------------------|----------------|-------------|---------|
-| find_next | **0.387 ns** | 1.56 ns | 4.0× |
+| find_next | <span style="color: green;">0.387 ns</span> | 1.56 ns | <span style="color: green;">4.0×</span> |
 
 ### Synchronous disk I/O
 

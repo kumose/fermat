@@ -21,7 +21,7 @@
 
 #include <cstddef>
 #include <cstring>
-#include <build/kmpkg_installed/x64-linux/include/turbo/log/check.h>
+#include <turbo/log/check.h>
 
 
 namespace fermat {
