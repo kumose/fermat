@@ -549,16 +549,96 @@
 | BM_NewDelete_Batch | 2789 |
 
 
-## pri queue
+## Priority queue
 
-| Benchmark | Size | std::priority_queue | fermat::PriorityQueue |
-|-----------|------|---------------------|----------------------|
-| **PushPop** | 1000 | **10795 ns** | 22614 ns |
-| | 10000 | 649324 ns | **601981 ns** |
-| | 100000 | 8123986 ns | **7723241 ns** |
-| **ConstructFromIterators** | 1000 | 2130 ns | **1871 ns** |
-| | 10000 | 42576 ns | **44622 ns** |
-| | 100000 | 754797 ns | **719866 ns** |
+`pri_queue_bench`: `std::priority_queue<int>` vs `fermat::PriorityQueue<int, 0>`. Push uses `fermat::push_heap` + `fermat::Vector`; Pop uses `std::pop_heap` on both adapters.
+
+> **BoundedPushPop**: at most `Arg` elements, `kBoundedStreamOps` = 2000 push/pop cycles. When `Arg < 2000` the heap stays bounded (mostly push). `BoundedPushPop/2000` ≈ 2000 pushes.
+
+### Push (total ns, n pushes from empty each iteration)
+
+| Size | std::priority_queue | fermat::PriorityQueue | Winner |
+|------|---------------------|----------------------|--------|
+| 50 | 193 | **80.0** | fermat |
+| 100 | 352 | **178** | fermat |
+| 200 | 592 | **358** | fermat |
+| 500 | 1338 | **917** | fermat |
+| 600 | 1555 | **1130** | fermat |
+| 700 | 1824 | **1290** | fermat |
+| 800 | 2039 | **1452** | fermat |
+| 900 | 2355 | **1637** | fermat |
+| 1000 | 2369 | **1853** | fermat |
+| 2000 | 4461 | **3683** | fermat |
+| 10000 | 90493 | **73803** | fermat |
+| 100000 | 1253163 | **980509** | fermat |
+
+### Pop (total ns, n pops; heap built in `PauseTiming`)
+
+| Size | std::priority_queue | fermat::PriorityQueue | Winner |
+|------|---------------------|----------------------|--------|
+| 50 | 425 | **366** | fermat |
+| 100 | 772 | **651** | fermat |
+| 200 | 1501 | **1297** | fermat |
+| 500 | 4183 | **3452** | fermat |
+| 600 | 13346 | **4229** | fermat |
+| 700 | 19277 | **4961** | fermat |
+| 800 | 24393 | **5738** | fermat |
+| 900 | 29914 | **6539** | fermat |
+| 1000 | 38677 | **12599** | fermat |
+| 2000 | 89097 | **70323** | fermat |
+| 10000 | 591412 | **541277** | fermat |
+| 100000 | 7247497 | **7101736** | fermat |
+
+> std **Pop** / **PushPop** show a sharp slowdown around **n ≈ 600** on this machine; fermat stays smooth until larger n.
+
+### PushPop (total ns, n push then n pop)
+
+| Size | std::priority_queue | fermat::PriorityQueue | Winner |
+|------|---------------------|----------------------|--------|
+| 50 | 454 | **322** | fermat |
+| 100 | 894 | **731** | fermat |
+| 200 | 1759 | **1525** | fermat |
+| 500 | 4823 | **4242** | fermat |
+| 600 | 12652 | **5245** | fermat |
+| 700 | 20166 | **6081** | fermat |
+| 800 | 27682 | **7176** | fermat |
+| 900 | 34164 | **8632** | fermat |
+| 1000 | 41378 | **9898** | fermat |
+| 2000 | 102329 | **79918** | fermat |
+| 10000 | 639528 | **631788** | fermat |
+| 100000 | 8193621 | **7817550** | fermat |
+
+### ConstructFromIterators
+
+| Size | std::priority_queue | fermat::PriorityQueue | Winner |
+|------|---------------------|----------------------|--------|
+| 1000 | 2085 | **1555** | fermat |
+| 10000 | 46857 | **20247** | fermat |
+| 100000 | 760036 | **670890** | fermat |
+
+### BoundedPushPop (limit = Arg, 2000 stream ops)
+
+| Limit | std::priority_queue | fermat::PriorityQueue | Winner |
+|-------|---------------------|----------------------|--------|
+| 50 | 19104 | **17647** | fermat |
+| 100 | 21771 | **19587** | fermat |
+| 200 | 23546 | **21126** | fermat |
+| 500 | 32393 | **18893** | fermat |
+| 600 | 33473 | **17989** | fermat |
+| 700 | 34530 | **16169** | fermat |
+| 800 | 36666 | **15653** | fermat |
+| 900 | 35737 | **14761** | fermat |
+| 1000 | 33822 | **13901** | fermat |
+| 2000 | 4451 | **4240** | fermat |
+
+### Other (fermat only)
+
+| Benchmark | Arg | Time (ns) |
+|-----------|-----|-----------|
+| ChangeRemove | 1000 | 1682 |
+| ChangeRemove | 10000 | 22518 |
+| ChangeRemove | 100000 | 654188 |
+| BoundedPushPop200 | – | 21194 |
 
 ## 
 
@@ -638,6 +718,10 @@ BM_MultiThread<ShardedPool>/16/real_time      0.394 us        0.376 us      4341
 
 
 ## stream
+
+> **How to read this table**
+> - **RoundTrip / PingPong / Binary\***: Cord chunked I/O vs std on comparable workloads — fair comparisons for Cord use cases.
+> - **TokenRead / BulkRead / OStreamFormat (std faster)**: reference **ceiling** for **already-contiguous** data (`std::istringstream` / flat buffer). Shows best achievable throughput on flat memory; **not** a head-to-head disadvantage of `CordInputStringStream` when your data lives in `CordBufferBase` chunks. Pick std for contiguous inputs; pick Cord streams to avoid flattening.
 
 | Operation | Size | std (ns / GiB/s) | fermat (ns / GiB/s) | Winner |
 |-----------|------|------------------|---------------------|--------|

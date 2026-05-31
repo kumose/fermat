@@ -27,7 +27,7 @@ fermat aims to provide **significant** performance gains (>20%) in its sweet spo
 | `Vector<T>` | same allocation path as `Buffer`; random access on par or faster than `std` in Release | 2x – 5x |
 | `Deque<T, Alloc, kSubarray>` | construction, push_front/push_back, iteration, random access, middle insert/erase, clear, destruct | 2x – 10x |
 | `List<T>` | all operations | 2x – 20x |
-| `PriorityQueue<T>` | large push/pop (10k+), construction from iterators | 10% – 30% |
+| `PriorityQueue<T>` | push (50–100k), push/pop (≤2k), construct from iterators, bounded stream | 1.2x – 4x |
 | `Stack<T>` | all operations | 20% – 10x (construction) |
 | `Bitset` | construction, set/reset/flip, count, find series | 1.5x – 5x |
 | `LruCache` (turbo_map + fermat_list) | insert, lookup, update, erase, touch | 20% – 50% |
@@ -42,9 +42,6 @@ fermat aims to provide **significant** performance gains (>20%) in its sweet spo
 | Component | Weak operations | Slower than `std` | Reason |
 |-----------|-----------------|--------------------|--------|
 | `KString` | short‑string `find` | ~30% | different implementation path from `std::string` |
-| `PriorityQueue<T>` | push/pop for small sizes (1000 elements) | ~2× | `std` algorithm better for small heaps |
-| `CordInputStringStream` | token read (`>> string`) | ~20–30% | need cross‑block search |
-| `CordInputStringStream` | bulk read (`read`) | ~2× | multiple cross‑block copies |
 | `CordFormatter` | text formatting | ~6× | currently outputs char‑by‑char, no batch write |
 | `Bitset` | bitwise ops (`&`, `|`, `^`), shift | ~10–20% | `std::bitset` better compiler optimization |
 
@@ -55,6 +52,7 @@ fermat aims to provide **significant** performance gains (>20%) in its sweet spo
 > - `Buffer<T>` (plain data such as `int`/`float`) and `Vector<T>` (general contiguous container) have no significant disadvantage vs `std::vector` in **Release** mode after recent optimizations; small‑size random access is now roughly on par with `std`.
 > - `Deque<T>` (`mem_deque_bench`, default `kDequeSubarraySize = 256`) is faster than or on par with `std::deque` on all measured operations; tune the third template parameter (power of 2) for block size vs memory overhead.
 > - `ObjectPool` cross-thread transfer (`collect_tsl` / `apply_tls`, `collect_arena` / `apply_arena`) stops at **moving free blocks via `ObjectGuard`**—an intentional ceiling after **coroutine / M:N** considerations. **Advanced users only** (strict memory/lifetime control); otherwise use same-thread pool or `ResourcePool`.
+> - **`CordInputStringStream` vs `std::istringstream` on contiguous data** (TokenRead / BulkRead in [`benchmark/README.md`](benchmark/README.md)) is a **reference ceiling** for flat memory—not a fair “fermat disadvantage”; use std when data is already contiguous, Cord streams when data lives in `CordBufferBase` chunks.
 
 ## When to use which component
 
@@ -70,7 +68,7 @@ fermat aims to provide **significant** performance gains (>20%) in its sweet spo
 | Frequent push_front / push_back (deque) | `Deque<T, Alloc, kSubarray>` | third template arg `kSubarray` (power of 2, default **256**) sets elements per memory block; larger blocks reduce chunk crossings (better scan/insert); smaller blocks save memory when `size()` is tiny |
 | Ordered read‑only / bulk construction of maps/sets | `VectorMap` / `VectorSet` | ordered insert 3.8× faster, iteration 24× faster; random insert slower, not for frequent modification |
 | Frequent stack operations | `FermatStack` | construction from container ~11× faster, push/pop ~1.2× faster, no disadvantage |
-| Priority queue with priority change/remove | `FermatPriorityQueue` | supports `change`/`remove`, large push/pop 30% faster; for small (<1000) slower than `std`, trade‑off |
+| Priority queue with priority change/remove | `FermatPriorityQueue` | supports `change`/`remove`; push ~2× at ≤2k, push/pop ~4× at 1k; std pop cliff ~600 on measured platform |
 | Small object pooling (same thread) | `ObjectPool` | 5–10× faster than `new`/`delete` on thread‑local cache |
 | Producer / consumer threads reuse pooled memory | `ObjectPool` / `BasicAllocator` + `collect_tsl` / `apply_tls` (or `collect_arena` / `apply_arena`) | **Advanced**: strict memory/thread/lifetime control required; see ObjectPool section |
 | High‑concurrency resource reuse (with versioning) | `ResourcePool` | thread‑safe handle lookup; 16 threads ~394 ns/op |
@@ -82,7 +80,8 @@ fermat aims to provide **significant** performance gains (>20%) in its sweet spo
 | Zero‑copy cross‑block traversal of CordBuffer | `Peeker` | returns `string_view`, no copy |
 | Consuming data from CordBuffer into a container | `Customer` / `Reader` | supports copy‑or‑move consumption |
 | Dynamic random map / set | `std::map` or `turbo::flat_hash_map` | fermat does not provide a high‑performance random map |
-| Pure heavy reading of continuous data | `std::vector` + `std::istringstream` | contiguous memory reads are faster |
+| Data already in contiguous memory; parse/read without flattening | `std::vector` / `std::string` + `std::istringstream` | reference upper bound; not a fermat weakness |
+| Parse/tokenize chunked Cord data (network, IOBuf, shared refs) | `CordInputStringStream` + `Peeker` | avoid flattening to a single buffer first |
 | High‑throughput text formatting | `CordOutputStringStream` or `fmt::format_to` + custom sink | avoid `CordFormatter` |
 
 ## Container `capacity` semantics
@@ -317,15 +316,21 @@ st.pop();
 
 ### Priority queue FermatPriorityQueue
 
-Supports `change` / `remove` (can modify elements via `get_container()`). Better per row in **bold**.
+Supports `change` / `remove` (can modify elements via `get_container()`). Push uses `fermat::push_heap`; pop uses `std::pop_heap` (same as std adapter today). Better per row in **bold**.
 
-| Operation | FermatPriorityQueue | std::priority_queue | Speedup |
-|-----------|---------------------|----------------------|---------|
-| push/pop (1000) | 22.6 µs | **10.8 µs** | ~2× slower |
-| push/pop (10000) | **602 µs** | 649 µs | 1.1× |
-| push/pop (100000) | **7.72 ms** | 8.12 ms | 1.1× |
-| construct from iterators (1000) | **1.87 µs** | 2.13 µs | 1.1× |
-| change/remove (1000) | supported | not supported | – |
+| Operation | Size | FermatPriorityQueue | std::priority_queue | Notes |
+|-----------|------|---------------------|----------------------|-------|
+| **Push** | 1000 | **1853 ns** | 2369 ns | ~1.3× |
+| | 100000 | **980 µs** | 1253 µs | ~1.3× |
+| **Pop** | 1000 | **12.6 µs** | 38.7 µs | std cliff ~600 |
+| | 100000 | **7.10 ms** | 7.25 ms | ~equal |
+| **PushPop** | 1000 | **9.90 µs** | 41.4 µs | ~4.2× |
+| | 100000 | **7.82 ms** | 8.19 ms | ~1.05× |
+| **ConstructFromIterators** | 10000 | **20.2 µs** | 46.9 µs | ~2.3× |
+| **BoundedPushPop** (limit 1000) | – | **13.9 µs** | 33.8 µs | 2000 stream ops |
+| change/remove (1000) | – | 1.68 µs | not supported | – |
+
+Full size sweep: [`benchmark/README.md`](benchmark/README.md) (Priority queue section).
 
 ```cpp
 fermat::PriorityQueue<int, 0> pq;
