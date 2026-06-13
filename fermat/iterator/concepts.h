@@ -153,7 +153,7 @@ namespace ranges
 
     template<typename I>
     RANGES_DEPRECATED("Please use ranges::indirectly_readable instead")
-    RANGES_INLINE_VAR constexpr bool readable = //
+    inline constexpr bool readable = //
         indirectly_readable<I>;
 
     /// \concept writable_
@@ -175,7 +175,7 @@ namespace ranges
 
     template<typename O, typename T>
     RANGES_DEPRECATED("Please use ranges::indirectly_writable instead")
-    RANGES_INLINE_VAR constexpr bool writable = //
+    inline constexpr bool writable = //
         indirectly_writable<O, T>;
     // clang-format on
 

@@ -77,7 +77,7 @@ namespace ranges
 
     template <typename R>
     RANGES_DEPRECATED("Please use ranges::borrowed_range instead.")
-    RANGES_INLINE_VAR constexpr bool safe_range = borrowed_range<R>;
+    inline constexpr bool safe_range = borrowed_range<R>;
 
     /// \concept output_range_
     /// \brief The \c output_range_ concept
@@ -224,12 +224,12 @@ namespace ranges
 
     // Specialize this if the default is wrong.
     template<typename T>
-    RANGES_INLINE_VAR constexpr bool enable_view =
+    inline constexpr bool enable_view =
         ext::enable_view<T>::value;
 
 #if defined(__cpp_lib_string_view) && __cpp_lib_string_view >= 201603L
     template<typename Char, typename Traits>
-    RANGES_INLINE_VAR constexpr bool enable_view<std::basic_string_view<Char, Traits>> =
+    inline constexpr bool enable_view<std::basic_string_view<Char, Traits>> =
         true;
 #endif
 
@@ -238,7 +238,7 @@ namespace ranges
 #if defined(__cpp_lib_span) && __cpp_lib_span >= 202002L && \
     (!defined(__GLIBCXX__) || defined(__cpp_lib_concepts))
     template<typename T, std::size_t N>
-    RANGES_INLINE_VAR constexpr bool enable_view<std::span<T, N>> = true;
+    inline constexpr bool enable_view<std::span<T, N>> = true;
 #endif
 
     //

@@ -46,7 +46,7 @@ namespace ranges
     };
 
     template<typename I>
-    RANGES_INLINE_VAR constexpr bool enable_borrowed_range<unbounded_view<I>> = true;
+    inline constexpr bool enable_borrowed_range<unbounded_view<I>> = true;
 
     namespace views
     {

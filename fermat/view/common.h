@@ -138,7 +138,7 @@ namespace ranges
     };
 
     template<typename Rng, bool B>
-    RANGES_INLINE_VAR constexpr bool enable_borrowed_range<common_view<Rng, B>> = //
+    inline constexpr bool enable_borrowed_range<common_view<Rng, B>> = //
         enable_borrowed_range<Rng>;
 
 #if RANGES_CXX_DEDUCTION_GUIDES >= RANGES_CXX_DEDUCTION_GUIDES_17
@@ -205,7 +205,7 @@ namespace ranges
             RANGES_DEPRECATED(
                 "The name views::bounded is deprecated. "
                 "Please use views::common instead.")
-            RANGES_INLINE_VAR constexpr auto & bounded = common;
+            inline constexpr auto & bounded = common;
         } // namespace
 
         template<typename Rng>

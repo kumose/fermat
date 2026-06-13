@@ -270,7 +270,7 @@ namespace ranges
     };
 
     template<typename Rng>
-    RANGES_INLINE_VAR constexpr bool enable_borrowed_range<take_view<Rng>> = //
+    inline constexpr bool enable_borrowed_range<take_view<Rng>> = //
         enable_borrowed_range<Rng>;
 
 #if RANGES_CXX_DEDUCTION_GUIDES >= RANGES_CXX_DEDUCTION_GUIDES_17

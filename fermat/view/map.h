@@ -127,10 +127,10 @@ namespace ranges
     } // namespace views
 
     template<typename Rng>
-    RANGES_INLINE_VAR constexpr bool enable_borrowed_range<keys_range_view<Rng>> =
+    inline constexpr bool enable_borrowed_range<keys_range_view<Rng>> =
         enable_borrowed_range<Rng>;
     template<typename Rng>
-    RANGES_INLINE_VAR constexpr bool enable_borrowed_range<values_view<Rng>> =
+    inline constexpr bool enable_borrowed_range<values_view<Rng>> =
         enable_borrowed_range<Rng>;
 
     namespace cpp20

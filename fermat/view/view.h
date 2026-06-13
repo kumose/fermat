@@ -225,7 +225,7 @@ namespace ranges
             RANGES_DEPRECATED(
                 "make_view and views::view<> has been deprecated. Please switch to "
                 "make_view_closure and views::view_closure.")
-            RANGES_INLINE_VAR constexpr auto & make_view =
+            inline constexpr auto & make_view =
                 static_const<make_view_fn_>::value;
         } // namespace
 
@@ -280,7 +280,7 @@ namespace ranges
     } // namespace views
 
     template<typename ViewFn>
-    RANGES_INLINE_VAR constexpr bool is_pipeable_v<views::view_closure<ViewFn>> = true;
+    inline constexpr bool is_pipeable_v<views::view_closure<ViewFn>> = true;
     /// @}
 } // namespace ranges
 

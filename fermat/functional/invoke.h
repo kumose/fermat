@@ -72,14 +72,14 @@ namespace ranges
         RANGES_DIAGNOSTIC_POP
 
         template<typename T>
-        RANGES_INLINE_VAR constexpr bool is_reference_wrapper_v =
+        inline constexpr bool is_reference_wrapper_v =
             meta::is<T, reference_wrapper>::value ||
             meta::is<T, std::reference_wrapper>::value;
     } // namespace detail
     /// \endcond
 
     template<typename T>
-    RANGES_INLINE_VAR constexpr bool is_reference_wrapper_v =
+    inline constexpr bool is_reference_wrapper_v =
         detail::is_reference_wrapper_v<detail::decay_t<T>>;
 
     template<typename T>
@@ -204,11 +204,11 @@ namespace ranges
     /// \endcond
 
     template<typename Fn, typename... Args>
-    RANGES_INLINE_VAR constexpr bool is_invocable_v =
+    inline constexpr bool is_invocable_v =
         meta::is_trait<invoke_result<Fn, Args...>>::value;
 
     template<typename Fn, typename... Args>
-    RANGES_INLINE_VAR constexpr bool is_nothrow_invocable_v =
+    inline constexpr bool is_nothrow_invocable_v =
         detail::is_nothrow_invocable_impl_<is_invocable_v<Fn, Args...>>::template apply<
             Fn, Args...>();
 

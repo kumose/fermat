@@ -310,7 +310,7 @@ namespace ranges
     };
 
     template<typename From, typename To>
-    RANGES_INLINE_VAR constexpr bool enable_borrowed_range<closed_iota_view<From, To>> =
+    inline constexpr bool enable_borrowed_range<closed_iota_view<From, To>> =
         true;
 
 #if RANGES_CXX_DEDUCTION_GUIDES >= RANGES_CXX_DEDUCTION_GUIDES_17
@@ -456,7 +456,7 @@ namespace ranges
     };
 
     template<typename From, typename To>
-    RANGES_INLINE_VAR constexpr bool enable_borrowed_range<iota_view<From, To>> = true;
+    inline constexpr bool enable_borrowed_range<iota_view<From, To>> = true;
 
 #if RANGES_CXX_DEDUCTION_GUIDES >= RANGES_CXX_DEDUCTION_GUIDES_17
     template(typename From, typename To)(

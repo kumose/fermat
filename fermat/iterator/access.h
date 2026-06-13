@@ -86,7 +86,7 @@ namespace ranges {
         void try_adl_iter_move_(long);
 
         template<typename T>
-        RANGES_INLINE_VAR constexpr bool is_adl_indirectly_movable_v =
+        inline constexpr bool is_adl_indirectly_movable_v =
                 !RANGES_IS_SAME(void, decltype(_iter_move_::try_adl_iter_move_<T>(42)));
 
         struct fn {
@@ -145,11 +145,11 @@ namespace ranges {
     /// \endcond
 
     template<typename I, typename O>
-    RANGES_INLINE_VAR constexpr bool is_indirectly_movable_v =
+    inline constexpr bool is_indirectly_movable_v =
             decltype(detail::is_indirectly_movable_<I, O>(nullptr, nullptr))::value;
 
     template<typename I, typename O>
-    RANGES_INLINE_VAR constexpr bool is_nothrow_indirectly_movable_v =
+    inline constexpr bool is_nothrow_indirectly_movable_v =
             decltype(detail::is_nothrow_indirectly_movable_<I, O>(nullptr))::value;
 
     template<typename I, typename O>
@@ -202,7 +202,7 @@ namespace ranges {
         // overload set. This depends on user-defined iter_swap overloads
         // being a better match than the overload in namespace std.
         template<typename T, typename U>
-        RANGES_INLINE_VAR constexpr bool is_adl_indirectly_swappable_v =
+        inline constexpr bool is_adl_indirectly_swappable_v =
                 !RANGES_IS_SAME(nope, decltype(_iter_swap_::try_adl_iter_swap_<T, U>(42)));
 
         struct fn {
@@ -266,11 +266,11 @@ namespace ranges {
     /// \endcond
 
     template<typename T, typename U>
-    RANGES_INLINE_VAR constexpr bool is_indirectly_swappable_v =
+    inline constexpr bool is_indirectly_swappable_v =
             decltype(detail::is_indirectly_swappable_<T, U>(nullptr, nullptr))::value;
 
     template<typename T, typename U>
-    RANGES_INLINE_VAR constexpr bool is_nothrow_indirectly_swappable_v =
+    inline constexpr bool is_nothrow_indirectly_swappable_v =
             decltype(detail::is_nothrow_indirectly_swappable_<T, U>(0))::value;
 
     template<typename T, typename U>

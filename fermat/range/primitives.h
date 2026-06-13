@@ -34,7 +34,7 @@ namespace ranges
     /// \addtogroup group-range
     // Specialize this if the default is wrong.
     template<typename T>
-    RANGES_INLINE_VAR constexpr bool disable_sized_range = false;
+    inline constexpr bool disable_sized_range = false;
 
     /// \cond
     namespace _size_

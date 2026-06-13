@@ -56,12 +56,12 @@ namespace ranges
     };
 
     template<typename T>
-    RANGES_INLINE_VAR constexpr bool enable_borrowed_range<empty_view<T>> = true;
+    inline constexpr bool enable_borrowed_range<empty_view<T>> = true;
 
     namespace views
     {
         template<typename T>
-        RANGES_INLINE_VAR constexpr empty_view<T> empty{};
+        inline constexpr empty_view<T> empty{};
     }
 
     namespace cpp20

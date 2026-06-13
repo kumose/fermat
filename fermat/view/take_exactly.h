@@ -143,7 +143,7 @@ namespace ranges
     using take_exactly_view = detail::take_exactly_view_<Rng>;
 
     template<typename Rng, bool B>
-    RANGES_INLINE_VAR constexpr bool //
+    inline constexpr bool //
         enable_borrowed_range<detail::take_exactly_view_<Rng, B>> = //
             enable_borrowed_range<Rng>;
 

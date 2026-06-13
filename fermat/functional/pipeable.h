@@ -31,13 +31,13 @@ namespace ranges
     struct pipeable_base;
 
     template<typename T>
-    RANGES_INLINE_VAR constexpr bool is_pipeable_v = META_IS_BASE_OF(pipeable_base, T);
+    inline constexpr bool is_pipeable_v = META_IS_BASE_OF(pipeable_base, T);
 
     template<typename T>
-    RANGES_INLINE_VAR constexpr bool is_pipeable_v<T &> = META_IS_BASE_OF(pipeable_base,
+    inline constexpr bool is_pipeable_v<T &> = META_IS_BASE_OF(pipeable_base,
                                                                           T);
     template<typename T>
-    RANGES_INLINE_VAR constexpr bool is_pipeable_v<T &&> = META_IS_BASE_OF(pipeable_base,
+    inline constexpr bool is_pipeable_v<T &&> = META_IS_BASE_OF(pipeable_base,
                                                                            T);
     template<typename T>
     using is_pipeable = meta::bool_<is_pipeable_v<T>>;

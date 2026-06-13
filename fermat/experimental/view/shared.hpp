@@ -121,7 +121,7 @@ namespace ranges
     }     // namespace experimental
 
     template<typename SharedFn>
-    RANGES_INLINE_VAR constexpr bool
+    inline constexpr bool
         is_pipeable_v<experimental::shared_closure<SharedFn>> = true;
     /// @}
 } // namespace ranges

@@ -521,7 +521,7 @@ namespace ranges
     /// \endcond
 
     template<typename MetaFn, typename Fn>
-    RANGES_INLINE_VAR constexpr bool
+    inline constexpr bool
         is_pipeable_v<detail::to_container_closure<MetaFn, Fn>> = true;
 } // namespace ranges
 

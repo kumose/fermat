@@ -400,14 +400,14 @@ namespace ranges
         // clang-format on
 
         template<typename Cur, bool IsReadable>
-        RANGES_INLINE_VAR constexpr bool is_writable_cursor_ = true;
+        inline constexpr bool is_writable_cursor_ = true;
 
         template<typename Cur>
-        RANGES_INLINE_VAR constexpr bool is_writable_cursor_<Cur, true> =
+        inline constexpr bool is_writable_cursor_<Cur, true> =
             (bool) writable_cursor<Cur, range_access::cursor_value_t<Cur>>;
 
         template<typename Cur>
-        RANGES_INLINE_VAR constexpr bool is_writable_cursor_v =
+        inline constexpr bool is_writable_cursor_v =
             is_writable_cursor_<Cur, (bool)readable_cursor<Cur>>;
     } // namespace detail
     /// \endcond

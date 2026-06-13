@@ -41,10 +41,10 @@ namespace ranges
     /// @{
 
     template<typename I, typename S>
-    RANGES_INLINE_VAR constexpr bool enable_borrowed_range<iterator_range<I, S>> = true;
+    inline constexpr bool enable_borrowed_range<iterator_range<I, S>> = true;
 
     template<typename I, typename S>
-    RANGES_INLINE_VAR constexpr bool enable_borrowed_range<sized_iterator_range<I, S>> =
+    inline constexpr bool enable_borrowed_range<sized_iterator_range<I, S>> =
         true;
 
     template<typename I, typename S /*= I*/>

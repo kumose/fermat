@@ -55,7 +55,7 @@ namespace ranges
         using iter_rvalue_reference_t = R;
 
         template<typename I>
-        RANGES_INLINE_VAR constexpr bool has_nothrow_iter_move_v =
+        inline constexpr bool has_nothrow_iter_move_v =
             noexcept(iter_rvalue_reference_t<I>(ranges::iter_move(std::declval<I &>())));
     } // namespace detail
     /// \endcond

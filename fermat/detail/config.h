@@ -567,14 +567,12 @@ namespace ranges
 
 #if RANGES_CXX_INLINE_VARIABLES < RANGES_CXX_INLINE_VARIABLES_17 && \
     !defined(RANGES_DOXYGEN_INVOKED)
-#define RANGES_INLINE_VAR
-#define RANGES_INLINE_VARIABLE(type, name)                           \
+#define RANGES_INLINE_VARIABLE(type, name)
     namespace                                                        \
     {                                                                \
         constexpr auto & name = ::ranges::static_const<type>::value; \
     }
 #else // RANGES_CXX_INLINE_VARIABLES >= RANGES_CXX_INLINE_VARIABLES_17
-#define RANGES_INLINE_VAR inline
 #define RANGES_INLINE_VARIABLE(type, name) \
     inline constexpr type name{};          \
     /**/

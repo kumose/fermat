@@ -44,7 +44,7 @@ namespace ranges
 {
 #if defined(__cpp_lib_string_view) && __cpp_lib_string_view >= 201603L
     template<class CharT, class Traits>
-    RANGES_INLINE_VAR constexpr bool
+    inline constexpr bool
         enable_borrowed_range<std::basic_string_view<CharT, Traits>> = true;
 #endif
 
@@ -53,17 +53,17 @@ namespace ranges
 #if defined(__cpp_lib_span) && __cpp_lib_span >= 202002L && \
     (!defined(__GLIBCXX__) || defined(__cpp_lib_concepts))
     template<class T, std::size_t N>
-    RANGES_INLINE_VAR constexpr bool enable_borrowed_range<std::span<T, N>> = true;
+    inline constexpr bool enable_borrowed_range<std::span<T, N>> = true;
 #endif
 
     namespace detail
     {
         template<typename T>
-        RANGES_INLINE_VAR constexpr bool _borrowed_range =
+        inline constexpr bool _borrowed_range =
             enable_borrowed_range<uncvref_t<T>>;
 
         template<typename T>
-        RANGES_INLINE_VAR constexpr bool _borrowed_range<T &> = true;
+        inline constexpr bool _borrowed_range<T &> = true;
 
         template<typename T>
         T _decay_copy(T) noexcept;

@@ -412,7 +412,7 @@ namespace ranges
 
     // Need to keep extra state for input_range, but forward_range is transparent
     template<typename Rng>
-    RANGES_INLINE_VAR constexpr bool enable_borrowed_range<chunk_view<Rng>> =
+    inline constexpr bool enable_borrowed_range<chunk_view<Rng>> =
         enable_borrowed_range<Rng> && forward_range<Rng>;
 
 #if RANGES_CXX_DEDUCTION_GUIDES >= RANGES_CXX_DEDUCTION_GUIDES_17

@@ -163,7 +163,7 @@ namespace ranges
     struct subrange;
 
     template<typename I, typename S, subrange_kind K>
-    RANGES_INLINE_VAR constexpr bool enable_borrowed_range<subrange<I, S, K>> = true;
+    inline constexpr bool enable_borrowed_range<subrange<I, S, K>> = true;
 
     /// \cond
     namespace _subrange_

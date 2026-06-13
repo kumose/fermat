@@ -188,7 +188,7 @@ namespace ranges
             RANGES_DEPRECATED(
                 "make_action and actions::action<> has been deprecated. Please switch to "
                 "make_action_closure and action::action_closure.")
-            RANGES_INLINE_VAR constexpr auto & make_action =
+            inline constexpr auto & make_action =
                 static_const<make_action_fn_>::value;
         } // namespace
 
@@ -237,7 +237,7 @@ namespace ranges
     } // namespace actions
 
     template<typename ActionFn>
-    RANGES_INLINE_VAR constexpr bool is_pipeable_v<actions::action_closure<ActionFn>> =
+    inline constexpr bool is_pipeable_v<actions::action_closure<ActionFn>> =
         true;
     /// @}
 } // namespace ranges

@@ -359,7 +359,7 @@ namespace ranges
     };
 
     template<typename T, detail::span_index_t N>
-    RANGES_INLINE_VAR constexpr bool enable_borrowed_range<span<T, N>> = true;
+    inline constexpr bool enable_borrowed_range<span<T, N>> = true;
 
 #if RANGES_CXX_INLINE_VARIABLES < RANGES_CXX_INLINE_VARIABLES_17
     template<typename T, detail::span_index_t N>

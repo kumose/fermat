@@ -73,7 +73,7 @@ namespace ranges
     // the begin iterator will be an iterator into the underlying view (conditionally
     // borrowed) and the end iterator owns the value to be compared against (borrowed)
     template<typename Rng, typename Val>
-    RANGES_INLINE_VAR constexpr bool enable_borrowed_range<delimit_view<Rng, Val>> = //
+    inline constexpr bool enable_borrowed_range<delimit_view<Rng, Val>> = //
         enable_borrowed_range<Rng>;
 
 #if RANGES_CXX_DEDUCTION_GUIDES >= RANGES_CXX_DEDUCTION_GUIDES_17

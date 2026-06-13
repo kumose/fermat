@@ -299,28 +299,28 @@ namespace ranges
 
 #if defined(__clang__) && !defined(_LIBCPP_VERSION)
         template<typename T, typename... Args>
-        RANGES_INLINE_VAR constexpr bool is_trivially_constructible_v =
+        inline constexpr bool is_trivially_constructible_v =
             __is_trivially_constructible(T, Args...);
         template<typename T>
-        RANGES_INLINE_VAR constexpr bool is_trivially_default_constructible_v =
+        inline constexpr bool is_trivially_default_constructible_v =
             is_trivially_constructible_v<T>;
         template<typename T>
-        RANGES_INLINE_VAR constexpr bool is_trivially_copy_constructible_v =
+        inline constexpr bool is_trivially_copy_constructible_v =
             is_trivially_constructible_v<T, T const &>;
         template<typename T>
-        RANGES_INLINE_VAR constexpr bool is_trivially_move_constructible_v =
+        inline constexpr bool is_trivially_move_constructible_v =
             is_trivially_constructible_v<T, T>;
         template<typename T>
-        RANGES_INLINE_VAR constexpr bool is_trivially_copyable_v =
+        inline constexpr bool is_trivially_copyable_v =
             __is_trivially_copyable(T);
         template<typename T, typename U>
-        RANGES_INLINE_VAR constexpr bool is_trivially_assignable_v =
+        inline constexpr bool is_trivially_assignable_v =
             __is_trivially_assignable(T, U);
         template<typename T>
-        RANGES_INLINE_VAR constexpr bool is_trivially_copy_assignable_v =
+        inline constexpr bool is_trivially_copy_assignable_v =
             is_trivially_assignable_v<T &, T const &>;
         template<typename T>
-        RANGES_INLINE_VAR constexpr bool is_trivially_move_assignable_v =
+        inline constexpr bool is_trivially_move_assignable_v =
             is_trivially_assignable_v<T &, T>;
 
         template<typename T, typename... Args>
@@ -375,34 +375,34 @@ namespace ranges
         using std::is_trivially_move_constructible_v;
 #else
         template<typename T, typename... Args>
-        RANGES_INLINE_VAR constexpr bool is_trivially_constructible_v =
+        inline constexpr bool is_trivially_constructible_v =
             is_trivially_constructible<T, Args...>::value;
         template<typename T>
-        RANGES_INLINE_VAR constexpr bool is_trivially_default_constructible_v =
+        inline constexpr bool is_trivially_default_constructible_v =
             is_trivially_default_constructible<T>::value;
         template<typename T>
-        RANGES_INLINE_VAR constexpr bool is_trivially_copy_constructible_v =
+        inline constexpr bool is_trivially_copy_constructible_v =
             is_trivially_copy_constructible<T>::value;
         template<typename T>
-        RANGES_INLINE_VAR constexpr bool is_trivially_move_constructible_v =
+        inline constexpr bool is_trivially_move_constructible_v =
             is_trivially_move_constructible<T>::value;
         template<typename T>
-        RANGES_INLINE_VAR constexpr bool is_trivially_copyable_v =
+        inline constexpr bool is_trivially_copyable_v =
             is_trivially_copyable<T>::value;
         template<typename T, typename U>
-        RANGES_INLINE_VAR constexpr bool is_trivially_assignable_v =
+        inline constexpr bool is_trivially_assignable_v =
             is_trivially_assignable<T, U>::value;
         template<typename T>
-        RANGES_INLINE_VAR constexpr bool is_trivially_copy_assignable_v =
+        inline constexpr bool is_trivially_copy_assignable_v =
             is_trivially_copy_assignable<T>::value;
         template<typename T>
-        RANGES_INLINE_VAR constexpr bool is_trivially_move_assignable_v =
+        inline constexpr bool is_trivially_move_assignable_v =
             is_trivially_move_assignable<T>::value;
 #endif
 #endif
 
         template<typename T>
-        RANGES_INLINE_VAR constexpr bool is_trivial_v =
+        inline constexpr bool is_trivial_v =
             is_trivially_copyable_v<T> &&
             is_trivially_default_constructible_v<T>;
 
@@ -414,7 +414,7 @@ namespace ranges
 #if RANGES_CXX_LIB_IS_FINAL > 0
 #if defined(__clang__) && !defined(_LIBCPP_VERSION)
         template<typename T>
-        RANGES_INLINE_VAR constexpr bool is_final_v = __is_final(T);
+        inline constexpr bool is_final_v = __is_final(T);
 
         template<typename T>
         struct is_final
@@ -426,12 +426,12 @@ namespace ranges
         using std::is_final_v;
 #else
         template<typename T>
-        RANGES_INLINE_VAR constexpr bool is_final_v = is_final<T>::value;
+        inline constexpr bool is_final_v = is_final<T>::value;
 #endif
 #endif
 #else
         template<typename T>
-        RANGES_INLINE_VAR constexpr bool is_final_v = false;
+        inline constexpr bool is_final_v = false;
 
         template<typename T>
         using is_final = std::false_type;
@@ -456,7 +456,7 @@ namespace ranges
         char (&is_function_impl_(priority_tag<3>))[4];
 
         template<typename T>
-        RANGES_INLINE_VAR constexpr bool is_function_v =
+        inline constexpr bool is_function_v =
             sizeof(detail::is_function_impl_<T>(priority_tag<3>{})) == 1;
 
         template<typename T>
@@ -524,16 +524,16 @@ namespace ranges
     using is_infinite = meta::bool_<range_cardinality<Rng>::value == infinite>;
 
     template<typename S, typename I>
-    RANGES_INLINE_VAR constexpr bool disable_sized_sentinel = false;
+    inline constexpr bool disable_sized_sentinel = false;
 
     template<typename R>
-    RANGES_INLINE_VAR constexpr bool enable_borrowed_range = false;
+    inline constexpr bool enable_borrowed_range = false;
 
     namespace detail
     {
         template<typename R>
         RANGES_DEPRECATED("Please use ranges::enable_borrowed_range instead.")
-        RANGES_INLINE_VAR constexpr bool enable_safe_range = enable_borrowed_range<R>;
+        inline constexpr bool enable_safe_range = enable_borrowed_range<R>;
     } // namespace detail
 
     using detail::enable_safe_range;

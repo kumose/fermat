@@ -91,7 +91,7 @@ namespace ranges
         // clang-format on
 
         template<cardinality C>
-        RANGES_INLINE_VAR constexpr bool has_fixed_size_ = (C >= 0 || C == infinite);
+        inline constexpr bool has_fixed_size_ = (C >= 0 || C == infinite);
 
         template<bool>
         struct dependent_

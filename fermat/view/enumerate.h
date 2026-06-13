@@ -89,7 +89,7 @@ namespace ranges
     } // namespace detail
 
     template<typename Size, typename Diff>
-    RANGES_INLINE_VAR constexpr bool enable_borrowed_range<detail::index_view<Size, Diff>> =
+    inline constexpr bool enable_borrowed_range<detail::index_view<Size, Diff>> =
         true;
 
     /// \endcond
