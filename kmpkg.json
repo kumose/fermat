@@ -6,6 +6,8 @@
     "gtest",
     "mimalloc",
     "turbo",
-    "xflow"
+    "uriparser",
+    "xflow",
+    "simdjson"
   ]
 }

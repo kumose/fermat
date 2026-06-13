@@ -397,3 +397,5 @@ kmcmake_cc_bm(
         ${KMCMAKE_DEPS_LINK}
 )
 ]]
+
+add_subdirectory(uri)

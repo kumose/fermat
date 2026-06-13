@@ -24,6 +24,7 @@ set(SRC
         memory/arena.cc
         memory/malloc.cc
         memory/resource_pool.cc
+        uri/uri.cc
 )
 kmcmake_cc_library(
         NAMESPACE ${PROJECT_NAME}

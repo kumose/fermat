@@ -53,7 +53,7 @@
 #include <fermat/algorithm/max_element.h>
 #include <fermat/algorithm/merge.h>
 #include <fermat/algorithm/min.h>
-#include <fermat/algorithm/min_element.h>
+#include <fermat/algorithm/min_element_test.h>
 #include <fermat/algorithm/minmax.h>
 #include <fermat/algorithm/minmax_element.h>
 #include <fermat/algorithm/mismatch.h>
@@ -67,7 +67,7 @@
 #include <fermat/algorithm/partition_copy.h>
 #include <fermat/algorithm/partition_point.h>
 #include <fermat/algorithm/permutation.h>
-#include <fermat/algorithm/remove.h>
+#include <fermat/algorithm/remove_test.h>
 #include <fermat/algorithm/remove_copy.h>
 #include <fermat/algorithm/remove_copy_if.h>
 #include <fermat/algorithm/remove_if.h>

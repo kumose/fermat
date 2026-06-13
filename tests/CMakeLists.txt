@@ -22,7 +22,7 @@ add_subdirectory(functional)
 add_subdirectory(iterator)
 add_subdirectory(numeric)
 add_subdirectory(utility)
-
+add_subdirectory(uri)
 add_subdirectory(io)
 add_subdirectory(memory)
 add_subdirectory(container)
