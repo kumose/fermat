@@ -66,9 +66,12 @@ namespace fermat {
             os.flush();
             EXPECT_GE(cord.size(), 5000);
             EXPECT_GE(cord.buffer_count(), 2);
+            auto s = cord.flatten();
+            EXPECT_EQ(s, large);
             std::string result;
             for (char c: cord) result.push_back(c);
             EXPECT_EQ(result, large);
+            KLOG(INFO)<<"result.size():"<<result.size()<<"large.size():"<<large.size();
         }
 
         // 19.3 overflow and sync

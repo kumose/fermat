@@ -342,6 +342,7 @@ void clause11_21_4_6_1(String &test) {
     auto dt = test2.data();
     auto sz = test.c_str();
     len = test.size();
+    KLOG(INFO)<<"1111111111111111";
     EXPECT_EQ(memcmp(sz, dt, len), 0);
     String copy(test.data(), test.size());
     EXPECT_EQ(
@@ -355,6 +356,8 @@ void clause11_21_4_6_1(String &test) {
         EXPECT_EQ(test[i], copy[i]);
         EXPECT_EQ(test[i], test[len + i]);
     }
+
+    KLOG(INFO)<<"22222222222222";
     len = test.size();
     EXPECT_EQ(
         char_traits<typename String::value_type>::length(test.c_str()), len);
@@ -371,6 +374,8 @@ void clause11_21_4_6_1(String &test) {
         test += test.c_str() + pos;
     }
     EXPECT_EQ(test.size(), 2 * len - pos);
+    KLOG(INFO)<<"333333333333333";
+
     // single char
     len = test.size();
     test += random('a', 'z');
@@ -382,10 +387,14 @@ void clause11_21_4_6_1(String &test) {
     auto testsv = orig;
     testsv += string_view_type{orig};
     EXPECT_EQ(orig + orig, testsv);
+    KLOG(INFO)<<"4444444444444444444";
+
     // like string_view
     auto testlsv = orig;
     testlsv += std::invoke([&] { return string_view_type{orig}; });
     EXPECT_EQ(orig + orig, testlsv);
+    KLOG(INFO)<<"55555555555555555";
+
 }
 
 
@@ -414,7 +423,7 @@ void clause11_21_4_6_2(String &test) {
     test.append(s.c_str(), random(0, s.size()));
     randomString(&s, maxString);
     test.append(s.c_str());
-    test.append(random(0, maxString), random('a', 'z'));
+    test.append(static_cast<size_t>(random(0, maxString)), random('a', 'z'));
     std::list<char> lst(RandomList(maxString));
     test.append(lst.begin(), lst.end());
     c = random('a', 'z');
@@ -772,8 +781,9 @@ void clause11_21_4_7_2_c1(String &test) {
             String(test).substr(random(0, test.size()), random(0, test.size()));
     auto n = random(0, test.size());
     auto f = test.find(str.c_str(), n);
-    KLOG(INFO) << "medium:" << str<<" medium size:"<<str.size()<<" c_str:"<<str.c_str() <<" n:"<<n<<" f:"<<f  ;
-    Num2String(test,  f);
+    KLOG(INFO) << "medium:" << str << " medium size:" << str.size() << " c_str:" << str.c_str() << " n:" << n << " f:"
+ << f;
+    Num2String(test, f);
     KLOG(INFO) << "after:" << test;
 }
 
@@ -1180,7 +1190,7 @@ TEST(KString, testAllClauses) {
     TEST_CLAUSE(21_4_4);
     TEST_CLAUSE(21_4_5);
     TEST_CLAUSE(21_4_6_1);
-    //TEST_CLAUSE(21_4_6_2);
+    TEST_CLAUSE(21_4_6_2);
 
     TEST_CLAUSE(21_4_6_3_a);
     TEST_CLAUSE(21_4_6_3_b);
@@ -1865,5 +1875,5 @@ TEST(KString, FindEmptyString) {
     }
 
     fermat::KString s1;
-    KLOG(INFO)<<strlen(s1.c_str());
+    KLOG(INFO) << strlen(s1.c_str());
 }

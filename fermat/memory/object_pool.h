@@ -99,7 +99,7 @@ namespace fermat {
         ~ObjectGuard() {
             for (void *ptr: ptrs) {
                 if constexpr (Alignment == 0) {
-                    Malloc::good_free(ptr, n);
+                    Malloc::good_free(ptr);
                 } else {
                     Malloc::good_align_free(ptr, Alignment);
                 }
@@ -123,7 +123,7 @@ namespace fermat {
         size_t n{0};
     };
 
-    template<class T, size_t Alignment = 0, size_t MaxFree = 512>
+    template<class T, size_t Alignment, size_t MaxFree = 512>
     class ObjectPool {
     private:
         struct ThreadLocalInitializer {
@@ -155,7 +155,7 @@ namespace fermat {
             }
             for (void *ptr: *cache_ptr) {
                 if constexpr (Alignment == 0) {
-                    Malloc::good_free(ptr, rn);
+                    Malloc::good_free(ptr);
                 } else {
                     Malloc::good_align_free(ptr, Alignment);
                 }
@@ -336,36 +336,36 @@ namespace fermat {
     template<typename T, size_t N, size_t Alignment>
     struct AlignedBytesAllocator {
         static T *allocate() {
-            return reinterpret_cast<T *>(ObjectPool<AlignBytes<N * sizeof(T), Alignment> >::get_uninitialize());
+            return reinterpret_cast<T *>(ObjectPool<AlignBytes<N * sizeof(T), Alignment>, Alignment>::get_uninitialize());
         }
 
         static void deallocate(T *ptr) {
-            ObjectPool<AlignBytes<N * sizeof(T), Alignment> >::put_raw(
+            ObjectPool<AlignBytes<N * sizeof(T), Alignment>,Alignment >::put_raw(
                 reinterpret_cast<AlignBytes<N * sizeof(T), Alignment> *>(ptr));
         }
 
         static void set_tsl_limit(size_t n) {
-            ObjectPool<AlignBytes<N * sizeof(T), Alignment> >::set_tsl_limit(n);
+            ObjectPool<AlignBytes<N * sizeof(T), Alignment>,Alignment >::set_tsl_limit(n);
         }
 
         static void release_tsl(float precent_to_save) {
-            ObjectPool<AlignBytes<N * sizeof(T), Alignment> >::release_tsl(precent_to_save);
+            ObjectPool<AlignBytes<N * sizeof(T), Alignment>,Alignment>::release_tsl(precent_to_save);
         }
 
         static PoolStats tls_stats() {
-            return ObjectPool<AlignBytes<N * sizeof(T), Alignment> >::tls_stats();
+            return ObjectPool<AlignBytes<N * sizeof(T), Alignment>,Alignment >::tls_stats();
         }
 
         static ObjectGuard<Alignment> collect_tsl() {
-            return ObjectPool<AlignBytes<N * sizeof(T), Alignment> >::collect_tsl();
+            return ObjectPool<AlignBytes<N * sizeof(T), Alignment>,Alignment >::collect_tsl();
         }
 
         static void apply_tsl(ObjectGuard<Alignment> &objs) {
-            return ObjectPool<AlignBytes<N * sizeof(T), Alignment> >::apply_tls(objs);
+            return ObjectPool<AlignBytes<N * sizeof(T), Alignment>,Alignment >::apply_tls(objs);
         }
 
         static size_t good_size() {
-            return ObjectPool<AlignBytes<N * sizeof(T), Alignment> >::kGoodSize;
+            return ObjectPool<AlignBytes<N * sizeof(T), Alignment>,Alignment>::kGoodSize;
         }
     };
 

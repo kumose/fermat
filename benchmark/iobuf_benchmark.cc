@@ -64,6 +64,16 @@ namespace {
         st.SetBytesProcessed(st.iterations() * total);
     }
 
+    static void BM_QueueBuffer_RandomChunked(benchmark::State &st) {
+        const size_t total = st.range(0);
+        for (auto _: st) {
+            fermat::BufferQueueBase<32, 16 * 1024> buf;
+            AppendRandomChunked(buf, total);
+            benchmark::DoNotOptimize(buf);
+        }
+        st.SetBytesProcessed(st.iterations() * total);
+    }
+
     static void BM_String_RandomChunked(benchmark::State &st) {
         const size_t total = st.range(0);
         for (auto _: st) {
@@ -145,6 +155,9 @@ namespace {
     ->Args({20 << 20}) \
     ->Args({50 << 20}) \
     ->Args({100 << 20})
+
+
+    BENCHMARK(BM_QueueBuffer_RandomChunked) BENCH_ARGS;
 
     BENCHMARK(BM_CordBuffer_RandomChunked) BENCH_ARGS;
     BENCHMARK(BM_String_RandomChunked) BENCH_ARGS;

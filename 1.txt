@@ -1,0 +1,398 @@
+fermat/
+├── action
+│   ├── action.h
+│   ├── adjacent_remove_if.h
+│   ├── concepts.h
+│   ├── drop.h
+│   ├── drop_while.h
+│   ├── erase.h
+│   ├── insert.h
+│   ├── join.h
+│   ├── push_back.h
+│   ├── push_front.h
+│   ├── remove.h
+│   ├── remove_if.h
+│   ├── reverse.h
+│   ├── shuffle.h
+│   ├── slice.h
+│   ├── sort.h
+│   ├── split.h
+│   ├── split_when.h
+│   ├── stable_sort.h
+│   ├── stride.h
+│   ├── take.h
+│   ├── take_while.h
+│   ├── transform.h
+│   ├── unique.h
+│   └── unstable_remove_if.h
+├── action.h
+├── algorithm
+│   ├── adjacent_find.h
+│   ├── adjacent_remove_if.h
+│   ├── all_of.h
+│   ├── any_of.h
+│   ├── aux_
+│   │   ├── equal_range_n.h
+│   │   ├── lower_bound_n.h
+│   │   ├── merge_n.h
+│   │   ├── merge_n_with_buffer.h
+│   │   ├── partition_point_n.h
+│   │   ├── sort_n_with_buffer.h
+│   │   └── upper_bound_n.h
+│   ├── binary_search.h
+│   ├── contains.h
+│   ├── contains_subrange.h
+│   ├── copy_backward.h
+│   ├── copy.h
+│   ├── copy_if.h
+│   ├── copy_n.h
+│   ├── count.h
+│   ├── count_if.h
+│   ├── ends_with.h
+│   ├── equal.h
+│   ├── equal_range.h
+│   ├── fill.h
+│   ├── fill_n.h
+│   ├── find_end.h
+│   ├── find_first_of.h
+│   ├── find.h
+│   ├── find_if.h
+│   ├── find_if_not.h
+│   ├── fold.h
+│   ├── fold_left.h
+│   ├── fold_right.h
+│   ├── for_each.h
+│   ├── for_each_n.h
+│   ├── generate.h
+│   ├── generate_n.h
+│   ├── heap_algorithm.h
+│   ├── inplace_merge.h
+│   ├── is_partitioned_test.h
+│   ├── is_sorted.h
+│   ├── is_sorted_until.h
+│   ├── lexicographical_compare.h
+│   ├── lower_bound.h
+│   ├── max_element.h
+│   ├── max.h
+│   ├── merge.h
+│   ├── min_element_test.h
+│   ├── min.h
+│   ├── minmax_element.h
+│   ├── minmax.h
+│   ├── mismatch.h
+│   ├── move_backward.h
+│   ├── move.h
+│   ├── none_of.h
+│   ├── nth_element.h
+│   ├── partial_sort_copy.h
+│   ├── partial_sort.h
+│   ├── partition_copy.h
+│   ├── partition.h
+│   ├── partition_point.h
+│   ├── permutation.h
+│   ├── remove_copy.h
+│   ├── remove_copy_if.h
+│   ├── remove_if.h
+│   ├── remove_test.h
+│   ├── replace_copy.h
+│   ├── replace_copy_if.h
+│   ├── replace.h
+│   ├── replace_if.h
+│   ├── result_types.h
+│   ├── reverse_copy.h
+│   ├── reverse.h
+│   ├── rotate_copy.h
+│   ├── rotate.h
+│   ├── sample.h
+│   ├── search.h
+│   ├── search_n.h
+│   ├── set_algorithm.h
+│   ├── shuffle.h
+│   ├── sort.h
+│   ├── stable_partition.h
+│   ├── stable_sort.h
+│   ├── starts_with.h
+│   ├── swap_ranges.h
+│   ├── tagspec.h
+│   ├── transform.h
+│   ├── unique_copy.h
+│   ├── unique.h
+│   ├── unstable_remove_if.h
+│   └── upper_bound.h
+├── algorithm.h
+├── all.h
+├── at.h
+├── back.h
+├── begin_end.h
+├── CMakeLists.txt
+├── compare.h
+├── concepts
+│   ├── compare.hpp
+│   ├── concepts.hpp
+│   ├── swap.hpp
+│   └── type_traits.hpp
+├── container
+│   ├── bitmap_view.h
+│   ├── bitset.h
+│   ├── buffer.h
+│   ├── buffer_queue.h
+│   ├── call_traits.h
+│   ├── compressed_pair.h
+│   ├── construct.h
+│   ├── cord_buffer.h
+│   ├── cord_input_stream.h
+│   ├── cord_output_stream.h
+│   ├── customer.h
+│   ├── deque.h
+│   ├── enumerate.h
+│   ├── expected.h
+│   ├── fixed_vector.h
+│   ├── heap.h
+│   ├── internal
+│   │   ├── special_member_functions_expected.h
+│   │   └── special_member_functions.h
+│   ├── intrusive_list.h
+│   ├── list.h
+│   ├── lru_cache.h
+│   ├── peeker.h
+│   ├── priority_queue.h
+│   ├── receiver.h
+│   ├── reference_ptr.h
+│   ├── ring_buffer.h
+│   ├── sorted_queue.h
+│   ├── sort.h
+│   ├── stack.h
+│   ├── stl.h
+│   ├── string.h
+│   ├── traits.h
+│   ├── utility.h
+│   ├── vector.h
+│   ├── vector_map.h
+│   ├── vector_multimap.h
+│   ├── vector_multiset.h
+│   └── vector_set.h
+├── core.h
+├── data.h
+├── detail
+│   ├── adl_get.h
+│   ├── config.h
+│   ├── epilogue.h
+│   ├── prologue.h
+│   ├── range_access.h
+│   ├── satisfy_boost_range.h
+│   ├── variant.h
+│   └── with_braced_init_args.h
+├── distance.h
+├── empty.h
+├── experimental
+│   ├── utility
+│   │   └── generator.hpp
+│   └── view
+│       └── shared.hpp
+├── fake.cc
+├── front.h
+├── functional
+│   ├── arithmetic.h
+│   ├── bind_back.h
+│   ├── bind.h
+│   ├── comparisons.h
+│   ├── compose.h
+│   ├── concepts.h
+│   ├── identity.h
+│   ├── indirect.h
+│   ├── invoke.h
+│   ├── not_fn.h
+│   ├── on.h
+│   ├── overload.h
+│   ├── pipeable.h
+│   └── reference_wrapper.h
+├── functional.h
+├── getlines.h
+├── index.h
+├── io
+│   ├── fd_guard.h
+│   ├── reader.cc
+│   ├── reader.h
+│   ├── reader_writer.h
+│   ├── sysio.cc
+│   ├── sysio.h
+│   ├── writer.cc
+│   └── writer.h
+├── istream_range.h
+├── iterator
+│   ├── access.h
+│   ├── associated_types.h
+│   ├── basic_iterator.h
+│   ├── common_iterator.h
+│   ├── concepts.h
+│   ├── counted_iterator.h
+│   ├── default_sentinel.h
+│   ├── diffmax_t.h
+│   ├── insert_iterators.h
+│   ├── move_iterators.h
+│   ├── operations.h
+│   ├── reverse_iterator.h
+│   ├── stream_iterators.h
+│   ├── traits.h
+│   └── unreachable_sentinel.h
+├── iterator.h
+├── iterator_range.h
+├── memory
+│   ├── allocator.h
+│   ├── arena.cc
+│   ├── arena.h
+│   ├── checked_math.h
+│   ├── malloc.cc
+│   ├── malloc.h
+│   ├── object_pool.h
+│   ├── resource_pool.cc
+│   └── resource_pool.h
+├── meta
+│   ├── meta_fwd.h
+│   └── meta.h
+├── numeric
+│   ├── accumulate.h
+│   ├── adjacent_difference.h
+│   ├── inner_product.h
+│   ├── iota.h
+│   └── partial_sum.h
+├── numeric.h
+├── range
+│   ├── access.h
+│   ├── concepts.h
+│   ├── conversion.h
+│   ├── dangling.h
+│   ├── operations.h
+│   ├── primitives.h
+│   └── traits.h
+├── range_access.h
+├── range_concepts.h
+├── range_for.h
+├── range_fwd.h
+├── range.h
+├── range_traits.h
+├── size.h
+├── span.h
+├── to_container.h
+├── utility
+│   ├── addressof.h
+│   ├── any.h
+│   ├── associated_types.h
+│   ├── basic_iterator.h
+│   ├── box.h
+│   ├── common_iterator.h
+│   ├── common_tuple.h
+│   ├── common_type.h
+│   ├── compressed_pair.h
+│   ├── concepts.h
+│   ├── copy.h
+│   ├── counted_iterator.h
+│   ├── dangling.h
+│   ├── functional.h
+│   ├── get.h
+│   ├── infinity.h
+│   ├── in_place.h
+│   ├── invoke.h
+│   ├── iterator_concepts.h
+│   ├── iterator.h
+│   ├── iterator_traits.h
+│   ├── memory.h
+│   ├── move.h
+│   ├── nullptr_v.h
+│   ├── optional.h
+│   ├── polymorphic_cast.h
+│   ├── random.h
+│   ├── scope_exit.h
+│   ├── semiregular_box.h
+│   ├── semiregular.h
+│   ├── static_const.h
+│   ├── swap.h
+│   ├── tagged_pair.h
+│   ├── tagged_tuple.h
+│   ├── tuple_algorithm.h
+│   ├── unreachable.h
+│   └── variant.h
+├── utility.h
+├── version.h
+├── version.h.in
+├── view
+│   ├── adaptor.h
+│   ├── addressof.h
+│   ├── adjacent_filter.h
+│   ├── adjacent_remove_if.h
+│   ├── all.h
+│   ├── any_view.h
+│   ├── bounded.h
+│   ├── cache1.h
+│   ├── cartesian_product.h
+│   ├── chunk_by.h
+│   ├── chunk.h
+│   ├── common.h
+│   ├── concat.h
+│   ├── const.h
+│   ├── counted.h
+│   ├── c_str.h
+│   ├── cycle.h
+│   ├── delimit.h
+│   ├── drop_exactly.h
+│   ├── drop.h
+│   ├── drop_last.h
+│   ├── drop_while.h
+│   ├── empty.h
+│   ├── enumerate.h
+│   ├── exclusive_scan.h
+│   ├── facade.h
+│   ├── filter.h
+│   ├── for_each.h
+│   ├── generate.h
+│   ├── generate_n.h
+│   ├── getlines.h
+│   ├── group_by.h
+│   ├── indices.h
+│   ├── indirect.h
+│   ├── interface.h
+│   ├── intersperse.h
+│   ├── iota.h
+│   ├── istream.h
+│   ├── join.h
+│   ├── linear_distribute.h
+│   ├── map.h
+│   ├── move.h
+│   ├── partial_sum.h
+│   ├── ref.h
+│   ├── remove.h
+│   ├── remove_if.h
+│   ├── repeat.h
+│   ├── repeat_n.h
+│   ├── replace.h
+│   ├── replace_if.h
+│   ├── reverse.h
+│   ├── sample.h
+│   ├── set_algorithm.h
+│   ├── single.h
+│   ├── slice.h
+│   ├── sliding.h
+│   ├── span.h
+│   ├── split.h
+│   ├── split_when.h
+│   ├── stride.h
+│   ├── subrange.h
+│   ├── tail.h
+│   ├── take_exactly.h
+│   ├── take.h
+│   ├── take_last.h
+│   ├── take_while.h
+│   ├── tokenize.h
+│   ├── transform.h
+│   ├── trim.h
+│   ├── unbounded.h
+│   ├── unique.h
+│   ├── view.h
+│   ├── zip.h
+│   └── zip_with.h
+├── view_adaptor.h
+├── view_facade.h
+├── view.h
+└── view_interface.h
+
+19 directories, 376 files

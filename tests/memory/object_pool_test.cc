@@ -53,7 +53,7 @@ struct NonTrivial {
 // -----------------------------------------------------------------------------
 
 TEST(ObjectPoolTest, GetUninitialize) {
-    using Pool = ObjectPool<Tracked>;
+    using Pool = ObjectPool<Tracked, 0>;
     Tracked* ptr = Pool::get_uninitialize();
     ASSERT_NE(ptr, nullptr);
     // size: at least sizeof(Tracked)
@@ -66,7 +66,7 @@ TEST(ObjectPoolTest, GetUninitialize) {
 }
 
 TEST(ObjectPoolTest, GetConstruct) {
-    using Pool = ObjectPool<Tracked>;
+    using Pool = ObjectPool<Tracked, 0>;
     Tracked::constructed = 0;
     Tracked::destructed = 0;
 
@@ -80,7 +80,7 @@ TEST(ObjectPoolTest, GetConstruct) {
 }
 
 TEST(ObjectPoolTest, PutRaw) {
-    using Pool = ObjectPool<Tracked>;
+    using Pool = ObjectPool<Tracked, 0>;
     Tracked* ptr = Pool::get_uninitialize();
     void* raw_addr = ptr;
     Pool::put_raw(ptr);
@@ -92,7 +92,7 @@ TEST(ObjectPoolTest, PutRaw) {
 }
 
 TEST(ObjectPoolTest, PutWithDestructor) {
-    using Pool = ObjectPool<Tracked>;
+    using Pool = ObjectPool<Tracked, 0>;
     Tracked::constructed = 0;
     Tracked::destructed = 0;
 
@@ -140,7 +140,7 @@ TEST(ObjectPoolTest, PutWithDestructor) {
 }
 
 TEST(ObjectPoolTest, ThreadLocalIsolation) {
-    using Pool = ObjectPool<int>;
+    using Pool = ObjectPool<int, 0>;
     constexpr int kIter = 100;
     std::atomic<int> sum1{0}, sum2{0};
     std::thread t1([&] {
@@ -170,7 +170,7 @@ TEST(ObjectPoolTest, ThreadLocalIsolation) {
 }
 
 TEST(ObjectPoolTest, ConcurrentGetPut) {
-    using Pool = ObjectPool<int>;
+    using Pool = ObjectPool<int, 0>;
     constexpr int kThreads = 8;
     constexpr int kOpsPerThread = 1000;
     std::atomic<bool> start{false};
@@ -192,7 +192,7 @@ TEST(ObjectPoolTest, ConcurrentGetPut) {
 }
 
 TEST(ObjectPoolTest, WithNonTrivialType) {
-    using Pool = ObjectPool<NonTrivial>;
+    using Pool = ObjectPool<NonTrivial, 0>;
     NonTrivial* obj = Pool::get(256);
     ASSERT_NE(obj, nullptr);
     EXPECT_EQ(obj->data.size(), 256);

@@ -474,6 +474,7 @@ namespace fermat {
 
         /// Pushes a value (move version).
         void push(value_type &&value) {
+            if (_capacity == 0 ) return;
             if (_container.size() < _capacity) {
                 _container.push_back(std::move(value));
                 if (_container.size() == 1) return;

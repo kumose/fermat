@@ -16,6 +16,16 @@
 configure_file(${PROJECT_SOURCE_DIR}/tests/config.h.in ${PROJECT_SOURCE_DIR}/tests/config.h @ONLY)
 
 find_package(GTest REQUIRED)
+add_subdirectory(action)
+add_subdirectory(algorithm)
+add_subdirectory(functional)
+add_subdirectory(iterator)
+add_subdirectory(numeric)
+add_subdirectory(utility)
+
 add_subdirectory(io)
 add_subdirectory(memory)
 add_subdirectory(container)
+add_subdirectory(range)
+add_subdirectory(view)
+

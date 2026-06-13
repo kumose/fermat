@@ -657,7 +657,7 @@ TEST(BufferStringifyTest, IsStringify) {
     buf.append('h');
     buf.append('i');
     EXPECT_TRUE(buf.is_stringify());  // still have space for null
-    buf.resize(10); // fill exactly capacity, no extra slot
+    buf.resize(buf.capacity()); // fill exactly capacity, no extra slot
     EXPECT_FALSE(buf.is_stringify());
 }
 

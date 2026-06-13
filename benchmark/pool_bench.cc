@@ -32,7 +32,7 @@ struct Payload {
 // -----------------------------------------------------------------------------
 
 static void BM_ObjectPool_SingleThread(benchmark::State& state) {
-    using Pool = ObjectPool<Payload>;
+    using Pool = ObjectPool<Payload,0>;
     for (auto _ : state) {
         Payload* p = Pool::get_uninitialize();
         benchmark::DoNotOptimize(p);
@@ -43,7 +43,7 @@ BENCHMARK(BM_ObjectPool_SingleThread);
 
 // With construction/destruction (get/put)
 static void BM_ObjectPool_ConstructDestruct(benchmark::State& state) {
-    using Pool = ObjectPool<Payload>;
+    using Pool = ObjectPool<Payload, 0>;
     for (auto _ : state) {
         Payload* p = Pool::get(42);
         benchmark::DoNotOptimize(p);
@@ -70,7 +70,7 @@ BENCHMARK(BM_NewDelete_SingleThread);
 // -----------------------------------------------------------------------------
 
 static void BM_ObjectPool_MultiThread(benchmark::State& state) {
-    using Pool = ObjectPool<Payload>;
+    using Pool = ObjectPool<Payload, 0>;
     for (auto _ : state) {
         Payload* p = Pool::get_uninitialize();
         benchmark::DoNotOptimize(p);
@@ -93,7 +93,7 @@ BENCHMARK(BM_NewDelete_MultiThread)->Threads(4)->Threads(8)->Threads(16);
 // -----------------------------------------------------------------------------
 
 static void BM_ObjectPool_Batch(benchmark::State& state) {
-    using Pool = ObjectPool<Payload>;
+    using Pool = ObjectPool<Payload, 0>;
     constexpr size_t BATCH = 128;
     std::vector<Payload*> vec;
     vec.reserve(BATCH);

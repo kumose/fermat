@@ -10,3 +10,4 @@
 //#include <fermat/container/fixed_vector.h>
 #include <fermat/container/reference_ptr.h>
 #include <fermat/container/expected.h>
+#include <fermat/container/buffer_queue.h>

@@ -19,6 +19,7 @@
 #include <fermat/container/vector.h>
 #include <fermat/io/reader_writer.h>
 #include <fermat/container/receiver.h>
+#include <fermat/container/buffer_queue.h>
 #include <fermat/container/deque.h>
 #include <turbo/log/logging.h>
 #include <memory>
@@ -226,25 +227,22 @@ namespace fermat {
             }
 
             CordIterator &operator++() {
+                if (_view_begin != _view.end()) {
+                    ++_view_begin;
+                }
+                ++_index_read;
+
                 if (_index_read >= _cord->size()) {
                     return *this;
                 }
 
-                if (_view_begin != _view.end()) {
-                    ++_view_begin;
-                } else {
+
+                if (_view_begin == _view.end()) {
                     ++_cur;
-                    if (_cur != _cord->buffer_end()) {
-                        _view = turbo::span<value_type>(_cur->buffer->data() + _cur->range.offset, _cur->range.length);
-                        _view_begin = _view.begin();
-                    } else {
-                        _view = turbo::span<value_type>{};
-                        _view_begin = _view.end();
-                    }
+                    _view = turbo::span<value_type>(_cur->buffer->data() + _cur->range.offset, _cur->range.length);
+                    _view_begin = _view.begin();
                 }
 
-
-                ++_index_read;
                 return *this;
             }
 
@@ -1530,18 +1528,10 @@ namespace fermat {
         cord_type storage;
     };
 
-    template<typename T>
-    struct is_cord_buffer : std::false_type {
-        static constexpr size_t alignment = 0;
-        static constexpr size_t block_size = 0;
-    };
-
     template<size_t Alignment, size_t BlockSize>
     struct is_cord_buffer<fermat::CordBufferBase<Alignment, BlockSize> > : std::true_type {
         static constexpr size_t alignment = Alignment;
         static constexpr size_t block_size = BlockSize;
     };
 
-    template<typename T>
-    inline constexpr bool is_cord_buffer_v = is_cord_buffer<T>::value;
 } // namespace fermat
