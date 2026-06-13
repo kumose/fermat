@@ -20,7 +20,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-functional
     /// @{
@@ -46,7 +46,7 @@ namespace ranges
     /// \brief The \c invocable concept
     template<typename Fun, typename... Args>
     CPP_concept invocable =
-        CPP_requires_ref(ranges::invocable_, Fun, Args...);
+        CPP_requires_ref(fermat::ranges::invocable_, Fun, Args...);
 #endif
 
     /// \concept regular_invocable
@@ -72,7 +72,7 @@ namespace ranges
     template<typename Fun, typename... Args>
     CPP_concept predicate =
         regular_invocable<Fun, Args...> &&
-        CPP_requires_ref(ranges::predicate_, Fun, Args...);
+        CPP_requires_ref(fermat::ranges::predicate_, Fun, Args...);
 
     /// \concept relation
     /// \brief The \c relation concept
@@ -92,14 +92,14 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::invocable;
-        using ranges::predicate;
-        using ranges::regular_invocable;
-        using ranges::relation;
-        using ranges::strict_weak_order;
+        using fermat::ranges::invocable;
+        using fermat::ranges::predicate;
+        using fermat::ranges::regular_invocable;
+        using fermat::ranges::relation;
+        using fermat::ranges::strict_weak_order;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

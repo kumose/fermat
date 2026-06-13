@@ -30,7 +30,7 @@
 RANGES_DIAGNOSTIC_PUSH
 RANGES_DIAGNOSTIC_IGNORE_DEPRECATED_DECLARATIONS
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -126,7 +126,7 @@ namespace ranges
             requires is_swappable<B>::value) //
         constexpr void swap(tagged & that) noexcept(is_nothrow_swappable<B>::value)
         {
-            ranges::swap(static_cast<Base &>(*this), static_cast<Base &>(that));
+            fermat::ranges::swap(static_cast<Base &>(*this), static_cast<Base &>(that));
         }
 #if !RANGES_BROKEN_CPO_LOOKUP
         template<typename B = Base>
@@ -154,19 +154,19 @@ namespace ranges
 #endif
 
     template<typename F, typename S>
-    using tagged_pair RANGES_DEPRECATED("ranges::tagged_pair is deprecated.") =
+    using tagged_pair RANGES_DEPRECATED("fermat::ranges::tagged_pair is deprecated.") =
         tagged<std::pair<detail::tag_elem<F>, detail::tag_elem<S>>, detail::tag_spec<F>,
                detail::tag_spec<S>>;
 
     template<typename Tag1, typename Tag2, typename T1, typename T2,
              typename R = tagged_pair<Tag1(bind_element_t<T1>), Tag2(bind_element_t<T2>)>>
-    RANGES_DEPRECATED("ranges::make_tagged_pair is deprecated.")
+    RANGES_DEPRECATED("fermat::ranges::make_tagged_pair is deprecated.")
     constexpr R make_tagged_pair(T1 && t1, T2 && t2) noexcept(
         std::is_nothrow_constructible<R, T1, T2>::value)
     {
         return {static_cast<T1 &&>(t1), static_cast<T2 &&>(t2)};
     }
-} // namespace ranges
+} // namespace fermat::ranges
 
 #define RANGES_DEFINE_TAG_SPECIFIER(NAME)                                               \
     namespace tag                                                                       \
@@ -212,11 +212,11 @@ RANGES_DIAGNOSTIC_IGNORE_MISMATCHED_TAGS
 namespace std
 {
     template<typename Untagged, typename... Tags>
-    struct tuple_size<::ranges::tagged<Untagged, Tags...>> : tuple_size<Untagged>
+    struct tuple_size<::fermat::ranges::tagged<Untagged, Tags...>> : tuple_size<Untagged>
     {};
 
     template<size_t N, typename Untagged, typename... Tags>
-    struct tuple_element<N, ::ranges::tagged<Untagged, Tags...>>
+    struct tuple_element<N, ::fermat::ranges::tagged<Untagged, Tags...>>
       : tuple_element<N, Untagged>
     {};
 } // namespace std

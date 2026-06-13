@@ -33,7 +33,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -42,7 +42,7 @@ namespace ranges
             requires input_iterator<I> AND sentinel_for<S, I>)
         constexpr I next_to_if(I i, S s, std::true_type)
         {
-            return ranges::next(i, s);
+            return fermat::ranges::next(i, s);
         }
 
         template(typename I, typename S)(
@@ -68,7 +68,7 @@ namespace ranges
             I1 res_begin, res_end;
             if(begin2 == end2)
             {
-                auto e1 = ranges::next(begin1, end1);
+                auto e1 = fermat::ranges::next(begin1, end1);
                 return {e1, e1};
             }
             while(true)
@@ -227,10 +227,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::find_end;
+        using fermat::ranges::find_end;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

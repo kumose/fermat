@@ -7,7 +7,7 @@
 #include <fermat/algorithm/is_sorted.h>
 
 constexpr bool test_constexpr() {
-    using namespace ranges;
+    using namespace fermat::ranges;
     constexpr unsigned N = 100;
     std::array<int, N> a{};
     std::array<int, N> b{};
@@ -34,7 +34,7 @@ TEST(MergeTest, Basic) {
         a[i] = 2 * i;
         b[i] = 2 * i + 1;
     }
-    auto res = ranges::merge(a.begin(), a.end(), b.begin(), b.end(), c.begin());
+    auto res = fermat::ranges::merge(a.begin(), a.end(), b.begin(), b.end(), c.begin());
     EXPECT_EQ(res.in1, a.end());
     EXPECT_EQ(res.in2, b.end());
     EXPECT_EQ(res.out, c.end());
@@ -50,7 +50,7 @@ TEST(MergeTest, RangeVersion) {
         a[i] = 2 * i;
         b[i] = 2 * i + 1;
     }
-    auto res = ranges::merge(a, b, c.begin());
+    auto res = fermat::ranges::merge(a, b, c.begin());
     EXPECT_EQ(res.in1, a.end());
     EXPECT_EQ(res.in2, b.end());
     EXPECT_EQ(res.out, c.end());

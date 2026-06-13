@@ -16,7 +16,7 @@ void test_iter() {
     int r1[10] = {0};
     int r2[10] = {0};
 
-    auto p = ranges::partition_copy(std::begin(ia), std::end(ia), r1, r2, is_odd{});
+    auto p = fermat::ranges::partition_copy(std::begin(ia), std::end(ia), r1, r2, is_odd{});
     EXPECT_EQ(p.in, std::end(ia));
     EXPECT_EQ(p.out1, r1 + 4);
     EXPECT_EQ(r1[0], 1);
@@ -36,8 +36,8 @@ void test_range() {
     int r1[10] = {0};
     int r2[10] = {0};
 
-    auto rng = ranges::make_subrange(std::begin(ia), std::end(ia));
-    auto p = ranges::partition_copy(rng, r1, r2, is_odd{});
+    auto rng = fermat::ranges::make_subrange(std::begin(ia), std::end(ia));
+    auto p = fermat::ranges::partition_copy(rng, r1, r2, is_odd{});
     EXPECT_EQ(p.in, std::end(ia));
     EXPECT_EQ(p.out1, r1 + 4);
     EXPECT_EQ(r1[0], 1);
@@ -67,7 +67,7 @@ TEST(PartitionCopyTest, Projection) {
     S r1[10] = {{0}};
     S r2[10] = {{0}};
 
-    auto p = ranges::partition_copy(ia, r1, r2, is_odd{}, &S::i);
+    auto p = fermat::ranges::partition_copy(ia, r1, r2, is_odd{}, &S::i);
     EXPECT_EQ(p.in, std::end(ia));
     EXPECT_EQ(p.out1, r1 + 4);
     EXPECT_EQ(r1[0].i, 1);
@@ -87,7 +87,7 @@ TEST(PartitionCopyTest, RvalueRange) {
     S r1[10] = {{0}};
     S r2[10] = {{0}};
 
-    auto p = ranges::partition_copy(std::move(ia), r1, r2, is_odd{}, &S::i);
+    auto p = fermat::ranges::partition_copy(std::move(ia), r1, r2, is_odd{}, &S::i);
     // p.in is dangling; we only verify that it compiles and outputs are correct.
     EXPECT_EQ(p.out1, r1 + 4);
     EXPECT_EQ(r1[0].i, 1);
@@ -103,7 +103,7 @@ TEST(PartitionCopyTest, RvalueRange) {
     std::fill(r1, r1 + 10, S{0});
     std::fill(r2, r2 + 10, S{0});
     std::vector<S> vec(std::begin(ia), std::end(ia));
-    auto q = ranges::partition_copy(std::move(vec), r1, r2, is_odd{}, &S::i);
+    auto q = fermat::ranges::partition_copy(std::move(vec), r1, r2, is_odd{}, &S::i);
     EXPECT_EQ(q.out1, r1 + 4);
     EXPECT_EQ(r1[0].i, 1);
     EXPECT_EQ(r1[1].i, 3);
@@ -122,7 +122,7 @@ TEST(PartitionCopyTest, Constexpr) {
         const int ia[] = {1, 2, 3, 4, 6, 8, 5, 7};
         int r1[10] = {0};
         int r2[10] = {0};
-        const auto p = ranges::partition_copy(ia, r1, r2, is_odd{});
+        const auto p = fermat::ranges::partition_copy(ia, r1, r2, is_odd{});
         bool ok = (p.in == std::end(ia)) &&
                   (p.out1 == r1 + 4) &&
                   (r1[0] == 1) && (r1[1] == 3) && (r1[2] == 5) && (r1[3] == 7) &&

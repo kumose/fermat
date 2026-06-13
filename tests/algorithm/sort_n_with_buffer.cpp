@@ -33,13 +33,13 @@ int main()
     };
     std::pair<int, int> space[2];
 
-    ranges::aux::sort_n_with_buffer(some_pairs + 0, ranges::size(some_pairs), space + 0, std::less<int>{}, &std::pair<int, int>::second);
+    fermat::ranges::aux::sort_n_with_buffer(some_pairs + 0, fermat::ranges::size(some_pairs), space + 0, std::less<int>{}, &std::pair<int, int>::second);
     CHECK(some_pairs[0] == std::make_pair(3, 0));
     CHECK(some_pairs[1] == std::make_pair(2, 1));
     CHECK(some_pairs[2] == std::make_pair(1, 2));
     CHECK(some_pairs[3] == std::make_pair(0, 3));
 
-    ranges::aux::sort_n_with_buffer(some_pairs + 0, ranges::size(some_pairs), space + 0, std::less<int>{}, &std::pair<int, int>::first);
+    fermat::ranges::aux::sort_n_with_buffer(some_pairs + 0, fermat::ranges::size(some_pairs), space + 0, std::less<int>{}, &std::pair<int, int>::first);
     CHECK(some_pairs[0] == std::make_pair(0, 3));
     CHECK(some_pairs[1] == std::make_pair(1, 2));
     CHECK(some_pairs[2] == std::make_pair(2, 1));

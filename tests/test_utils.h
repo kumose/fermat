@@ -73,7 +73,7 @@ struct check_equal_fn
 {
     // Single value comparison
     template<typename T, typename U,
-             typename = std::enable_if_t<!ranges::input_range<T> && !ranges::input_range<U>>>
+             typename = std::enable_if_t<!fermat::ranges::input_range<T> && !fermat::ranges::input_range<U>>>
     constexpr void operator()(T&& actual, U&& expected,
                               source_location sloc = source_location::current()) const
     {
@@ -82,14 +82,14 @@ struct check_equal_fn
 
     // Two-range comparison (both satisfy input_range)
     template<typename Rng1, typename Rng2,
-             typename = std::enable_if_t<ranges::input_range<Rng1> && ranges::input_range<Rng2>>>
+             typename = std::enable_if_t<fermat::ranges::input_range<Rng1> && fermat::ranges::input_range<Rng2>>>
     constexpr void operator()(Rng1&& actual, Rng2&& expected,
                               source_location sloc = source_location::current()) const
     {
-        auto it0 = ranges::begin(actual);
-        auto end0 = ranges::end(actual);
-        auto it1 = ranges::begin(expected);
-        auto end1 = ranges::end(expected);
+        auto it0 = fermat::ranges::begin(actual);
+        auto end0 = fermat::ranges::end(actual);
+        auto it1 = fermat::ranges::begin(expected);
+        auto end1 = fermat::ranges::end(expected);
         for (; it0 != end0 && it1 != end1; ++it0, ++it1)
             (*this)(*it0, *it1, sloc);
         CHECK_SLOC(sloc, it0 == end0);
@@ -98,7 +98,7 @@ struct check_equal_fn
 
     // Range vs initializer_list
     template<typename Rng, typename Val,
-             typename = std::enable_if_t<ranges::input_range<Rng>>>
+             typename = std::enable_if_t<fermat::ranges::input_range<Rng>>>
     constexpr void operator()(Rng&& actual, std::initializer_list<Val> expected,
                               source_location sloc = source_location::current()) const
     {
@@ -123,9 +123,9 @@ constexpr void has_type(Actual&&)
 /// ------------------------------------------------------------
 /// has_cardinality: check range cardinality
 /// ------------------------------------------------------------
-template<ranges::cardinality Expected,
+template<fermat::ranges::cardinality Expected,
          typename Rng,
-         ranges::cardinality Actual = ranges::range_cardinality<Rng>::value>
+         fermat::ranges::cardinality Actual = fermat::ranges::range_cardinality<Rng>::value>
 constexpr void has_cardinality(Rng&&)
 {
     static_assert(Actual == Expected, "Unexpected cardinality");
@@ -219,8 +219,8 @@ private:
                               function_ref<void(R)> const& check) {
             check(algo(first, last, rest...));
             check(algo(first, S{base(last)}, rest...));
-            check(algo(::rvalue_if<RvalueOK>(ranges::make_subrange(first, last)), rest...));
-            check(algo(::rvalue_if<RvalueOK>(ranges::make_subrange(first, S{base(last)})),
+            check(algo(::rvalue_if<RvalueOK>(fermat::ranges::make_subrange(first, last)), rest...));
+            check(algo(::rvalue_if<RvalueOK>(fermat::ranges::make_subrange(first, S{base(last)})),
                        rest...));
         };
         return checker<R>{check_algo};
@@ -282,11 +282,11 @@ public:
                               function_ref<void(R)> const& check) {
             check(algo(begin1, end1, begin2, end2, rest...));
             check(algo(begin1, S1{base(end1)}, begin2, S2{base(end2)}, rest...));
-            check(algo(::rvalue_if<RvalueOK1>(ranges::make_subrange(begin1, end1)),
-                       ::rvalue_if<RvalueOK2>(ranges::make_subrange(begin2, end2)),
+            check(algo(::rvalue_if<RvalueOK1>(fermat::ranges::make_subrange(begin1, end1)),
+                       ::rvalue_if<RvalueOK2>(fermat::ranges::make_subrange(begin2, end2)),
                        rest...));
-            check(algo(::rvalue_if<RvalueOK1>(ranges::make_subrange(begin1, S1{base(end1)})),
-                       ::rvalue_if<RvalueOK2>(ranges::make_subrange(begin2, S2{base(end2)})),
+            check(algo(::rvalue_if<RvalueOK1>(fermat::ranges::make_subrange(begin1, S1{base(end1)})),
+                       ::rvalue_if<RvalueOK2>(fermat::ranges::make_subrange(begin2, S2{base(end2)})),
                        rest...));
         }};
     }

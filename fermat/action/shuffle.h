@@ -27,7 +27,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-actions
     /// @{
@@ -57,7 +57,7 @@ namespace ranges
                     convertible_to<invoke_result_t<Gen &>, range_difference_t<Rng>>)
             Rng operator()(Rng && rng, Gen && gen) const
             {
-                ranges::shuffle(rng, static_cast<Gen &&>(gen));
+                fermat::ranges::shuffle(rng, static_cast<Gen &&>(gen));
                 return static_cast<Rng &&>(rng);
             }
 
@@ -76,7 +76,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(shuffle_fn, shuffle)
     } // namespace actions
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

@@ -32,7 +32,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     namespace aux
     {
@@ -52,7 +52,7 @@ namespace ranges
                     do
                     {
                         auto half = dist / 2;
-                        auto middle = ranges::next(first, half);
+                        auto middle = fermat::ranges::next(first, half);
                         auto && v = *middle;
                         auto && pv = invoke(proj, (decltype(v) &&)v);
                         if(invoke(pred, pv, val))
@@ -69,13 +69,13 @@ namespace ranges
                             return {lower_bound_n(std::move(first),
                                                   half,
                                                   val,
-                                                  ranges::ref(pred),
-                                                  ranges::ref(proj)),
-                                    upper_bound_n(ranges::next(middle),
+                                                  fermat::ranges::ref(pred),
+                                                  fermat::ranges::ref(proj)),
+                                    upper_bound_n(fermat::ranges::next(middle),
                                                   dist - (half + 1),
                                                   val,
-                                                  ranges::ref(pred),
-                                                  ranges::ref(proj))};
+                                                  fermat::ranges::ref(pred),
+                                                  fermat::ranges::ref(proj))};
                         }
                     } while(0 != dist);
                 }
@@ -85,7 +85,7 @@ namespace ranges
 
         RANGES_INLINE_VARIABLE(equal_range_n_fn, equal_range_n)
     } // namespace aux
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

@@ -33,7 +33,7 @@ void has_type(Actual&&) {
 /// debug_input_view (minimal input view for testing)
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T>>
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>>
 {
     struct data
     {
@@ -52,7 +52,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T>>
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T>> = true;
@@ -63,8 +63,8 @@ namespace ranges
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -89,7 +89,7 @@ void check_equal(const std::vector<char>& actual, std::initializer_list<char> ex
 // ------------------------------------------------------------------
 
 TEST(SliceTest, RawArraySlice) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     auto rng0 = rgi | views::slice(3, 9);
@@ -100,7 +100,7 @@ TEST(SliceTest, RawArraySlice) {
 }
 
 TEST(SliceTest, ReverseOfSlice) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     auto rng0 = rgi | views::slice(3, 9);
@@ -109,7 +109,7 @@ TEST(SliceTest, ReverseOfSlice) {
 }
 
 TEST(SliceTest, VectorSliceThenReverse) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     auto rng2 = v | views::slice(3, 9) | views::reverse;
@@ -117,7 +117,7 @@ TEST(SliceTest, VectorSliceThenReverse) {
 }
 
 TEST(SliceTest, ListSlice) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::list<int> l{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     auto rng3 = l | views::slice(3, 9);
@@ -126,7 +126,7 @@ TEST(SliceTest, ListSlice) {
 }
 
 TEST(SliceTest, IotaSlice) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto rng4 = views::iota(10) | views::slice(10, 20);
     // finite
@@ -134,14 +134,14 @@ TEST(SliceTest, IotaSlice) {
 }
 
 TEST(SliceTest, IotaSliceWithBraces) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto rng5 = views::iota(10)[{10, 20}];
     check_equal(rng5, {20,21,22,23,24,25,26,27,28,29});
 }
 
 TEST(SliceTest, ListSliceWithBraces) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::list<int> l{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     auto rng6 = views::all(l)[{3, 9}];
@@ -149,7 +149,7 @@ TEST(SliceTest, ListSliceWithBraces) {
 }
 
 TEST(SliceTest, ListSliceToEnd) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::list<int> l{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     auto rng7 = views::all(l)[{3, end}];
@@ -157,7 +157,7 @@ TEST(SliceTest, ListSliceToEnd) {
 }
 
 TEST(SliceTest, ListSliceWithNegativeOffset) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::list<int> l{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     auto rng8 = views::all(l)[{end-5, end-2}];
@@ -165,16 +165,16 @@ TEST(SliceTest, ListSliceWithNegativeOffset) {
 }
 
 TEST(SliceTest, InfiniteIotaSliceToEnd) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto rng9 = views::iota(0)[{0, end}];
-    static_assert(ranges::is_infinite<decltype(rng9)>::value, "should be infinite");
+    static_assert(fermat::ranges::is_infinite<decltype(rng9)>::value, "should be infinite");
     (void)rng9; // just compile
     SUCCEED();
 }
 
 TEST(SliceTest, IstreamSlice) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::string str{"0 1 2 3 4 5 6 7 8 9"};
     std::stringstream sin{str};
@@ -183,7 +183,7 @@ TEST(SliceTest, IstreamSlice) {
 }
 
 TEST(SliceTest, IstreamSliceToEnd) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::string str{"0 1 2 3 4 5 6 7 8 9"};
     std::stringstream sin{str};
@@ -192,7 +192,7 @@ TEST(SliceTest, IstreamSliceToEnd) {
 }
 
 TEST(SliceTest, ClosedIotaSlice) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto letters = views::closed_iota('a','g');
     static_assert(random_access_range<decltype(letters)> && view_<decltype(letters)>, "");
@@ -205,7 +205,7 @@ TEST(SliceTest, ClosedIotaSlice) {
 }
 
 TEST(SliceTest, DebugInputView) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int const some_ints[] = {0,1,2,3,4,5,6,7,8,9};
     auto rng = debug_input_view<int const>{some_ints, 10} | views::slice(3, 10);

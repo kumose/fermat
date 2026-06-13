@@ -6,7 +6,7 @@
 #include <vector>
 
 TEST(ActionAdjacentRemoveIfTest, Example) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto v = views::ints(1, 21) | to<std::vector>();
     auto& v2 = actions::adjacent_remove_if(v, [](int x, int y) { return (x + y) % 3 == 0; });

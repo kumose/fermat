@@ -20,9 +20,9 @@ constexpr bool test_constexpr() {
 
     // Use std::array instead of test::array
     std::array<int, 5> arr{{1, 2, 3, 4, 5}};
-    const auto it = ranges::unstable_remove_if(arr, is_even);
+    const auto it = fermat::ranges::unstable_remove_if(arr, is_even);
     if (it != arr.begin() + 3) return false;
-    if (!ranges::equal(ranges::make_subrange(arr.begin(), it), IL{1, 5, 3})) return false;
+    if (!fermat::ranges::equal(fermat::ranges::make_subrange(arr.begin(), it), IL{1, 5, 3})) return false;
     return true;
 }
 

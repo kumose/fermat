@@ -20,7 +20,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -137,7 +137,7 @@ namespace ranges
         };
     } // namespace _tuple_wrapper_
     /// \endcond
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

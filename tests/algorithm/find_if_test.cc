@@ -12,12 +12,12 @@ constexpr bool is_three(int i) { return i == 3; }
 
 template<class Rng>
 constexpr bool contains_three(Rng r) {
-    auto it = ranges::find_if(r, is_three);
-    return it != ranges::end(r);
+    auto it = fermat::ranges::find_if(r, is_three);
+    return it != fermat::ranges::end(r);
 }
 
 TEST(FindIfTest, IteratorPairs) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {0, 1, 2, 3, 4, 5};
     constexpr auto s = sizeof(ia) / sizeof(ia[0]);
@@ -37,7 +37,7 @@ TEST(FindIfTest, IteratorPairs) {
 }
 
 TEST(FindIfTest, Range) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {0, 1, 2, 3, 4, 5};
     constexpr auto s = sizeof(ia) / sizeof(ia[0]);
@@ -49,7 +49,7 @@ TEST(FindIfTest, Range) {
 }
 
 TEST(FindIfTest, RvalueContainer) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {0, 1, 2, 3, 4, 5};
     std::vector<int> const vec(std::begin(ia), std::end(ia));
@@ -60,7 +60,7 @@ TEST(FindIfTest, RvalueContainer) {
 }
 
 TEST(FindIfTest, WithProjection) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     S sa[] = {{0}, {1}, {2}, {3}, {4}, {5}};
     S* ps = find_if(sa, [](int i) { return i == 3; }, &S::i_);

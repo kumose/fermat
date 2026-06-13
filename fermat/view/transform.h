@@ -40,7 +40,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -186,13 +186,13 @@ namespace ranges
         constexpr auto CPP_fun(size)()(
             requires sized_range<Rng>)
         {
-            return ranges::size(this->base());
+            return fermat::ranges::size(this->base());
         }
         CPP_auto_member
         constexpr auto CPP_fun(size)()(const //
             requires sized_range<Rng const>)
         {
-            return ranges::size(this->base());
+            return fermat::ranges::size(this->base());
         }
     };
 
@@ -244,7 +244,7 @@ namespace ranges
         public:
             sentinel() = default;
             sentinel(meta::const_if_c<Const, iter_transform2_view> * parent,
-                     decltype(ranges::end))
+                     decltype(fermat::ranges::end))
               : end1_(end(parent->rng1_))
               , end2_(end(parent->rng2_))
             {}
@@ -330,8 +330,8 @@ namespace ranges
             auto advance(difference_type n) -> CPP_ret(void)(
                 requires random_access_range<R1> && random_access_range<R2>)
             {
-                ranges::advance(it1_, n);
-                ranges::advance(it2_, n);
+                fermat::ranges::advance(it1_, n);
+                fermat::ranges::advance(it2_, n);
             }
             CPP_member
             auto distance_to(cursor const & that) const //
@@ -342,7 +342,7 @@ namespace ranges
                 // Return the smallest distance (in magnitude) of any of the iterator
                 // pairs. This is to accommodate zippers of sequences of different length.
                 difference_type d1 = that.it1_ - it1_, d2 = that.it2_ - it2_;
-                return 0 < d1 ? ranges::min(d1, d2) : ranges::max(d1, d2);
+                return 0 < d1 ? fermat::ranges::min(d1, d2) : fermat::ranges::max(d1, d2);
             }
             // clang-format off
             auto CPP_auto_fun(move)()(const)
@@ -362,11 +362,11 @@ namespace ranges
 
         cursor<simple_view<Rng1>() && simple_view<Rng2>()> begin_cursor()
         {
-            return {this, ranges::begin};
+            return {this, fermat::ranges::begin};
         }
         end_cursor_t<simple_view<Rng1>() && simple_view<Rng2>()> end_cursor()
         {
-            return {this, ranges::end};
+            return {this, fermat::ranges::end};
         }
         template(bool Const = true)(
             requires Const AND range<meta::const_if_c<Const, Rng1>> AND
@@ -377,7 +377,7 @@ namespace ranges
                     meta::const_if_c<Const, Rng2>>)
         cursor<true> begin_cursor() const
         {
-            return {this, ranges::begin};
+            return {this, fermat::ranges::begin};
         }
         template(bool Const = true)(
             requires Const AND range<meta::const_if_c<Const, Rng1>> AND
@@ -388,14 +388,14 @@ namespace ranges
                     meta::const_if_c<Const, Rng2>>)
         end_cursor_t<Const> end_cursor() const
         {
-            return {this, ranges::end};
+            return {this, fermat::ranges::end};
         }
         template<typename Self>
         static constexpr auto size_(Self & self)
         {
             using size_type = common_type_t<range_size_t<Rng1>, range_size_t<Rng2>>;
-            return ranges::min(static_cast<size_type>(ranges::size(self.rng1_)),
-                               static_cast<size_type>(ranges::size(self.rng2_)));
+            return fermat::ranges::min(static_cast<size_type>(fermat::ranges::size(self.rng1_)),
+                               static_cast<size_type>(fermat::ranges::size(self.rng2_)));
         }
 
         template<bool B>
@@ -547,7 +547,7 @@ namespace ranges
             }
         };
 
-        /// # ranges::views::transform
+        /// # fermat::ranges::views::transform
         /// The transform view takes in a function `T -> U` and converts an input
         /// range of `T` into an output range of `U` by calling the function on every
         /// element of the input range.
@@ -560,7 +560,7 @@ namespace ranges
         ///
         /// ## Syntax
         /// ```cpp
-        /// auto output_range = input_range | ranges::views::transform(transform_func);
+        /// auto output_range = input_range | fermat::ranges::views::transform(transform_func);
         /// ```
         ///
         /// ## Parameters
@@ -598,21 +598,21 @@ namespace ranges
     {
         namespace views
         {
-            using ranges::views::transform;
+            using fermat::ranges::views::transform;
         }
         template(typename Rng, typename F)(
             requires input_range<Rng> AND copy_constructible<F> AND view_<Rng> AND
                 std::is_object<F>::value AND
                     regular_invocable<F &, iter_reference_t<iterator_t<Rng>>>)
-            using transform_view = ranges::transform_view<Rng, F>;
+            using transform_view = fermat::ranges::transform_view<Rng, F>;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::iter_transform_view)
-RANGES_SATISFY_BOOST_RANGE(::ranges::transform_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::iter_transform_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::transform_view)
 
 #endif

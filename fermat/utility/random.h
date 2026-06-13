@@ -71,7 +71,7 @@
 RANGES_DIAGNOSTIC_PUSH
 RANGES_DIAGNOSTIC_IGNORE_CXX17_COMPAT
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-numerics
     /// @{
@@ -98,8 +98,8 @@ namespace ranges
     template<typename Gen>
     CPP_concept uniform_random_bit_generator =
         invocable<Gen &> &&
-        CPP_requires_ref(ranges::uniform_random_bit_generator_, Gen) &&
-        CPP_concept_ref(ranges::uniform_random_bit_generator_, Gen);
+        CPP_requires_ref(fermat::ranges::uniform_random_bit_generator_, Gen) &&
+        CPP_concept_ref(fermat::ranges::uniform_random_bit_generator_, Gen);
     // clang-format on
     /// @}
 
@@ -119,7 +119,7 @@ namespace ranges
                 std::random_device rd;
 #endif
                 std::uniform_int_distribution<std::uint32_t> dist{};
-                ranges::generate(seeds, [&] { return dist(rd); });
+                fermat::ranges::generate(seeds, [&] { return dist(rd); });
 
                 return seeds;
             }
@@ -355,7 +355,7 @@ namespace ranges
                             *i = unhashed;
                         }
                     }
-                    ranges::copy(mixer_copy, dest);
+                    fermat::ranges::copy(mixer_copy, dest);
                 }
 
                 template(typename I, typename S)(
@@ -488,7 +488,7 @@ namespace ranges
         }
     } // namespace detail
     /// \endcond
-} // namespace ranges
+} // namespace fermat::ranges
 
 RANGES_DIAGNOSTIC_POP
 

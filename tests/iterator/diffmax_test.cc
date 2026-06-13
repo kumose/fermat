@@ -8,7 +8,7 @@
 
 #include <fermat/iterator/diffmax_t.h>
 
-using ranges::detail::diffmax_t;
+using fermat::ranges::detail::diffmax_t;
 
 template<template<typename> class Op>
 void check_1(std::ptrdiff_t a, std::ptrdiff_t b) {

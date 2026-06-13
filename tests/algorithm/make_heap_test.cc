@@ -14,7 +14,7 @@ void test_make_heap_basic(int N) {
     std::vector<int> v(N);
     for (int i = 0; i < N; ++i) v[i] = i;
     std::shuffle(v.begin(), v.end(), gen);
-    auto result = ranges::make_heap(v.begin(), v.end());
+    auto result = fermat::ranges::make_heap(v.begin(), v.end());
     EXPECT_EQ(result, v.end());
     EXPECT_TRUE(std::is_heap(v.begin(), v.end()));
 }
@@ -24,7 +24,7 @@ void test_make_heap_sentinel(int N) {
     std::vector<int> v(N);
     for (int i = 0; i < N; ++i) v[i] = i;
     std::shuffle(v.begin(), v.end(), gen);
-    auto result = ranges::make_heap(v.data(), v.data() + N);
+    auto result = fermat::ranges::make_heap(v.data(), v.data() + N);
     EXPECT_EQ(result, v.data() + N);
     EXPECT_TRUE(std::is_heap(v.begin(), v.end()));
 }
@@ -34,8 +34,8 @@ void test_make_heap_subrange(int N) {
     std::vector<int> v(N);
     for (int i = 0; i < N; ++i) v[i] = i;
     std::shuffle(v.begin(), v.end(), gen);
-    auto rng = ranges::subrange(v.begin(), v.end());
-    auto result = ranges::make_heap(rng);
+    auto rng = fermat::ranges::subrange(v.begin(), v.end());
+    auto result = fermat::ranges::make_heap(rng);
     EXPECT_EQ(result, v.end());
     EXPECT_TRUE(std::is_heap(v.begin(), v.end()));
 }
@@ -45,7 +45,7 @@ void test_make_heap_comparator(int N) {
     std::vector<int> v(N);
     for (int i = 0; i < N; ++i) v[i] = i;
     std::shuffle(v.begin(), v.end(), gen);
-    auto result = ranges::make_heap(v.begin(), v.end(), std::greater<int>());
+    auto result = fermat::ranges::make_heap(v.begin(), v.end(), std::greater<int>());
     EXPECT_EQ(result, v.end());
     EXPECT_TRUE(std::is_heap(v.begin(), v.end(), std::greater<int>()));
 }
@@ -55,8 +55,8 @@ void test_make_heap_comparator_subrange(int N) {
     std::vector<int> v(N);
     for (int i = 0; i < N; ++i) v[i] = i;
     std::shuffle(v.begin(), v.end(), gen);
-    auto rng = ranges::subrange(v.begin(), v.end());
-    auto result = ranges::make_heap(rng, std::greater<int>());
+    auto rng = fermat::ranges::subrange(v.begin(), v.end());
+    auto result = fermat::ranges::make_heap(rng, std::greater<int>());
     EXPECT_EQ(result, v.end());
     EXPECT_TRUE(std::is_heap(v.begin(), v.end(), std::greater<int>()));
 }
@@ -69,7 +69,7 @@ void test_make_heap_indirect(int N) {
     std::vector<std::unique_ptr<int>> v(N);
     for (int i = 0; i < N; ++i) v[i] = std::make_unique<int>(i);
     std::shuffle(v.begin(), v.end(), gen);
-    auto result = ranges::make_heap(v.begin(), v.end(), indirect_less);
+    auto result = fermat::ranges::make_heap(v.begin(), v.end(), indirect_less);
     EXPECT_EQ(result, v.end());
     EXPECT_TRUE(std::is_heap(v.begin(), v.end(), indirect_less));
 }
@@ -80,7 +80,7 @@ void test_make_heap_projection(int N) {
     std::vector<S> v(N);
     for (int i = 0; i < N; ++i) v[i].i = i;
     std::shuffle(v.begin(), v.end(), gen);
-    auto result = ranges::make_heap(v.begin(), v.end(), std::less<int>(), &S::i);
+    auto result = fermat::ranges::make_heap(v.begin(), v.end(), std::less<int>(), &S::i);
     EXPECT_EQ(result, v.end());
     std::vector<int> tmp(N);
     std::transform(v.begin(), v.end(), tmp.begin(), [](const S& s) { return s.i; });
@@ -121,6 +121,6 @@ TEST(MakeHeapTest, ConstexprRuntime) {
     const int N = 100;
     std::array<int, N> ia;
     for (int i = 0; i < N; ++i) ia[i] = N - 1 - i;
-    ranges::make_heap(ia.begin(), ia.end(), std::less<int>());
+    fermat::ranges::make_heap(ia.begin(), ia.end(), std::less<int>());
     EXPECT_TRUE(std::is_heap(ia.begin(), ia.end()));
 }

@@ -26,7 +26,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-actions
     /// @{
@@ -47,8 +47,8 @@ namespace ranges
             Rng operator()(Rng && rng, range_difference_t<Rng> n) const
             {
                 RANGES_EXPECT(n >= 0);
-                ranges::actions::erase(
-                    rng, ranges::next(begin(rng), n, end(rng)), end(rng));
+                fermat::ranges::actions::erase(
+                    rng, fermat::ranges::next(begin(rng), n, end(rng)), end(rng));
                 return static_cast<Rng &&>(rng);
             }
         };
@@ -57,7 +57,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(take_fn, take)
     } // namespace actions
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

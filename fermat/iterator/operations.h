@@ -24,7 +24,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-iterator
     /// @{
@@ -376,7 +376,7 @@ namespace ranges
         static constexpr std::pair<iter_difference_t<I>, I> //
         impl_i(I first, S end_, sentinel_tag)
         {
-            I last = ranges::next(first, end_);
+            I last = fermat::ranges::next(first, end_);
             auto n = static_cast<iter_difference_t<I>>(last - first);
             RANGES_EXPECT(((bool)same_as<I, S> || 0 <= n));
             return {n, last};
@@ -387,7 +387,7 @@ namespace ranges
         {
             auto n = static_cast<iter_difference_t<I>>(last - first);
             RANGES_EXPECT(((bool)same_as<I, S> || 0 <= n));
-            return {n, ranges::next(first, last)};
+            return {n, fermat::ranges::next(first, last)};
         }
 
     public:
@@ -637,13 +637,13 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::advance;
-        using ranges::distance;
-        using ranges::next;
-        using ranges::prev;
+        using fermat::ranges::advance;
+        using fermat::ranges::distance;
+        using fermat::ranges::next;
+        using fermat::ranges::prev;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

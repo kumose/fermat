@@ -4,7 +4,7 @@
 #include <fermat/view/subrange.h>
 
 TEST(FindFirstOfTest, IteratorPairs) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {0, 1, 2, 3, 0, 1, 2, 3};
     constexpr auto sa = sizeof(ia) / sizeof(ia[0]);
@@ -25,7 +25,7 @@ TEST(FindFirstOfTest, IteratorPairs) {
 }
 
 TEST(FindFirstOfTest, WithPredicate) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {0, 1, 2, 3, 0, 1, 2, 3};
     constexpr auto sa = sizeof(ia) / sizeof(ia[0]);
@@ -46,7 +46,7 @@ TEST(FindFirstOfTest, WithPredicate) {
 }
 
 TEST(FindFirstOfTest, RangeVersions) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {0, 1, 2, 3, 0, 1, 2, 3};
     constexpr auto sa = sizeof(ia) / sizeof(ia[0]);
@@ -76,7 +76,7 @@ TEST(FindFirstOfTest, RangeVersions) {
 }
 
 TEST(FindFirstOfTest, RangeWithPredicate) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {0, 1, 2, 3, 0, 1, 2, 3};
     constexpr auto sa = sizeof(ia) / sizeof(ia[0]);
@@ -102,14 +102,14 @@ TEST(FindFirstOfTest, RangeWithPredicate) {
 }
 
 TEST(FindFirstOfTest, WithProjection) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     struct S { int i; };
     S ia[] = {{0}, {1}, {2}, {3}, {0}, {1}, {2}, {3}};
     int ib[] = {1, 3, 5, 7};
     int ic[] = {7};
 
-    // Fixed: use identity{} (or ranges::identity{}) instead of identity
+    // Fixed: use identity{} (or fermat::ranges::identity{}) instead of identity
     auto it = find_first_of(ia, ia + 8, ib, ib + 4,
                             std::equal_to<int>(), &S::i, identity{});
     EXPECT_EQ(it, ia + 1);
@@ -135,7 +135,7 @@ TEST(FindFirstOfTest, WithProjection) {
 }
 
 TEST(FindFirstOfTest, Constexpr) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     constexpr int ia[] = {0, 1, 2, 3, 0, 1, 2, 3};
     constexpr int ib[] = {1, 3, 5, 7};
     constexpr int ic[] = {7};

@@ -29,8 +29,8 @@
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -64,7 +64,7 @@ void has_type(Actual&&) {
 // ------------------------------------------------------------------
 
 TEST(ReverseTest, ReverseRandomAccessCommonSized) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> rgv{0,1,2,3,4,5,6,7,8,9};
     auto const rng0 = rgv | views::reverse;
@@ -79,7 +79,7 @@ TEST(ReverseTest, ReverseRandomAccessCommonSized) {
 }
 
 TEST(ReverseTest, ZipReverse) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> rgv{0,1,2,3,4,5,6,7,8,9};
     auto z = views::zip(rgv);
@@ -93,7 +93,7 @@ TEST(ReverseTest, ZipReverse) {
 // Deduction guides test – not applicable in Fermat; skip or minimal.
 
 TEST(ReverseTest, ReverseRandomAccessNonCommonSized) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> rgv{0,1,2,3,4,5,6,7,8,9};
     auto cnt = views::counted(rgv.begin(), 10);
@@ -105,7 +105,7 @@ TEST(ReverseTest, ReverseRandomAccessNonCommonSized) {
 }
 
 TEST(ReverseTest, ReverseRandomAccessNonSized) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto sz = views::c_str((char const*)"hello");
     auto rng2 = sz | views::reverse;
@@ -115,7 +115,7 @@ TEST(ReverseTest, ReverseRandomAccessNonSized) {
 }
 
 TEST(ReverseTest, ReverseBidirectionalCommonSized) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::list<int> rgl{0,1,2,3,4,5,6,7,8,9};
     auto const rng3 = rgl | views::reverse;
@@ -126,7 +126,7 @@ TEST(ReverseTest, ReverseBidirectionalCommonSized) {
 }
 
 TEST(ReverseTest, ReverseBidirectionalWeakSized) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::list<int> rgl{0,1,2,3,4,5,6,7,8,9};
     auto cnt2 = views::counted(rgl.begin(), 10);
@@ -138,7 +138,7 @@ TEST(ReverseTest, ReverseBidirectionalWeakSized) {
 }
 
 TEST(ReverseTest, ReverseBidirectionalWeakNonSized) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::list<int> rgl{0,1,2,3,4,5,6,7,8,9};
     auto dlm = views::delimit(rgl.begin(), 9);
@@ -149,7 +149,7 @@ TEST(ReverseTest, ReverseBidirectionalWeakNonSized) {
 }
 
 TEST(ReverseTest, ReverseBidirectionalWeakNonSized2) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::list<int> rgl{0,1,2,3,4,5,6,7,8,9};
     auto dlm2 = views::delimit(rgl, 10);
@@ -160,7 +160,7 @@ TEST(ReverseTest, ReverseBidirectionalWeakNonSized2) {
 }
 
 TEST(ReverseTest, FindInReverse) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v = {1, 2, 3, 4, 5};
     auto b = find(v, 2);

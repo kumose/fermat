@@ -27,7 +27,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// Checked indexed range access.
     ///
@@ -43,14 +43,14 @@ namespace ranges
         {
             // Workaround https://gcc.gnu.org/bugzilla/show_bug.cgi?id=67371 in GCC 5
             check_throw(rng, n);
-            return ranges::begin(rng)[n];
+            return fermat::ranges::begin(rng)[n];
         }
 
     private:
         template<typename Rng>
         static constexpr void check_throw(Rng && rng, range_difference_t<Rng> n)
         {
-            (n < 0 || n >= ranges::distance(rng)) ? throw std::out_of_range("ranges::at")
+            (n < 0 || n >= fermat::ranges::distance(rng)) ? throw std::out_of_range("fermat::ranges::at")
                                                   : void(0);
         }
     };
@@ -74,8 +74,8 @@ namespace ranges
             using D = range_difference_t<Rng>;
             RANGES_EXPECT(0 <= static_cast<D>(n));
             RANGES_EXPECT(!(bool)sized_range<Rng> ||
-                          static_cast<D>(n) < ranges::distance(rng));
-            return ranges::begin(rng)[static_cast<D>(n)];
+                          static_cast<D>(n) < fermat::ranges::distance(rng));
+            return fermat::ranges::begin(rng)[static_cast<D>(n)];
         }
     };
 
@@ -117,7 +117,7 @@ namespace ranges
     /// \ingroup group-range
     /// \sa `front_fn`
     RANGES_INLINE_VARIABLE(front_fn, front)
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

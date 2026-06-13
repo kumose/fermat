@@ -30,7 +30,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -45,7 +45,7 @@ namespace ranges
             CPP_assert(forward_range<Rng> || sized_range<Rng>);
             size_tracker() = default;
             size_tracker(Rng & rng)
-              : size_(ranges::distance(rng))
+              : size_(fermat::ranges::distance(rng))
             {}
             void decrement()
             {
@@ -69,7 +69,7 @@ namespace ranges
             {}
             range_difference_t<Rng> get(Rng & rng, iterator_t<Rng> const & it) const
             {
-                return ranges::end(rng) - it;
+                return fermat::ranges::end(rng) - it;
             }
         };
     } // namespace detail
@@ -113,7 +113,7 @@ namespace ranges
 
                     for(;; ++current_, size_.decrement())
                     {
-                        RANGES_ASSERT(current_ != ranges::end(parent_->rng_));
+                        RANGES_ASSERT(current_ != fermat::ranges::end(parent_->rng_));
                         auto n = pop_size();
                         RANGES_EXPECT(n > 0);
                         typename Dist::param_type const interval{0, n - 1};
@@ -130,7 +130,7 @@ namespace ranges
             cursor() = default;
             explicit cursor(meta::const_if_c<IsConst, sample_view> * rng)
               : parent_(rng)
-              , current_(ranges::begin(rng->rng_))
+              , current_(fermat::ranges::begin(rng->rng_))
               , size_{rng->rng_}
             {
                 auto n = pop_size();
@@ -159,7 +159,7 @@ namespace ranges
                 RANGES_EXPECT(parent_);
                 RANGES_EXPECT(parent_->size_ > 0);
                 --parent_->size_;
-                RANGES_ASSERT(current_ != ranges::end(parent_->rng_));
+                RANGES_ASSERT(current_ != fermat::ranges::end(parent_->rng_));
                 ++current_;
                 size_.decrement();
                 advance();
@@ -258,10 +258,10 @@ namespace ranges
         RANGES_INLINE_VARIABLE(sample_fn, sample)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::sample_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::sample_view)
 
 #endif

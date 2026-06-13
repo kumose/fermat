@@ -20,7 +20,7 @@
 // Test implementations (converted from original)
 // ------------------------------------------------------------
 void test_defaults() {
-    using namespace ranges;
+    using namespace fermat::ranges;
     // checks starts_with works for input ranges
     {
         constexpr auto full_latin_alphabet = "a b c d e f g h i j k l m n o p q r s t u v w x y z";
@@ -104,7 +104,7 @@ void test_defaults() {
 }
 
 void test_comparison() {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto const long_range = views::iota(0, 100);
     auto const short_range = views::iota(1, 51);
     EXPECT_TRUE(starts_with(begin(long_range), end(long_range), begin(short_range), end(short_range),

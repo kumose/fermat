@@ -16,7 +16,7 @@
 #include <fermat/view/map.h>
 #include <fermat/view/iota.h>           /// views::iota
 #include <fermat/view/zip.h>            /// views::zip
-#include <fermat/algorithm/find.h>      /// ranges::find
+#include <fermat/algorithm/find.h>      /// fermat::ranges::find
 
 /// ------------------------------------------------------------
 /// Helper: has_type (static assertion on expression type)
@@ -30,7 +30,7 @@ void has_type(Actual&&) {
 /// debug_input_view (minimal input view for testing)
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T>>
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>>
 {
     struct data
     {
@@ -49,7 +49,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T>>
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T>> = true;
@@ -60,8 +60,8 @@ namespace ranges
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -73,8 +73,8 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected) {
 /// Overload for pair-like elements (keys/values)
 template<typename Rng, typename U, typename V>
 void check_equal(Rng&& rng, std::initializer_list<U> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -88,7 +88,7 @@ void check_equal(Rng&& rng, std::initializer_list<U> expected) {
 // ------------------------------------------------------------------
 
 TEST(MapViewTest, KeysAndValuesOnStdMap) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::map<std::string, int> m = {
         {"this", 0},
@@ -112,7 +112,7 @@ TEST(MapViewTest, KeysAndValuesOnStdMap) {
 // implementation detail not guaranteed to exist in Fermat. The essential test
 // for views::keys on a zip view is kept below.
 TEST(MapViewTest, ZipWithIota) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> xs = {42, 100, -1234};
     auto exs = views::zip(views::ints, xs);
@@ -120,7 +120,7 @@ TEST(MapViewTest, ZipWithIota) {
 }
 
 TEST(MapViewTest, KeysAndValuesOnDebugInputView) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::pair<int, int> const rgp[] = {{0, 2}, {1, 1}, {2, 0}};
     auto key_range = debug_input_view<std::pair<int, int> const>{rgp, 3} | views::keys;
@@ -131,7 +131,7 @@ TEST(MapViewTest, KeysAndValuesOnDebugInputView) {
 }
 
 TEST(MapViewTest, FindOnKeysAndValues) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::map<std::string, int> m = {
         {"this", 0},

@@ -48,7 +48,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -69,7 +69,7 @@ namespace ranges
                 I tmp = first;
                 if(invoke(pred, invoke(proj, *++tmp)))
                 {
-                    ranges::iter_swap(first, tmp);
+                    fermat::ranges::iter_swap(first, tmp);
                     return tmp;
                 }
                 return first;
@@ -91,7 +91,7 @@ namespace ranges
                 // All trues now at start of range, all falses in buffer
                 // Move falses back into range, but don't mess up first which points to
                 // first false
-                ranges::move(p.first, res.out2.base().base(), res.out1);
+                fermat::ranges::move(p.first, res.out2.base().base(), res.out1);
                 // h destructs moved-from values out of the temp buffer, but doesn't
                 // deallocate buffer
                 return res.out1;
@@ -114,7 +114,7 @@ namespace ranges
             while(invoke(pred, invoke(proj, *m1)))
             {
                 if(++m1 == last)
-                    return ranges::rotate(begin_false, middle, last).begin();
+                    return fermat::ranges::rotate(begin_false, middle, last).begin();
                 --len_half;
             }
             // TTTFFFFFTTTF??????
@@ -123,7 +123,7 @@ namespace ranges
                 detail::stable_partition_impl(m1, last, pred, proj, len_half, p, fi);
             // TTTFFFFFTTTTTFFFFF
             // f  ff   m    sf   l
-            return ranges::rotate(begin_false, middle, end_false).begin();
+            return fermat::ranges::rotate(begin_false, middle, end_false).begin();
             // TTTTTTTTFFFFFFFFFF
             //         |
         }
@@ -165,7 +165,7 @@ namespace ranges
             // len >= 2
             if(len == 2)
             {
-                ranges::iter_swap(first, last);
+                fermat::ranges::iter_swap(first, last);
                 return last;
             }
             if(len == 3)
@@ -173,19 +173,19 @@ namespace ranges
                 I tmp = first;
                 if(invoke(pred, invoke(proj, *++tmp)))
                 {
-                    ranges::iter_swap(first, tmp);
-                    ranges::iter_swap(tmp, last);
+                    fermat::ranges::iter_swap(first, tmp);
+                    fermat::ranges::iter_swap(tmp, last);
                     return last;
                 }
-                ranges::iter_swap(tmp, last);
-                ranges::iter_swap(first, tmp);
+                fermat::ranges::iter_swap(tmp, last);
+                fermat::ranges::iter_swap(first, tmp);
                 return tmp;
             }
             if(len <= p.second)
             { // The buffer is big enough to use
                 // Move the falses into the temporary buffer, and the trues to the front
                 // of the line Update first to always point to the last of the trues
-                auto tmpbuf = ranges::make_raw_buffer(p.first);
+                auto tmpbuf = fermat::ranges::make_raw_buffer(p.first);
                 auto buf = tmpbuf.begin();
                 *buf = iter_move(first);
                 ++buf;
@@ -202,7 +202,7 @@ namespace ranges
                 // All trues now at start of range, all falses in buffer
                 // Move falses back into range, but don't mess up first which points to
                 // first false
-                ranges::move(p.first, res.out2.base().base(), first);
+                fermat::ranges::move(p.first, res.out2.base().base(), first);
                 // h destructs moved-from values out of the temp buffer, but doesn't
                 // deallocate buffer
                 return first;
@@ -237,7 +237,7 @@ namespace ranges
             while(invoke(pred, invoke(proj, *m1)))
             {
                 if(++m1 == last)
-                    return ranges::rotate(begin_false, middle, ++last).begin();
+                    return fermat::ranges::rotate(begin_false, middle, ++last).begin();
                 --len_half;
             }
             // TTTFFFFFTTTF?????T
@@ -246,7 +246,7 @@ namespace ranges
                 detail::stable_partition_impl(m1, last, pred, proj, len_half, p, bi);
             // TTTFFFFFTTTTTFFFFF
             // f  ff   m    sf  l
-            return ranges::rotate(begin_false, middle, end_false).begin();
+            return fermat::ranges::rotate(begin_false, middle, end_false).begin();
             // TTTTTTTTFFFFFFFFFF
             //         |
         }
@@ -271,7 +271,7 @@ namespace ranges
             // first points to first false, everything prior to first is already set.
             // Either prove [first, last) is all false and return first, or point last to
             // last true
-            I last = ranges::next(first, end_);
+            I last = fermat::ranges::next(first, end_);
             do
             {
                 if(first == --last)
@@ -321,10 +321,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::stable_partition;
+        using fermat::ranges::stable_partition;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

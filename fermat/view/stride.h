@@ -35,7 +35,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     template<typename Rng>
@@ -92,7 +92,7 @@ namespace ranges
         private:
             constexpr range_difference_t<Rng> calc_offset(std::true_type)
             {
-                if(auto const rem = ranges::distance(this->base()) % stride_)
+                if(auto const rem = fermat::ranges::distance(this->base()) % stride_)
                     return stride_ - rem;
                 else
                     return 0;
@@ -176,9 +176,9 @@ namespace ranges
             {}
             constexpr void next(iterator_t<CRng> & it)
             {
-                auto const last = ranges::end(rng_->base());
+                auto const last = fermat::ranges::end(rng_->base());
                 RANGES_EXPECT(it != last);
-                auto const delta = ranges::advance(it, rng_->stride_, last);
+                auto const delta = fermat::ranges::advance(it, rng_->stride_, last);
                 if(it == last)
                 {
                     rng_->set_offset(delta);
@@ -189,14 +189,14 @@ namespace ranges
                 -> CPP_ret(void)(
                     requires bidirectional_range<CRng>)
             {
-                RANGES_EXPECT(it != ranges::begin(rng_->base()));
+                RANGES_EXPECT(it != fermat::ranges::begin(rng_->base()));
                 auto delta = -rng_->stride_;
-                if(it == ranges::end(rng_->base()))
+                if(it == fermat::ranges::end(rng_->base()))
                 {
                     RANGES_EXPECT(rng_->get_offset() >= 0);
                     delta += rng_->get_offset();
                 }
-                ranges::advance(it, delta);
+                fermat::ranges::advance(it, delta);
             }
             template(typename Other)(
                 requires sized_sentinel_for<Other, iterator_t<CRng>>)
@@ -218,7 +218,7 @@ namespace ranges
                 if(0 == n)
                     return;
                 n *= rng_->stride_;
-                auto const last = ranges::end(rng_->base());
+                auto const last = fermat::ranges::end(rng_->base());
                 if(it == last)
                 {
                     RANGES_EXPECT(n < 0);
@@ -227,7 +227,7 @@ namespace ranges
                 }
                 if(0 < n)
                 {
-                    auto delta = ranges::advance(it, n, last);
+                    auto delta = fermat::ranges::advance(it, n, last);
                     if(it == last)
                     {
                         // advance hit the last of the base range.
@@ -237,10 +237,10 @@ namespace ranges
                 else if(0 > n)
                 {
 #ifdef NDEBUG
-                    ranges::advance(it, n);
+                    fermat::ranges::advance(it, n);
 #else
-                    auto const first = ranges::begin(rng_->base());
-                    auto const delta = ranges::advance(it, n, first);
+                    auto const first = fermat::ranges::begin(rng_->base());
+                    auto const delta = fermat::ranges::advance(it, n, first);
                     RANGES_EXPECT(delta == 0);
 #endif
                 }
@@ -281,7 +281,7 @@ namespace ranges
             requires sized_range<Rng>)
         {
             using size_type = range_size_t<Rng>;
-            auto const n = ranges::size(this->base());
+            auto const n = fermat::ranges::size(this->base());
             return (n + static_cast<size_type>(this->stride_) - 1) /
                    static_cast<size_type>(this->stride_);
         }
@@ -290,7 +290,7 @@ namespace ranges
             requires sized_range<Rng const>)
         {
             using size_type = range_size_t<Rng const>;
-            auto const n = ranges::size(this->base());
+            auto const n = fermat::ranges::size(this->base());
             return (n + static_cast<size_type>(this->stride_) - 1) /
                    static_cast<size_type>(this->stride_);
         }
@@ -332,10 +332,10 @@ namespace ranges
         RANGES_INLINE_VARIABLE(stride_fn, stride)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::stride_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::stride_view)
 
 #endif

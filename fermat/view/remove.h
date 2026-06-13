@@ -30,7 +30,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -102,7 +102,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(remove_fn, remove)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

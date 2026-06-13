@@ -35,7 +35,7 @@ RANGES_DEPRECATED_HEADER(
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -159,7 +159,7 @@ namespace ranges
         {
 #ifndef NDEBUG
             RANGES_ASSERT(!(bool)forward_iterator<I> ||
-                          static_cast<size_type>(ranges::distance(rng_)) == size_);
+                          static_cast<size_type>(fermat::ranges::distance(rng_)) == size_);
 #endif
         }
         template(typename X, typename Y)(
@@ -224,8 +224,8 @@ namespace ranges
             requires (N < 2))        //
         friend constexpr auto CPP_auto_fun(get)(sized_iterator_range const &p)
         (
-            // return ranges::get<N>(p.rng_)
-            return ranges::get<N>(p.*&sized_iterator_range::rng_) // makes clang happy
+            // return fermat::ranges::get<N>(p.rng_)
+            return fermat::ranges::get<N>(p.*&sized_iterator_range::rng_) // makes clang happy
         )
         // clang-format on
         /// \overload
@@ -264,7 +264,7 @@ namespace ranges
     // infinite
 
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 // The standard is inconsistent about whether these are classes or structs
 RANGES_DIAGNOSTIC_PUSH
@@ -274,42 +274,42 @@ RANGES_DIAGNOSTIC_IGNORE_MISMATCHED_TAGS
 namespace std
 {
     template<typename I, typename S>
-    struct tuple_size<::ranges::iterator_range<I, S>> : std::integral_constant<size_t, 2>
+    struct tuple_size<::fermat::ranges::iterator_range<I, S>> : std::integral_constant<size_t, 2>
     {};
 
     template<typename I, typename S>
-    struct tuple_element<0, ::ranges::iterator_range<I, S>>
+    struct tuple_element<0, ::fermat::ranges::iterator_range<I, S>>
     {
         using type = I;
     };
 
     template<typename I, typename S>
-    struct tuple_element<1, ::ranges::iterator_range<I, S>>
+    struct tuple_element<1, ::fermat::ranges::iterator_range<I, S>>
     {
         using type = S;
     };
 
     template<typename I, typename S>
-    struct tuple_size<::ranges::sized_iterator_range<I, S>>
+    struct tuple_size<::fermat::ranges::sized_iterator_range<I, S>>
       : std::integral_constant<size_t, 3>
     {};
 
     template<typename I, typename S>
-    struct tuple_element<0, ::ranges::sized_iterator_range<I, S>>
+    struct tuple_element<0, ::fermat::ranges::sized_iterator_range<I, S>>
     {
         using type = I;
     };
 
     template<typename I, typename S>
-    struct tuple_element<1, ::ranges::sized_iterator_range<I, S>>
+    struct tuple_element<1, ::fermat::ranges::sized_iterator_range<I, S>>
     {
         using type = S;
     };
 
     template<typename I, typename S>
-    struct tuple_element<2, ::ranges::sized_iterator_range<I, S>>
+    struct tuple_element<2, ::fermat::ranges::sized_iterator_range<I, S>>
     {
-        using type = typename ::ranges::sized_iterator_range<I, S>::size_type;
+        using type = typename ::fermat::ranges::sized_iterator_range<I, S>::size_type;
     };
 } // namespace std
 /// \endcond

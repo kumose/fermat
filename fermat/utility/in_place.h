@@ -20,13 +20,13 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \ingroup group-utility
     struct in_place_t
     {};
     RANGES_INLINE_VARIABLE(in_place_t, in_place)
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

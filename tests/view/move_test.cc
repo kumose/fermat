@@ -47,7 +47,7 @@ struct MoveOnlyString {
 /// Note: uses non-const pointer to allow moving elements.
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T> > {
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T> > {
     struct data {
         T *first_;
         std::ptrdiff_t size_;
@@ -66,7 +66,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T> > {
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges {
+namespace fermat::ranges {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T> > = true;
 }
@@ -74,8 +74,8 @@ namespace ranges {
 /// Helper: check_equal for ranges vs initializer_list
 template<typename Rng, typename T>
 void check_equal(Rng &&rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -87,8 +87,8 @@ void check_equal(Rng &&rng, std::initializer_list<T> expected) {
 /// Helper for MoveOnlyString vector
 template<typename Rng>
 void check_equal(Rng &&rng, std::vector<MoveOnlyString> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(it->s, val.s);
@@ -102,7 +102,7 @@ void check_equal(Rng &&rng, std::vector<MoveOnlyString> expected) {
 // ------------------------------------------------------------------
 
 TEST(MoveTest, MoveViewOnDebugInputView) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     // Create a modifiable array of MoveOnlyString
     MoveOnlyString arr[] = {"a", "b", "c", "d", "e"};
@@ -116,8 +116,8 @@ TEST(MoveTest, MoveViewOnDebugInputView) {
     // Target array for move
     MoveOnlyString target[5];
 
-    // Use ranges::move algorithm to move elements from the view to target
-    ranges::move(rng, target);
+    // Use fermat::ranges::move algorithm to move elements from the view to target
+    fermat::ranges::move(rng, target);
 
     // Verify target contains the original values
     const char *expected_original[] = {"a", "b", "c", "d", "e"};

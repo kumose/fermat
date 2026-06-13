@@ -15,7 +15,7 @@
 #include <fermat/action/sort.h>
 #include <fermat/range/conversion.h>
 
-using namespace ranges;
+using namespace fermat::ranges;
 
 TEST(ActionSortShuffleTest, ShuffleThenSort) {
     std::mt19937 gen;

@@ -23,7 +23,7 @@
 #include <compare>
 #include <type_traits>
 
-namespace ranges
+namespace fermat::ranges
 {
    template<typename... Ts>
    struct common_comparison_category
@@ -40,7 +40,7 @@ namespace ranges
 
     template<typename... Ts>
     using common_comparison_category_t = typename common_comparison_category<Ts...>::type;
-} // namespace ranges
+} // namespace fermat::ranges
 
 #endif // __cplusplus
 #endif // RANGES_V3_COMPARE_HPP

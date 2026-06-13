@@ -27,7 +27,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace adl_insert_detail
@@ -61,8 +61,8 @@ namespace ranges
         insert(Cont && cont, Rng && rng)
         {
             return unwrap_reference(cont).insert(
-                detail::range_cpp17_iterator_t<Rng>{ranges::begin(rng)},
-                detail::range_cpp17_iterator_t<Rng>{ranges::end(rng)});
+                detail::range_cpp17_iterator_t<Rng>{fermat::ranges::begin(rng)},
+                detail::range_cpp17_iterator_t<Rng>{fermat::ranges::end(rng)});
         }
 
         template(typename Cont, typename I, typename T)(
@@ -84,8 +84,8 @@ namespace ranges
         /// \cond
         namespace detail
         {
-            using ranges::detail::cpp17_iterator_t;
-            using ranges::detail::range_cpp17_iterator_t;
+            using fermat::ranges::detail::cpp17_iterator_t;
+            using fermat::ranges::detail::range_cpp17_iterator_t;
 
             template(typename Cont, typename P)(
                 requires container<Cont> AND input_iterator<P> AND
@@ -93,21 +93,21 @@ namespace ranges
             iterator_t<Cont> insert_reserve_helper(
                 Cont & cont, P const p, range_size_t<Cont> const delta)
             {
-                auto const old_size = ranges::size(cont);
+                auto const old_size = fermat::ranges::size(cont);
                 auto const max_size = cont.max_size();
                 RANGES_EXPECT(delta <= max_size - old_size);
                 auto const new_size = old_size + delta;
                 auto const old_capacity = cont.capacity();
-                auto const index = p - ranges::begin(cont);
+                auto const index = p - fermat::ranges::begin(cont);
                 if(old_capacity < new_size)
                 {
                     auto const new_capacity =
                         (old_capacity <= max_size / 3 * 2)
-                            ? ranges::max(old_capacity + old_capacity / 2, new_size)
+                            ? fermat::ranges::max(old_capacity + old_capacity / 2, new_size)
                             : max_size;
                     cont.reserve(new_capacity);
                 }
-                return ranges::begin(cont) + index;
+                return fermat::ranges::begin(cont) + index;
             }
 
             template(typename Cont, typename P, typename I, typename S)(
@@ -125,7 +125,7 @@ namespace ranges
                     (!range<S>)) //
             auto insert_impl(Cont && cont_, P p, I i, S j, std::true_type)
                 -> decltype(unwrap_reference(cont_).insert(
-                    ranges::begin(unwrap_reference(cont_)), cpp17_iterator_t<I, S>{i},
+                    fermat::ranges::begin(unwrap_reference(cont_)), cpp17_iterator_t<I, S>{i},
                     cpp17_iterator_t<I, S>{j}))
             {
                 using C = cpp17_iterator_t<I, S>;
@@ -139,12 +139,12 @@ namespace ranges
                 requires range<Rng>)
             auto insert_impl(Cont && cont, I p, Rng && rng, std::false_type)
                 -> decltype(unwrap_reference(cont).insert(
-                    p, range_cpp17_iterator_t<Rng>{ranges::begin(rng)},
-                    range_cpp17_iterator_t<Rng>{ranges::end(rng)}))
+                    p, range_cpp17_iterator_t<Rng>{fermat::ranges::begin(rng)},
+                    range_cpp17_iterator_t<Rng>{fermat::ranges::end(rng)}))
             {
                 using C = range_cpp17_iterator_t<Rng>;
                 return unwrap_reference(cont).insert(
-                    p, C{ranges::begin(rng)}, C{ranges::end(rng)});
+                    p, C{fermat::ranges::begin(rng)}, C{fermat::ranges::end(rng)});
             }
 
             template(typename Cont, typename I, typename Rng)(
@@ -152,14 +152,14 @@ namespace ranges
             auto insert_impl(Cont && cont_, I p, Rng && rng, std::true_type)
                 -> decltype(unwrap_reference(cont_).insert(
                     begin(unwrap_reference(cont_)),
-                    range_cpp17_iterator_t<Rng>{ranges::begin(rng)},
-                    range_cpp17_iterator_t<Rng>{ranges::end(rng)}))
+                    range_cpp17_iterator_t<Rng>{fermat::ranges::begin(rng)},
+                    range_cpp17_iterator_t<Rng>{fermat::ranges::end(rng)}))
             {
                 using C = range_cpp17_iterator_t<Rng>;
                 auto && cont = unwrap_reference(cont_);
-                auto const delta = static_cast<range_size_t<Cont>>(ranges::size(rng));
+                auto const delta = static_cast<range_size_t<Cont>>(fermat::ranges::size(rng));
                 auto pos = insert_reserve_helper(cont, std::move(p), delta);
-                return cont.insert(pos, C{ranges::begin(rng)}, C{ranges::end(rng)});
+                return cont.insert(pos, C{fermat::ranges::begin(rng)}, C{fermat::ranges::end(rng)});
             }
         } // namespace detail
         /// \endcond
@@ -290,9 +290,9 @@ namespace ranges
 
     namespace actions
     {
-        using ranges::insert;
+        using fermat::ranges::insert;
     }
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

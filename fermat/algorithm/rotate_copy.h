@@ -30,7 +30,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -46,9 +46,9 @@ namespace ranges
         constexpr rotate_copy_result<I, O> //
         RANGES_FUNC(rotate_copy)(I first, I middle, S last, O out) //
         {
-            auto res = ranges::copy(middle, std::move(last), std::move(out));
+            auto res = fermat::ranges::copy(middle, std::move(last), std::move(out));
             return {std::move(res.in),
-                    ranges::copy(std::move(first), middle, std::move(res.out)).out};
+                    fermat::ranges::copy(std::move(first), middle, std::move(res.out)).out};
         }
 
         /// \overload
@@ -65,11 +65,11 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::rotate_copy;
-        using ranges::rotate_copy_result;
+        using fermat::ranges::rotate_copy;
+        using fermat::ranges::rotate_copy_result;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

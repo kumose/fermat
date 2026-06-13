@@ -13,7 +13,7 @@
 
 
 // Placeholder for is_dangling (C++17 compatible template)
-namespace ranges {
+namespace fermat::ranges {
     template<typename T>
     bool is_dangling(T&&) { return false; }
 }
@@ -28,8 +28,8 @@ struct iter_call {
 
     template<class B, class E, class... Args>
     auto operator()(B &&It, E &&e, Args &&... args) const
-        -> decltype(ranges::unique(begin_t{It}, sentinel_t{e}, std::forward<Args>(args)...)) {
-        return ranges::unique(begin_t{It}, sentinel_t{e}, std::forward<Args>(args)...);
+        -> decltype(fermat::ranges::unique(begin_t{It}, sentinel_t{e}, std::forward<Args>(args)...)) {
+        return fermat::ranges::unique(begin_t{It}, sentinel_t{e}, std::forward<Args>(args)...);
     }
 };
 
@@ -43,9 +43,9 @@ struct range_call {
 
     template<class B, class E, class... Args>
     auto operator()(B &&It, E &&e, Args &&... args) const
-        -> ranges::iterator_t<decltype(ranges::make_subrange(begin_t{It}, sentinel_t{e}))> {
-        auto rng = ranges::make_subrange(begin_t{It}, sentinel_t{e});
-        return ranges::unique(rng, std::forward<Args>(args)...);
+        -> fermat::ranges::iterator_t<decltype(fermat::ranges::make_subrange(begin_t{It}, sentinel_t{e}))> {
+        auto rng = fermat::ranges::make_subrange(begin_t{It}, sentinel_t{e});
+        return fermat::ranges::unique(rng, std::forward<Args>(args)...);
     }
 };
 
@@ -123,7 +123,7 @@ void test_unique() {
 }
 
 constexpr bool test_constexpr() {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int a[] = {0, 1, 1, 1, 2, 2, 2};
     const unsigned sa = sizeof(a) / sizeof(a[0]);
     auto r = unique(a, a + sa);
@@ -147,7 +147,7 @@ TEST(UniqueTest, IteratorInterface) {
 TEST(UniqueTest, RvalueRange) {
     {
         int a[] = {0, 1, 1, 1, 2, 2, 2};
-        auto r = ranges::unique(ranges::views::all(a));
+        auto r = fermat::ranges::unique(fermat::ranges::views::all(a));
         EXPECT_EQ(r, a + 3);
         EXPECT_EQ(a[0], 0);
         EXPECT_EQ(a[1], 1);
@@ -155,7 +155,7 @@ TEST(UniqueTest, RvalueRange) {
     }
     {
         int a[] = {0, 1, 1, 1, 2, 2, 2};
-        auto r = ranges::unique(std::move(a));
+        auto r = fermat::ranges::unique(std::move(a));
         // is_dangling may be false; we skip that check.
         EXPECT_EQ(a[0], 0);
         EXPECT_EQ(a[1], 1);
@@ -164,7 +164,7 @@ TEST(UniqueTest, RvalueRange) {
     }
     {
         std::vector<int> a{0, 1, 1, 1, 2, 2, 2};
-        auto r = ranges::unique(std::move(a));
+        auto r = fermat::ranges::unique(std::move(a));
         // is_dangling may be false; skip check.
         EXPECT_EQ(a[0], 0);
         EXPECT_EQ(a[1], 1);

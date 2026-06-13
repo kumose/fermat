@@ -15,7 +15,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename Target, typename Source>
     auto polymorphic_downcast(Source * x) noexcept
@@ -39,7 +39,7 @@ namespace ranges
 #endif
         return static_cast<Target>(result);
     }
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

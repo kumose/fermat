@@ -26,7 +26,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -51,18 +51,18 @@ namespace ranges
             // use the stored range's begin and end
             iterator_t<Rng> begin() const
             {
-                return ranges::begin(*rng_ptr_);
+                return fermat::ranges::begin(*rng_ptr_);
             }
             sentinel_t<Rng> end() const
             {
-                return ranges::end(*rng_ptr_);
+                return fermat::ranges::end(*rng_ptr_);
             }
 
             CPP_auto_member
             auto CPP_fun(size)()(const
                 requires sized_range<Rng>)
             {
-                return ranges::size(*rng_ptr_);
+                return fermat::ranges::size(*rng_ptr_);
             }
         };
 
@@ -124,7 +124,7 @@ namespace ranges
     inline constexpr bool
         is_pipeable_v<experimental::shared_closure<SharedFn>> = true;
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

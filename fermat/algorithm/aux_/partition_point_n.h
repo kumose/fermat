@@ -23,7 +23,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     namespace aux
     {
@@ -58,7 +58,7 @@ namespace ranges
 
         RANGES_INLINE_VARIABLE(partition_point_n_fn, partition_point_n)
     } // namespace aux
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

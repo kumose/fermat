@@ -31,7 +31,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -69,7 +69,7 @@ namespace ranges
     CPP_concept simple_view_ =
         view_<Rng> &&
         range<Rng const> &&
-        CPP_concept_ref(ranges::simple_view_impl_, Rng);
+        CPP_concept_ref(fermat::ranges::simple_view_impl_, Rng);
 
     /// \concept invocable_view_closure_
     /// \brief The \c invocable_view_closure_ concept
@@ -82,7 +82,7 @@ namespace ranges
     template<typename ViewFn, typename Rng>
     CPP_concept invocable_view_closure =
         invocable<ViewFn, Rng> &&
-        CPP_concept_ref(ranges::invocable_view_closure_, ViewFn, Rng);
+        CPP_concept_ref(fermat::ranges::invocable_view_closure_, ViewFn, Rng);
     // clang-format on
 
     template<typename Rng>
@@ -282,7 +282,7 @@ namespace ranges
     template<typename ViewFn>
     inline constexpr bool is_pipeable_v<views::view_closure<ViewFn>> = true;
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

@@ -25,7 +25,7 @@
 /// debug_input_view: minimal input view for testing (borrowed range)
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T>> {
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>> {
     struct data {
         const T *first_;
         std::ptrdiff_t size_;
@@ -44,7 +44,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T>> {
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges {
+namespace fermat::ranges {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T>> = true;
 }
@@ -54,8 +54,8 @@ namespace ranges {
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng &&rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -68,8 +68,8 @@ void check_equal(Rng &&rng, std::initializer_list<T> expected) {
 /// Use (*it).i instead of it->i to avoid operator-> issues.
 template<typename Rng, typename U>
 void check_equal(Rng &&rng, std::vector<U> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ((*it).i, val.i);
@@ -95,7 +95,7 @@ bool operator==(my_data left, my_data right) {
 
 /// Test take_while on infinite iota range
 TEST(TakeWhileViewTest, IotaTakeWhile) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto rng0 = views::iota(10) | views::take_while([](int i) { return i != 25; });
     // CPP_assert(view_<decltype(rng0)>);
@@ -106,7 +106,7 @@ TEST(TakeWhileViewTest, IotaTakeWhile) {
 
 /// Test take_while on vector (finite range)
 TEST(TakeWhileViewTest, VectorTakeWhile) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> vi{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     auto rng1 = vi | views::take_while([](int i) { return i != 50; });
@@ -117,7 +117,7 @@ TEST(TakeWhileViewTest, VectorTakeWhile) {
 
 /// Test with mutable predicate (non-const view)
 TEST(TakeWhileViewTest, MutablePredicate) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     int cnt = 0;
@@ -129,7 +129,7 @@ TEST(TakeWhileViewTest, MutablePredicate) {
 
 /// Test take_while on generate view with const predicate
 TEST(TakeWhileViewTest, GenerateTakeWhileConstPredicate) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto ns = views::generate([]() mutable {
         static int N;
@@ -141,7 +141,7 @@ TEST(TakeWhileViewTest, GenerateTakeWhileConstPredicate) {
 
 /// Test take_while on generate view with mutable predicate
 TEST(TakeWhileViewTest, GenerateTakeWhileMutablePredicate) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto ns = views::generate([]() mutable {
         static int N;
@@ -153,7 +153,7 @@ TEST(TakeWhileViewTest, GenerateTakeWhileMutablePredicate) {
 
 /// Test take_while on debug_input_view (input range)
 TEST(TakeWhileViewTest, DebugInputViewTakeWhile) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     auto rng = debug_input_view<int const>{rgi, 10} | views::take_while([](int i) {
@@ -164,7 +164,7 @@ TEST(TakeWhileViewTest, DebugInputViewTakeWhile) {
 
 /// Test take_while with projection (using member pointer)
 TEST(TakeWhileViewTest, GenerateTakeWhileWithProjection) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto ns = views::generate([]() {
         static int N;

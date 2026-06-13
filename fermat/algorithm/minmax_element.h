@@ -32,7 +32,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -101,11 +101,11 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::minmax_element;
-        using ranges::minmax_element_result;
+        using fermat::ranges::minmax_element;
+        using fermat::ranges::minmax_element_result;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

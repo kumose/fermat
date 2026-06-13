@@ -34,7 +34,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -48,7 +48,7 @@ namespace ranges
             range_size_t<Rng> get_size(Rng & rng, range_difference_t<Rng> n_)
             {
                 RANGES_EXPECT(n_ >= 0);
-                range_size_t<Rng> const initial_size = ranges::size(rng);
+                range_size_t<Rng> const initial_size = fermat::ranges::size(rng);
                 range_size_t<Rng> const n = static_cast<range_size_t<Rng>>(n_);
                 return initial_size > n ? initial_size - n : 0;
             }
@@ -149,7 +149,7 @@ namespace ranges
 
         iterator_t<Rng> begin()
         {
-            return ranges::begin(rng_);
+            return fermat::ranges::begin(rng_);
         }
         sentinel_t<Rng> end()
         {
@@ -161,7 +161,7 @@ namespace ranges
             requires random_access_range<CRng> AND sized_range<CRng>)
         iterator_t<CRng> begin() const
         {
-            return ranges::begin(rng_);
+            return fermat::ranges::begin(rng_);
         }
         template(typename CRng = Rng const)(
             requires random_access_range<CRng> AND sized_range<CRng>)
@@ -292,13 +292,13 @@ namespace ranges
 
         counted_iterator<iterator_t<Rng>> begin()
         {
-            return {ranges::begin(rng_), static_cast<difference_t>(size())};
+            return {fermat::ranges::begin(rng_), static_cast<difference_t>(size())};
         }
         template(typename CRng = Rng const)(
             requires sized_range<CRng>)
         counted_iterator<iterator_t<CRng>> begin() const
         {
-            return {ranges::begin(rng_), static_cast<difference_t>(size())};
+            return {fermat::ranges::begin(rng_), static_cast<difference_t>(size())};
         }
         default_sentinel_t end() const
         {
@@ -364,10 +364,10 @@ namespace ranges
     } // namespace views
 
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::drop_last_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::drop_last_view)
 
 #endif

@@ -9,7 +9,7 @@
 #include <fermat/range/conversion.h>
 
 TEST(ActionPushFrontTest, DirectCall) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     {
         std::vector<int> v;
@@ -40,7 +40,7 @@ TEST(ActionPushFrontTest, DirectCall) {
 }
 
 TEST(ActionPushFrontTest, PipeWithMove) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     {
         std::vector<int> v;
@@ -71,7 +71,7 @@ TEST(ActionPushFrontTest, PipeWithMove) {
 }
 
 TEST(ActionPushFrontTest, InPlacePipe) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     {
         std::vector<int> v;

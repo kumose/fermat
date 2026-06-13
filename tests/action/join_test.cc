@@ -8,7 +8,7 @@
 #include <fermat/view/transform.h>
 
 TEST(ActionJoinTest, MoveAndJoin) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<std::string> v{"hello", " ", "world"};
     auto s = v | move | actions::join;
@@ -17,7 +17,7 @@ TEST(ActionJoinTest, MoveAndJoin) {
 }
 
 TEST(ActionJoinTest, TransformAllAndJoin) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<std::string> v{"hello", " ", "world"};
     auto s2 = v | views::transform(views::all) | actions::join;

@@ -26,7 +26,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-actions
     /// @{
@@ -52,17 +52,17 @@ namespace ranges
                 RANGES_EXPECT(0 < step);
                 if(1 < step)
                 {
-                    I first = ranges::begin(rng);
-                    S const last = ranges::end(rng);
+                    I first = fermat::ranges::begin(rng);
+                    S const last = fermat::ranges::end(rng);
                     if(first != last)
                     {
-                        for(I i = ranges::next(++first, step - 1, last); i != last;
+                        for(I i = fermat::ranges::next(++first, step - 1, last); i != last;
                             advance(i, step, last), ++first)
                         {
                             *first = iter_move(i);
                         }
                     }
-                    ranges::actions::erase(rng, first, last);
+                    fermat::ranges::actions::erase(rng, first, last);
                 }
                 return static_cast<Rng &&>(rng);
             }
@@ -72,7 +72,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(stride_fn, stride)
     } // namespace actions
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

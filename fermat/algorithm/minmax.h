@@ -31,7 +31,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -59,8 +59,8 @@ namespace ranges
         RANGES_FUNC(minmax)(Rng && rng, C pred = C{}, P proj = P{}) //
         {
             using R = minmax_result<range_value_t<Rng>>;
-            auto first = ranges::begin(rng);
-            auto last = ranges::end(rng);
+            auto first = fermat::ranges::begin(rng);
+            auto last = fermat::ranges::end(rng);
             RANGES_EXPECT(first != last);
             auto result = R{*first, *first};
             if(++first != last)
@@ -119,11 +119,11 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::minmax;
-        using ranges::minmax_result;
+        using fermat::ranges::minmax;
+        using fermat::ranges::minmax_result;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

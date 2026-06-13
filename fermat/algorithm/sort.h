@@ -55,7 +55,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -63,7 +63,7 @@ namespace ranges
         template<typename I, typename C, typename P>
         inline constexpr I unguarded_partition(I first, I last, C & pred, P & proj)
         {
-            I mid = first + (last - first) / 2, penultimate = ranges::prev(last);
+            I mid = first + (last - first) / 2, penultimate = fermat::ranges::prev(last);
             auto &&x = *first, &&y = *mid, &&z = *penultimate;
             auto &&a = invoke(proj, (decltype(x) &&)x),
                  &&b = invoke(proj, (decltype(y) &&)y),
@@ -89,7 +89,7 @@ namespace ranges
                     --last;
                 if(!(first < last))
                     return first;
-                ranges::iter_swap(first, last);
+                fermat::ranges::iter_swap(first, last);
                 pivot_pnt =
                     pivot_pnt == first ? last : (pivot_pnt == last ? first : pivot_pnt);
                 ++first;
@@ -201,7 +201,7 @@ namespace ranges
                 sentinel_for<S, I>)
         constexpr I RANGES_FUNC(sort)(I first, S end_, C pred = C{}, P proj = P{})
         {
-            I last = ranges::next(first, std::move(end_));
+            I last = fermat::ranges::next(first, std::move(end_));
             if(first != last)
             {
                 detail::introsort_loop(
@@ -224,10 +224,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::sort;
+        using fermat::ranges::sort;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

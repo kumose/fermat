@@ -22,7 +22,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-numerics
     /// @{
@@ -48,7 +48,7 @@ namespace ranges
 
     RANGES_INLINE_VARIABLE(iota_fn, iota)
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

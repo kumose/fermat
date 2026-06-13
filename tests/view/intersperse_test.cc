@@ -11,7 +11,7 @@
 
 #include <fermat/range/access.h>
 #include <fermat/range/primitives.h>
-#include <fermat/range/conversion.h>          /// ranges::to
+#include <fermat/range/conversion.h>          /// fermat::ranges::to
 #include <fermat/view/intersperse.h>          /// views::intersperse
 #include <fermat/view/delimit.h>              /// views::delimit
 #include <fermat/view/reverse.h>              /// views::reverse
@@ -21,22 +21,22 @@
 /// Helper functions (as in original)
 /// ------------------------------------------------------------
 template<std::size_t N>
-ranges::subrange<char const*> c_str(char const (&sz)[N])
+fermat::ranges::subrange<char const*> c_str(char const (&sz)[N])
 {
     return {&sz[0], &sz[N-1]};
 }
 
-ranges::delimit_view<ranges::subrange<char const*, ranges::unreachable_sentinel_t>, char>
+fermat::ranges::delimit_view<fermat::ranges::subrange<char const*, fermat::ranges::unreachable_sentinel_t>, char>
 c_str_(char const* sz)
 {
-    return ranges::views::delimit(sz, '\0');
+    return fermat::ranges::views::delimit(sz, '\0');
 }
 
 /// ------------------------------------------------------------
 /// debug_input_view: minimal input view for testing
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T>>
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>>
 {
     struct data
     {
@@ -55,7 +55,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T>>
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T>> = true;
@@ -66,8 +66,8 @@ namespace ranges
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -81,83 +81,83 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected) {
 // ------------------------------------------------------------------
 
 TEST(IntersperseTest, CommonRange) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     // abcde
     {
         auto r0 = views::intersperse(c_str("abcde"), ',');
-        EXPECT_EQ(ranges::to<std::string>(r0), "a,b,c,d,e");
+        EXPECT_EQ(fermat::ranges::to<std::string>(r0), "a,b,c,d,e");
         EXPECT_EQ(r0.size(), 9u);
     }
     // empty
     {
         auto r1 = views::intersperse(c_str(""), ',');
-        EXPECT_EQ(ranges::to<std::string>(r1), "");
+        EXPECT_EQ(fermat::ranges::to<std::string>(r1), "");
         EXPECT_EQ(r1.size(), 0u);
     }
     // single char
     {
         auto r2 = views::intersperse(c_str("a"), ',');
-        EXPECT_EQ(ranges::to<std::string>(r2), "a");
+        EXPECT_EQ(fermat::ranges::to<std::string>(r2), "a");
         EXPECT_EQ(r2.size(), 1u);
     }
     // two chars
     {
         auto r3 = views::intersperse(c_str("ab"), ',');
-        EXPECT_EQ(ranges::to<std::string>(r3), "a,b");
+        EXPECT_EQ(fermat::ranges::to<std::string>(r3), "a,b");
         EXPECT_EQ(r3.size(), 3u);
     }
 }
 
 TEST(IntersperseTest, CommonRangeReverse) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     // abcde reversed
     {
         auto r0 = views::intersperse(c_str("abcde"), ',') | views::reverse;
-        EXPECT_EQ(ranges::to<std::string>(r0), "e,d,c,b,a");
+        EXPECT_EQ(fermat::ranges::to<std::string>(r0), "e,d,c,b,a");
     }
     // empty
     {
         auto r1 = views::intersperse(c_str(""), ',') | views::reverse;
-        EXPECT_EQ(ranges::to<std::string>(r1), "");
+        EXPECT_EQ(fermat::ranges::to<std::string>(r1), "");
     }
     // single char
     {
         auto r2 = views::intersperse(c_str("a"), ',') | views::reverse;
-        EXPECT_EQ(ranges::to<std::string>(r2), "a");
+        EXPECT_EQ(fermat::ranges::to<std::string>(r2), "a");
     }
     // two chars
     {
         auto r3 = views::intersperse(c_str("ab"), ',') | views::reverse;
-        EXPECT_EQ(ranges::to<std::string>(r3), "b,a");
+        EXPECT_EQ(fermat::ranges::to<std::string>(r3), "b,a");
     }
 }
 
 TEST(IntersperseTest, NonCommonRange) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     // Using c_str_ (delimit view, not common)
     {
         auto r0 = views::intersperse(c_str_("abcde"), ',');
-        EXPECT_EQ(ranges::to<std::string>(r0), "a,b,c,d,e");
+        EXPECT_EQ(fermat::ranges::to<std::string>(r0), "a,b,c,d,e");
     }
     {
         auto r1 = views::intersperse(c_str_(""), ',');
-        EXPECT_EQ(ranges::to<std::string>(r1), "");
+        EXPECT_EQ(fermat::ranges::to<std::string>(r1), "");
     }
     {
         auto r2 = views::intersperse(c_str_("a"), ',');
-        EXPECT_EQ(ranges::to<std::string>(r2), "a");
+        EXPECT_EQ(fermat::ranges::to<std::string>(r2), "a");
     }
     {
         auto r3 = views::intersperse(c_str_("ab"), ',');
-        EXPECT_EQ(ranges::to<std::string>(r3), "a,b");
+        EXPECT_EQ(fermat::ranges::to<std::string>(r3), "a,b");
     }
 }
 
 TEST(IntersperseTest, RandomAccessIteration) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto r0 = views::intersperse(c_str("abcde"), ',');
     auto it = r0.begin();
@@ -191,7 +191,7 @@ TEST(IntersperseTest, RandomAccessIteration) {
 }
 
 TEST(IntersperseTest, IstreamRange) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::stringstream str{"1 2 3 4 5"};
     auto r0 = istream<int>(str) | views::intersperse(42);
@@ -199,7 +199,7 @@ TEST(IntersperseTest, IstreamRange) {
 }
 
 TEST(IntersperseTest, DebugInputView) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int const some_ints[] = {1,2,3,4,5};
     auto rng = debug_input_view<int const>{some_ints, 5} | views::intersperse(42);

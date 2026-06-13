@@ -27,7 +27,7 @@ namespace {
 } // namespace
 
 TEST(ActionInsertTest, Vector) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v;
     auto i = insert(v, v.begin(), 42);
@@ -49,7 +49,7 @@ TEST(ActionInsertTest, Vector) {
 }
 
 TEST(ActionInsertTest, Set) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::set<int> s;
     insert(s, views::ints | views::take(10) |
@@ -66,7 +66,7 @@ TEST(ActionInsertTest, Set) {
 }
 
 TEST(ActionInsertTest, VectorLikeReservation) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     const std::size_t N = 1024;
     vector_like<int> vl;

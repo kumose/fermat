@@ -32,7 +32,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-actions
     /// @{
@@ -42,7 +42,7 @@ namespace ranges
         {
             template<typename Rng>
             using split_value_t =
-                meta::if_c<(bool)ranges::container<Rng>, //
+                meta::if_c<(bool)fermat::ranges::container<Rng>, //
                            uncvref_t<Rng>, std::vector<range_value_t<Rng>>>;
 
             template<typename Fun>
@@ -83,7 +83,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(split_when_fn, split_when)
     } // namespace actions
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

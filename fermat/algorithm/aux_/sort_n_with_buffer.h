@@ -42,7 +42,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     namespace aux
     {
@@ -66,7 +66,7 @@ namespace ranges
 
         RANGES_INLINE_VARIABLE(sort_n_with_buffer_fn, sort_n_with_buffer)
     } // namespace aux
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

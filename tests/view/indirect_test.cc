@@ -9,8 +9,8 @@
 #include <memory>
 #include <utility>
 
-#include <fermat/range/access.h>            /// ranges::begin, ranges::end
-#include <fermat/range/primitives.h>        /// ranges::size
+#include <fermat/range/access.h>            /// fermat::ranges::begin, fermat::ranges::end
+#include <fermat/range/primitives.h>        /// fermat::ranges::size
 #include <fermat/view/indirect.h>           /// views::indirect
 #include <fermat/view/transform.h>          /// views::transform
 
@@ -18,7 +18,7 @@
 /// debug_input_view: minimal input view for testing
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T>>
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>>
 {
     struct data
     {
@@ -37,7 +37,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T>>
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T>> = true;
@@ -48,8 +48,8 @@ namespace ranges
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -63,19 +63,19 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected) {
 // ------------------------------------------------------------------
 
 TEST(IndirectTest, SharedPtrVector) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<std::shared_ptr<int>> vp;
     for (int i = 0; i < 10; ++i)
         vp.push_back(std::make_shared<int>(i));
 
     auto rng = vp | views::indirect;
-    EXPECT_EQ(&*ranges::begin(rng), vp[0].get());
+    EXPECT_EQ(&*fermat::ranges::begin(rng), vp[0].get());
     check_equal(rng, {0,1,2,3,4,5,6,7,8,9});
 }
 
 TEST(IndirectTest, PointerArray) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int const some_ints[] = {0,1,2,3};
     int const* some_int_pointers[] = {
@@ -87,7 +87,7 @@ TEST(IndirectTest, PointerArray) {
     auto rng = make_range();
     check_equal(rng, {0,1,2,3});
     rng = make_range();
-    EXPECT_EQ(&*ranges::begin(rng), some_ints + 0);
+    EXPECT_EQ(&*fermat::ranges::begin(rng), some_ints + 0);
 }
 
 #if RANGES_CXX_RETURN_TYPE_DEDUCTION >= RANGES_CXX_RETURN_TYPE_DEDUCTION_14
@@ -98,7 +98,7 @@ TEST(IndirectTest, MemberFunctionReturnTypeDeduction) {
     struct Test {
         std::vector<Data*> m_list;
         auto list() {
-            return m_list | ranges::views::indirect;
+            return m_list | fermat::ranges::views::indirect;
         }
     };
 
@@ -111,7 +111,7 @@ TEST(IndirectTest, MemberFunctionReturnTypeDeduction) {
 
 /// Regression test for #952
 TEST(IndirectTest, TransformThenIndirect) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int some_ints[42]{};
     auto a = some_ints | views::transform([](int& i) { return &i; })

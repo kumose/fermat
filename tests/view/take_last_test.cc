@@ -6,10 +6,10 @@
 
 #include <gtest/gtest.h>
 
-#include <fermat/range/access.h>                 /// ranges::begin, ranges::end
-#include <fermat/range/primitives.h>             /// ranges::size
+#include <fermat/range/access.h>                 /// fermat::ranges::begin, fermat::ranges::end
+#include <fermat/range/primitives.h>             /// fermat::ranges::size
 #include <fermat/view/take_last.h>               /// views::take_last
-#include <fermat/utility/copy.h>                 /// ranges::copy (if needed)
+#include <fermat/utility/copy.h>                 /// fermat::ranges::copy (if needed)
 
 /// ------------------------------------------------------------
 /// has_type: static assertion that a value has given type
@@ -24,8 +24,8 @@ void has_type(Actual&&) {
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -39,7 +39,7 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected) {
 // ------------------------------------------------------------------
 
 TEST(TakeLastTest, Basic) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {0, 1, 2, 3, 4, 5};
     auto rng0 = rgi | views::take_last(3);
@@ -49,7 +49,7 @@ TEST(TakeLastTest, Basic) {
 }
 
 TEST(TakeLastTest, LargerThanSize) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {0, 1, 2, 3, 4, 5};
     auto rng1 = rgi | views::take_last(7);

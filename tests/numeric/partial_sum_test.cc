@@ -4,9 +4,9 @@
 
 #include <gtest/gtest.h>
 #include <numeric>                                  /// for std::plus, std::multiplies
-#include <fermat/numeric/partial_sum.h>    /// Assume Fermat provides ranges::partial_sum
-#include <fermat/algorithm/equal.h>        /// For ranges::equal (optional)
-#include <fermat/iterator/operations.h>    /// For ranges::begin
+#include <fermat/numeric/partial_sum.h>    /// Assume Fermat provides fermat::ranges::partial_sum
+#include <fermat/algorithm/equal.h>        /// For fermat::ranges::equal (optional)
+#include <fermat/iterator/operations.h>    /// For fermat::ranges::begin
 
 struct S {
     int i;
@@ -18,7 +18,7 @@ constexpr std::size_t array_size(T (&)[N]) { return N; }
 
 /// Test partial_sum with raw pointers (satisfy all Fermat iterator concepts).
 TEST(PartialSumTest, BasicWithPointers) {
-    using ranges::partial_sum;
+    using fermat::ranges::partial_sum;
 
     int input[] = {1, 2, 3, 4, 5};
     constexpr std::size_t n = array_size(input);
@@ -52,8 +52,8 @@ TEST(PartialSumTest, BasicWithPointers) {
 
 /// Test with projection.
 TEST(PartialSumTest, Projection) {
-    using ranges::partial_sum;
-    using ranges::begin;
+    using fermat::ranges::partial_sum;
+    using fermat::ranges::begin;
 
     S input[] = {{1}, {2}, {3}, {4}, {5}};
     constexpr std::size_t n = array_size(input);

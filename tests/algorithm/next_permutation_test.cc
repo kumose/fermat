@@ -23,7 +23,7 @@ void test_permutation_on_array(int* first, int* last) {
     std::vector<int> prev(n);
     do {
         std::copy(first, last, prev.begin());
-        has_next = ranges::next_permutation(first, last);
+        has_next = fermat::ranges::next_permutation(first, last);
         if (n > 1) {
             if (has_next)
                 EXPECT_TRUE(std::lexicographical_compare(prev.begin(), prev.end(), first, last));
@@ -52,7 +52,7 @@ TEST(NextPermutationTest, WithComparator) {
         std::vector<int> prev(e);
         do {
             std::copy(arr, arr + e, prev.begin());
-            has_next = ranges::next_permutation(arr, arr + e, std::greater<int>());
+            has_next = fermat::ranges::next_permutation(arr, arr + e, std::greater<int>());
             if (e > 1) {
                 if (has_next)
                     EXPECT_TRUE(std::lexicographical_compare(prev.begin(), prev.end(), arr, arr + e, std::greater<int>()));
@@ -73,8 +73,8 @@ TEST(NextPermutationTest, RangeVersion) {
         std::vector<int> prev(e);
         do {
             std::copy(arr, arr + e, prev.begin());
-            auto rng = ranges::subrange(arr, arr + e);   // use subrange constructor
-            has_next = ranges::next_permutation(rng);
+            auto rng = fermat::ranges::subrange(arr, arr + e);   // use subrange constructor
+            has_next = fermat::ranges::next_permutation(rng);
             if (e > 1) {
                 if (has_next)
                     EXPECT_TRUE(std::lexicographical_compare(prev.begin(), prev.end(), arr, arr + e));
@@ -95,8 +95,8 @@ TEST(NextPermutationTest, RangeWithComparator) {
         std::vector<int> prev(e);
         do {
             std::copy(arr, arr + e, prev.begin());
-            auto rng = ranges::subrange(arr, arr + e);
-            has_next = ranges::next_permutation(rng, std::greater<int>());
+            auto rng = fermat::ranges::subrange(arr, arr + e);
+            has_next = fermat::ranges::next_permutation(rng, std::greater<int>());
             if (e > 1) {
                 if (has_next)
                     EXPECT_TRUE(std::lexicographical_compare(prev.begin(), prev.end(), arr, arr + e, std::greater<int>()));
@@ -123,21 +123,21 @@ TEST(NextPermutationTest, Projection) {
     auto comp = std::greater<int>();
     auto proj = &Pair::first;
 
-    EXPECT_TRUE(ranges::next_permutation(arr, comp, proj));
+    EXPECT_TRUE(fermat::ranges::next_permutation(arr, comp, proj));
     Pair expected1[] = {{6,{"six"}}, {5,{"five"}}, {4,{"four"}}, {3,{"three"}}, {1,{"one"}}, {2,{"two"}}};
-    EXPECT_TRUE(ranges::equal(arr, expected1));
+    EXPECT_TRUE(fermat::ranges::equal(arr, expected1));
 
-    EXPECT_TRUE(ranges::next_permutation(arr, comp, proj));
+    EXPECT_TRUE(fermat::ranges::next_permutation(arr, comp, proj));
     Pair expected2[] = {{6,{"six"}}, {5,{"five"}}, {4,{"four"}}, {2,{"two"}}, {3,{"three"}}, {1,{"one"}}};
-    EXPECT_TRUE(ranges::equal(arr, expected2));
+    EXPECT_TRUE(fermat::ranges::equal(arr, expected2));
 
-    EXPECT_TRUE(ranges::next_permutation(arr, comp, proj));
+    EXPECT_TRUE(fermat::ranges::next_permutation(arr, comp, proj));
     Pair expected3[] = {{6,{"six"}}, {5,{"five"}}, {4,{"four"}}, {2,{"two"}}, {1,{"one"}}, {3,{"three"}}};
-    EXPECT_TRUE(ranges::equal(arr, expected3));
+    EXPECT_TRUE(fermat::ranges::equal(arr, expected3));
 }
 
 TEST(NextPermutationTest, Constexpr) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     constexpr auto test = []() constexpr {
         int arr[] = {6,5,4,3,2,1};
         next_permutation(arr, std::greater<int>());

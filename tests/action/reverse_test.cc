@@ -8,7 +8,7 @@
 #include <fermat/action/unique.h>
 #include <fermat/range/conversion.h>
 
-using namespace ranges;
+using namespace fermat::ranges;
 
 TEST(ActionUniqueReverseTest, Example) {
     /// Build vector: [1,2,2,3,3,3,4,4,4,4,5,5,5,5,5]

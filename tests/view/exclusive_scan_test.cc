@@ -7,10 +7,10 @@
 
 #include <vector>
 
-#include <fermat/range/access.h>            /// ranges::begin, ranges::end
-#include <fermat/range/primitives.h>        /// ranges::empty, ranges::size
+#include <fermat/range/access.h>            /// fermat::ranges::begin, fermat::ranges::end
+#include <fermat/range/primitives.h>        /// fermat::ranges::empty, fermat::ranges::size
 #include <fermat/view/exclusive_scan.h>     /// views::exclusive_scan
-#include <fermat/utility/copy.h>            /// ranges::copy (if needed)
+#include <fermat/utility/copy.h>            /// fermat::ranges::copy (if needed)
 
 /// ------------------------------------------------------------
 /// Helper: has_type (static assertion on expression type)
@@ -25,8 +25,8 @@ void has_type(Actual&&) {
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -40,7 +40,7 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected) {
 // ------------------------------------------------------------------
 
 TEST(ExclusiveScanTest, NonEmptyRange) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
@@ -65,7 +65,7 @@ TEST(ExclusiveScanTest, NonEmptyRange) {
 }
 
 TEST(ExclusiveScanTest, EmptyRange) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> rgi;
     auto rng = rgi | views::exclusive_scan(0);

@@ -25,7 +25,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -38,7 +38,7 @@ namespace ranges
                 requires viewable_range<Rng> AND sized_range<Rng>)
             auto operator()(Rng && rng, range_difference_t<Rng> n) const
             {
-                auto sz = ranges::distance(rng);
+                auto sz = fermat::ranges::distance(rng);
                 return drop_exactly(static_cast<Rng &&>(rng), sz > n ? sz - n : 0);
             }
         };
@@ -59,7 +59,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(take_last_fn, take_last)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

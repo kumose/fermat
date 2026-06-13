@@ -57,7 +57,7 @@ struct MoveOnlyString {
 /// debug_input_view (minimal input view for testing)
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T>>
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>>
 {
     struct data
     {
@@ -76,7 +76,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T>>
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T>> = true;
@@ -87,8 +87,8 @@ namespace ranges
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -112,8 +112,8 @@ void check_equal(const std::vector<T>& actual, std::initializer_list<const char*
 /// Overload for ranges (value_type MoveOnlyString) vs initializer_list<const char*>
 template<typename Rng>
 void check_equal(Rng&& rng, std::initializer_list<const char*> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(it->s_, val);
@@ -158,7 +158,7 @@ std::vector<MoveOnlyString> to_vector(Rng&& rng) {
 // ------------------------------------------------------------------
 
 TEST(SetDifferenceTest, FiniteFinite) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int i1_finite[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     int i2_finite[] = {-3, 2, 4, 4, 6, 9};
@@ -174,7 +174,7 @@ TEST(SetDifferenceTest, FiniteFinite) {
 }
 
 TEST(SetDifferenceTest, InfiniteInfinite) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto i1_infinite = views::ints | views::stride(3);
     auto i2_infinite = views::ints | views::transform([](int x) { return x * x; });
@@ -188,11 +188,11 @@ TEST(SetDifferenceTest, InfiniteInfinite) {
                    back_inserter(diff));
     auto res_prefix = res | views::take(5);
     auto diff_prefix = diff | views::take(5);
-    EXPECT_TRUE(ranges::equal(res_prefix, diff_prefix));
+    EXPECT_TRUE(fermat::ranges::equal(res_prefix, diff_prefix));
 }
 
 TEST(SetDifferenceTest, FiniteInfinite) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int i1_finite[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     auto i2_infinite = views::ints | views::transform([](int x) { return x * x; });
@@ -202,7 +202,7 @@ TEST(SetDifferenceTest, FiniteInfinite) {
 }
 
 TEST(SetDifferenceTest, InfiniteFinite) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto i1_infinite = views::ints | views::stride(3);
     int i2_finite[] = {-3, 2, 4, 4, 6, 9};
@@ -212,7 +212,7 @@ TEST(SetDifferenceTest, InfiniteFinite) {
 }
 
 TEST(SetDifferenceTest, UnknownCardinalities) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto rng0 = views::iota(10) | views::drop_while([](int i) { return i < 25; });
     int i2_finite[] = {-3, 2, 4, 4, 6, 9};
@@ -232,7 +232,7 @@ TEST(SetDifferenceTest, UnknownCardinalities) {
 }
 
 TEST(SetDifferenceTest, ConstRanges) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int i1_finite[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     int i2_finite[] = {-3, 2, 4, 4, 6, 9};
@@ -245,7 +245,7 @@ TEST(SetDifferenceTest, ConstRanges) {
 }
 
 TEST(SetDifferenceTest, DifferentOrdering) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int i1_finite[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     int i2_finite[] = {-3, 2, 4, 4, 6, 9};
@@ -257,7 +257,7 @@ TEST(SetDifferenceTest, DifferentOrdering) {
 }
 
 TEST(SetDifferenceTest, Projections) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     struct S {
         int val;
@@ -276,12 +276,12 @@ TEST(SetDifferenceTest, Projections) {
 }
 
 TEST(SetDifferenceTest, MoveOnly) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto v0 = to<std::vector<MoveOnlyString>>({"a","b","b","c","x","x"});
     auto v1 = to<std::vector<MoveOnlyString>>({"b","x","y","z"});
 
-    // Use the view (ranges::views::set_difference)
+    // Use the view (fermat::ranges::views::set_difference)
     auto res = views::set_difference(v0, v1,
                                      [](const MoveOnlyString& a, const MoveOnlyString& b) {
                                          return a < b;
@@ -309,7 +309,7 @@ TEST(SetDifferenceTest, MoveOnly) {
 }
 
 TEST(SetDifferenceTest, DebugInputView) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int i1_finite[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     int i2_finite[] = {-3, 2, 4, 4, 6, 9};

@@ -29,7 +29,7 @@
 /// debug_input_view: minimal input view for testing
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T>>
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>>
 {
     struct data
     {
@@ -48,7 +48,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T>>
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T>> = true;
@@ -60,8 +60,8 @@ namespace ranges
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected)
 {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected)
     {
         EXPECT_NE(it, end);
@@ -75,8 +75,8 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected)
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<std::initializer_list<T>> expected)
 {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& expected_row : expected)
     {
         EXPECT_NE(it, end);
@@ -91,7 +91,7 @@ void check_equal(Rng&& rng, std::initializer_list<std::initializer_list<T>> expe
 /// ------------------------------------------------------------
 void test_input_ranges()
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int const ints[] = {0,1,2,3,4};
     constexpr auto N = size(ints);
@@ -105,7 +105,7 @@ void test_input_ranges()
     // easily queryable with ::value. The original runtime behavior is preserved.
 
     EXPECT_EQ(size(rng), (N + K - 1) / K);
-    EXPECT_EQ(ranges::distance(begin(rng), end(rng)), (N + K - 1) / K);
+    EXPECT_EQ(fermat::ranges::distance(begin(rng), end(rng)), (N + K - 1) / K);
 
     rng = make_range();
     auto i = begin(rng);
@@ -149,7 +149,7 @@ void test_input_ranges()
 
 TEST(ChunkTest, VectorOfInts)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto v = views::iota(0,11) | to<std::vector<int>>();
     auto rng1 = v | views::chunk(3);
 
@@ -167,7 +167,7 @@ TEST(ChunkTest, VectorOfInts)
 
 TEST(ChunkTest, ForwardListOfInts)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto l = views::iota(0,11) | to<std::forward_list<int>>();
     auto rng2 = l | views::chunk(3);
 
@@ -181,7 +181,7 @@ TEST(ChunkTest, ForwardListOfInts)
 
 TEST(ChunkTest, RepeatCycle)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto fives = views::repeat(5);
     auto rng = fives | views::chunk(3);
 
@@ -194,7 +194,7 @@ TEST(ChunkTest, RepeatCycle)
 
 TEST(ChunkTest, CycleLength3Chunk2)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int const ints[] = {0,1,2};
     auto cyc = ints | views::cycle;
     auto rng = cyc | views::chunk(2);
@@ -215,7 +215,7 @@ TEST(ChunkTest, CycleLength3Chunk2)
 
 TEST(ChunkTest, CycleLength3Chunk4)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int const ints[] = {0,1,2};
     auto cyc = ints | views::cycle;
     auto rng = cyc | views::chunk(4);
@@ -236,7 +236,7 @@ TEST(ChunkTest, CycleLength3Chunk4)
 
 TEST(ChunkTest, CycleLength10Chunk3)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int const ints[] = {0,1,2,3,4,5,6,7,8,9};
     auto cyc = ints | views::cycle;
     auto rng = cyc | views::chunk(3);
@@ -268,7 +268,7 @@ TEST(ChunkTest, InputRanges)
 
 TEST(ChunkTest, Regression567)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::vector<std::vector<int>> vec{{1, 2, 3}, {4, 5, 6}};
     auto rng = vec | views::join | views::chunk(2);
     int const expected[][2] = {{1, 2}, {3, 4}, {5, 6}};
@@ -282,7 +282,7 @@ TEST(ChunkTest, Regression567)
 
 TEST(ChunkTest, Regression567NotExactly)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int some_ints[] = {0,1,2,3};
     auto rng = views::all(some_ints);
     int const expected[][2] = {{0, 1}, {2, 3}};
@@ -292,7 +292,7 @@ TEST(ChunkTest, Regression567NotExactly)
 
 TEST(ChunkTest, StackOverflowExample)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto rng = views::closed_iota(1,25)
         | views::filter([](int item){ return item % 10 != 0; })
         | views::chunk(10);

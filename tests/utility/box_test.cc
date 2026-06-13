@@ -12,7 +12,7 @@
 #define RANGES_EMPTY_BASES __attribute__((__empty_bases__))
 #endif
 
-using namespace ranges;   /// Use Fermat's ranges namespace (assuming it contains compressed_pair)
+using namespace fermat::ranges;   /// Use Fermat's ranges namespace (assuming it contains compressed_pair)
 
 /// Test for issue #1093: compressed_pair should be empty‑base‑optimized.
 void test_1093() {
@@ -22,8 +22,8 @@ void test_1093() {
     struct payload { void* v; };
     struct base_adaptor {};
 
-    struct RANGES_EMPTY_BASES A : base_adaptor, private ranges::box<Op, A> {};
-    struct RANGES_EMPTY_BASES B : base_adaptor, private ranges::box<Op2, B> {};
+    struct RANGES_EMPTY_BASES A : base_adaptor, private fermat::ranges::box<Op, A> {};
+    struct RANGES_EMPTY_BASES B : base_adaptor, private fermat::ranges::box<Op2, B> {};
 
     using P  = compressed_pair<A, payload>;
     using P2 = compressed_pair<B, P>;

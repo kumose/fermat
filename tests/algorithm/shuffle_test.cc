@@ -68,11 +68,11 @@ public:
 // Helper to create a test range (simplified version of MakeTestRange)
 template <typename Iter, typename Sent>
 auto MakeTestRange(Iter begin, Sent end) {
-    return ranges::subrange<Iter, Sent>(begin, end);
+    return fermat::ranges::subrange<Iter, Sent>(begin, end);
 }
 
 // Dangling check (simplified; real fermat::range might provide this)
-namespace ranges {
+namespace fermat::ranges {
     constexpr bool is_dangling(auto&&) { return false; } // Placeholder, adjust if needed
 }
 
@@ -84,63 +84,63 @@ TEST(ShuffleTest, IteratorPair) {
     constexpr unsigned N = 100;
     std::array<int, N> a, b, c;
     for (auto p : {&a, &b, &c})
-        ranges::iota(*p, 0);
+        fermat::ranges::iota(*p, 0);
     std::minstd_rand g1, g2 = g1;
-    ranges::shuffle(RandomAccessIterator<int*>(a.data()), Sentinel<int*>(a.data() + N), g1);
-    EXPECT_FALSE(ranges::equal(a, b));
+    fermat::ranges::shuffle(RandomAccessIterator<int*>(a.data()), Sentinel<int*>(a.data() + N), g1);
+    EXPECT_FALSE(fermat::ranges::equal(a, b));
 
-    EXPECT_EQ(ranges::shuffle(b.begin(), b.end(), g1), b.end());
-    EXPECT_FALSE(ranges::equal(a, b));
+    EXPECT_EQ(fermat::ranges::shuffle(b.begin(), b.end(), g1), b.end());
+    EXPECT_FALSE(fermat::ranges::equal(a, b));
 
-    EXPECT_EQ(ranges::shuffle(c.begin(), c.end(), g2), c.end());
-    EXPECT_TRUE(ranges::equal(a, c));
-    EXPECT_FALSE(ranges::equal(b, c));
+    EXPECT_EQ(fermat::ranges::shuffle(c.begin(), c.end(), g2), c.end());
+    EXPECT_TRUE(fermat::ranges::equal(a, c));
+    EXPECT_FALSE(fermat::ranges::equal(b, c));
 }
 
 TEST(ShuffleTest, Range) {
     constexpr unsigned N = 100;
     std::array<int, N> a, b, c;
     for (auto p : {&a, &b, &c})
-        ranges::iota(*p, 0);
+        fermat::ranges::iota(*p, 0);
     std::minstd_rand g1, g2 = g1;
     auto rng = MakeTestRange(RandomAccessIterator<int*>(a.data()), Sentinel<int*>(a.data() + N));
-    ranges::shuffle(rng, g1);
-    EXPECT_FALSE(ranges::equal(a, b));
+    fermat::ranges::shuffle(rng, g1);
+    EXPECT_FALSE(fermat::ranges::equal(a, b));
 
-    EXPECT_EQ(ranges::shuffle(b, g2), b.end());
-    EXPECT_TRUE(ranges::equal(a, b));
+    EXPECT_EQ(fermat::ranges::shuffle(b, g2), b.end());
+    EXPECT_TRUE(fermat::ranges::equal(a, b));
 
-    EXPECT_EQ(ranges::shuffle(b, g1), b.end());
-    EXPECT_FALSE(ranges::equal(a, b));
-    EXPECT_FALSE(ranges::equal(b, c));
+    EXPECT_EQ(fermat::ranges::shuffle(b, g1), b.end());
+    EXPECT_FALSE(fermat::ranges::equal(a, b));
+    EXPECT_FALSE(fermat::ranges::equal(b, c));
 
-    ranges::iota(a, 0);
+    fermat::ranges::iota(a, 0);
     // Note: is_dangling may not be available; we skip that check or adapt.
-    // auto res = ranges::shuffle(std::move(rng), g1);
+    // auto res = fermat::ranges::shuffle(std::move(rng), g1);
     // EXPECT_TRUE(::is_dangling(res));
     // Instead, we just ensure it compiles.
-    ranges::shuffle(std::move(rng), g1);
-    EXPECT_FALSE(ranges::equal(a, c));
+    fermat::ranges::shuffle(std::move(rng), g1);
+    EXPECT_FALSE(fermat::ranges::equal(a, c));
 }
 
 TEST(ShuffleTest, WithoutGenerator) {
     constexpr unsigned N = 100;
     std::array<int, N> a, b, c;
     for (auto p : {&a, &b, &c})
-        ranges::iota(*p, 0);
-    ranges::shuffle(RandomAccessIterator<int*>(a.data()), Sentinel<int*>(a.data() + N));
-    EXPECT_FALSE(ranges::equal(a, c));
+        fermat::ranges::iota(*p, 0);
+    fermat::ranges::shuffle(RandomAccessIterator<int*>(a.data()), Sentinel<int*>(a.data() + N));
+    EXPECT_FALSE(fermat::ranges::equal(a, c));
 
-    ranges::shuffle(b);
-    EXPECT_FALSE(ranges::equal(b, c));
-    EXPECT_FALSE(ranges::equal(a, b));
+    fermat::ranges::shuffle(b);
+    EXPECT_FALSE(fermat::ranges::equal(b, c));
+    EXPECT_FALSE(fermat::ranges::equal(a, b));
 }
 
 TEST(ShuffleTest, ShuffleInPlace) {
     constexpr unsigned N = 100;
     std::array<int, N> a, b;
     for (auto p : {&a, &b})
-        ranges::iota(*p, 0);
-    ranges::shuffle(a);
-    EXPECT_FALSE(ranges::equal(a, b));
+        fermat::ranges::iota(*p, 0);
+    fermat::ranges::shuffle(a);
+    EXPECT_FALSE(fermat::ranges::equal(a, b));
 }

@@ -43,8 +43,8 @@
     "(RANGES_SILENCE_COROUTINE_WARNING will silence this message.)")
 #elif defined RANGES_WORKAROUND_MSVC_835948
 #pragma message(                                                                 \
-    "DANGER: ranges::experimental::generator is fine, but this "                 \
-    "version of MSVC likely miscompiles ranges::experimental::sized_generator. " \
+    "DANGER: fermat::ranges::experimental::generator is fine, but this "                 \
+    "version of MSVC likely miscompiles fermat::ranges::experimental::sized_generator. " \
     "Use the latter at your own risk. "                                          \
     "(RANGES_SILENCE_COROUTINE_WARNING will silence this message.)")
 #endif
@@ -52,7 +52,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-view
     /// @{
@@ -124,7 +124,7 @@ namespace ranges
               : base_t(coro)
             {}
             coroutine_owner(coroutine_owner && that) noexcept
-              : base_t(ranges::exchange(that.base(), {}))
+              : base_t(fermat::ranges::exchange(that.base(), {}))
               , copied_(that.copied_.load(std::memory_order_relaxed))
             {}
             coroutine_owner(coroutine_owner const & that) noexcept
@@ -359,7 +359,7 @@ namespace ranges
     } // namespace experimental
 
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

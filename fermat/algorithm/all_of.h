@@ -28,7 +28,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -59,10 +59,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::all_of;
+        using fermat::ranges::all_of;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

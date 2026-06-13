@@ -26,7 +26,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-actions
     /// @{
@@ -49,7 +49,7 @@ namespace ranges
                         indirect_result_t<F &, projected<iterator_t<Rng>, P>>>)
             Rng operator()(Rng && rng, F fun, P proj = P{}) const
             {
-                ranges::transform(rng, begin(rng), std::move(fun), std::move(proj));
+                fermat::ranges::transform(rng, begin(rng), std::move(fun), std::move(proj));
                 return static_cast<Rng &&>(rng);
             }
         };
@@ -58,7 +58,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(transform_fn, transform)
     } // namespace actions
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

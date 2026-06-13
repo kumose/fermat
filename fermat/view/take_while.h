@@ -34,7 +34,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -192,19 +192,19 @@ namespace ranges
     {
         namespace views
         {
-            using ranges::views::take_while;
+            using fermat::ranges::views::take_while;
         }
         template(typename Rng, typename Pred)(
             requires viewable_range<Rng> AND input_range<Rng> AND
                 predicate<Pred &, iterator_t<Rng>> AND copy_constructible<Pred>)
-            using take_while_view = ranges::take_while_view<Rng, Pred>;
+            using take_while_view = fermat::ranges::take_while_view<Rng, Pred>;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::iter_take_while_view)
-RANGES_SATISFY_BOOST_RANGE(::ranges::take_while_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::iter_take_while_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::take_while_view)
 
 #endif

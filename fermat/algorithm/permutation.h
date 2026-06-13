@@ -41,7 +41,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -61,7 +61,7 @@ namespace ranges
         {
             // shorten sequences as much as possible by lopping off any equal parts
             const auto mismatch =
-                ranges::mismatch(begin1, end1, begin2, end2, pred, proj1, proj2);
+                fermat::ranges::mismatch(begin1, end1, begin2, end2, pred, proj1, proj2);
             begin1 = mismatch.in1;
             begin2 = mismatch.in2;
             if(begin1 == end1 || begin2 == end2)
@@ -121,7 +121,7 @@ namespace ranges
             requires forward_iterator<I1> AND sentinel_for<S1, I1> AND
                 forward_iterator<I2> AND indirectly_comparable<I1, I2, C, P1, P2>)
         RANGES_DEPRECATED(
-            "Use the variant of ranges::is_permutation that takes an upper bound "
+            "Use the variant of fermat::ranges::is_permutation that takes an upper bound "
             "for both sequences")
         bool RANGES_FUNC(is_permutation)(I1 begin1,
                                          S1 end1,
@@ -221,7 +221,7 @@ namespace ranges
             requires forward_range<Rng1> AND forward_iterator<uncvref_t<I2Ref>> AND
                 indirectly_comparable<iterator_t<Rng1>, uncvref_t<I2Ref>, C, P1, P2>)
         RANGES_DEPRECATED(
-            "Use the variant of ranges::is_permutation that takes an upper bound "
+            "Use the variant of fermat::ranges::is_permutation that takes an upper bound "
             "for both sequences")
         bool RANGES_FUNC(is_permutation)(Rng1 && rng1,
                                          I2Ref && begin2,
@@ -284,7 +284,7 @@ namespace ranges
         {
             if(first == end_)
                 return false;
-            I last = ranges::next(first, end_), i = last;
+            I last = fermat::ranges::next(first, end_), i = last;
             if(first == --i)
                 return false;
             while(true)
@@ -295,13 +295,13 @@ namespace ranges
                     I j = last;
                     while(!invoke(pred, invoke(proj, *i), invoke(proj, *--j)))
                         ;
-                    ranges::iter_swap(i, j);
-                    ranges::reverse(ip1, last);
+                    fermat::ranges::iter_swap(i, j);
+                    fermat::ranges::reverse(ip1, last);
                     return true;
                 }
                 if(i == first)
                 {
-                    ranges::reverse(first, last);
+                    fermat::ranges::reverse(first, last);
                     return false;
                 }
             }
@@ -327,7 +327,7 @@ namespace ranges
         {
             if(first == end_)
                 return false;
-            I last = ranges::next(first, end_), i = last;
+            I last = fermat::ranges::next(first, end_), i = last;
             if(first == --i)
                 return false;
             while(true)
@@ -338,13 +338,13 @@ namespace ranges
                     I j = last;
                     while(!invoke(pred, invoke(proj, *--j), invoke(proj, *i)))
                         ;
-                    ranges::iter_swap(i, j);
-                    ranges::reverse(ip1, last);
+                    fermat::ranges::iter_swap(i, j);
+                    fermat::ranges::reverse(ip1, last);
                     return true;
                 }
                 if(i == first)
                 {
-                    ranges::reverse(first, last);
+                    fermat::ranges::reverse(first, last);
                     return false;
                 }
             }
@@ -362,12 +362,12 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::is_permutation;
-        using ranges::next_permutation;
-        using ranges::prev_permutation;
+        using fermat::ranges::is_permutation;
+        using fermat::ranges::next_permutation;
+        using fermat::ranges::prev_permutation;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

@@ -40,7 +40,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -71,7 +71,7 @@ namespace ranges
                     if(d1 < d2) // return the last if we've run out of room
                     {
                         auto e =
-                            ranges::next(recounted(begin1_, std::move(begin1), d1_ - d1),
+                            fermat::ranges::next(recounted(begin1_, std::move(begin1), d1_ - d1),
                                          std::move(end1));
                         return {e, e};
                     }
@@ -231,10 +231,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::search;
+        using fermat::ranges::search;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

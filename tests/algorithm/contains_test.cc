@@ -2,7 +2,7 @@
 #include <fermat/algorithm/contains.h>
 
 TEST(ContainsTest, Basic) {
-    using ranges::contains;
+    using fermat::ranges::contains;
 
     constexpr int rng[] = {4, 2};
     const auto first = rng;

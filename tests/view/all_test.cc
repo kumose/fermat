@@ -15,7 +15,7 @@
 /// A minimal debug input view for testing (replaces range-v3's debug_input_view).
 /// It inherits from view_base to satisfy view_ concept.
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T>> {
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>> {
     struct data {
         const T* first_;
         std::size_t size_;
@@ -31,7 +31,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T>> {
     std::size_t size() const { return data_->size_; }
 };
 
-namespace ranges {
+namespace fermat::ranges {
     /// specialize enable_borrowed_range for debug_input_view
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T>> = true;
@@ -46,7 +46,7 @@ constexpr std::size_t array_size(T (&)[N]) { return N; }
 // ------------------------------------------------------------------
 
 TEST(AllViewTest, BasicArraysAndContainers) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {1, 1, 1, 2, 3, 4, 4};
     std::vector<int> vi(begin(rgi), end(rgi));
@@ -70,7 +70,7 @@ TEST(AllViewTest, BasicArraysAndContainers) {
 }
 
 TEST(AllViewTest, DebugInputView) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {1, 1, 1, 2, 3, 4, 4};
     constexpr std::size_t n = sizeof(rgi) / sizeof(rgi[0]);

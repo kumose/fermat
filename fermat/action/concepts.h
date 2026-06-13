@@ -25,7 +25,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -78,7 +78,7 @@ namespace ranges
     template<typename T>
     CPP_concept container =
         semi_container<T> &&
-        CPP_concept_ref(ranges::container_, T);
+        CPP_concept_ref(fermat::ranges::container_, T);
 
     /// \concept reservable_
     /// \brief The \c reservable_ concept
@@ -86,20 +86,20 @@ namespace ranges
     CPP_requires(reservable_,
         requires(C & c, C const & cc) //
         (
-            c.reserve(ranges::size(c)),
+            c.reserve(fermat::ranges::size(c)),
             cc.capacity(),
             cc.max_size(),
             concepts::requires_<same_as<decltype(cc.capacity()),
-                                        decltype(ranges::size(c))>>,
+                                        decltype(fermat::ranges::size(c))>>,
             concepts::requires_<same_as<decltype(cc.max_size()),
-                                        decltype(ranges::size(c))>>
+                                        decltype(fermat::ranges::size(c))>>
         ));
 
     /// \concept reservable
     /// \brief The \c reservable concept
     template<typename C>
     CPP_concept reservable =
-        container<C> && sized_range<C> && CPP_requires_ref(ranges::reservable_, C);
+        container<C> && sized_range<C> && CPP_requires_ref(fermat::ranges::reservable_, C);
 
     /// \concept reservable_with_assign_
     /// \brief The \c reservable_with_assign_ concept
@@ -115,7 +115,7 @@ namespace ranges
     CPP_concept reservable_with_assign =
         reservable<C> && //
         input_iterator<I> && //
-        CPP_requires_ref(ranges::reservable_with_assign_, C, I);
+        CPP_requires_ref(fermat::ranges::reservable_with_assign_, C, I);
 
     /// \concept random_access_reservable
     /// \brief The \c random_access_reservable concept
@@ -175,10 +175,10 @@ namespace ranges
     template<typename T>
     CPP_concept lvalue_container_like =
         forward_range<T> &&
-        CPP_concept_ref(ranges::lvalue_container_like_, T);
+        CPP_concept_ref(fermat::ranges::lvalue_container_like_, T);
     // clang-format on
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

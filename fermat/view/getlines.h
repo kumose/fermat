@@ -25,7 +25,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -105,7 +105,7 @@ namespace ranges
 
     RANGES_INLINE_VARIABLE(getlines_fn, getlines)
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

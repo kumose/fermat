@@ -10,15 +10,15 @@
 
 #include <fermat/range/access.h>
 #include <fermat/range/primitives.h>
-#include <fermat/view/getlines.h>          /// ranges::views::getlines
+#include <fermat/view/getlines.h>          /// fermat::ranges::views::getlines
 
 /// ------------------------------------------------------------
 /// Helper: check_equal for ranges vs initializer_list
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -32,7 +32,7 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected) {
 // ------------------------------------------------------------------
 
 TEST(GetlinesTest, Basic) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     const char* text =
 R"(Now is

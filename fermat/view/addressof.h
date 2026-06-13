@@ -25,7 +25,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -58,7 +58,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(view_closure<addressof_fn>, addressof)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

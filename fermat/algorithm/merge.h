@@ -47,7 +47,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -89,8 +89,8 @@ namespace ranges
                     ++begin0;
                 }
             }
-            auto t0 = ranges::copy(begin0, end0, out);
-            auto t1 = ranges::copy(begin1, end1, t0.out);
+            auto t0 = fermat::ranges::copy(begin0, end0, out);
+            auto t1 = fermat::ranges::copy(begin1, end1, t0.out);
             return {t0.in, t1.in, t1.out};
         }
 
@@ -125,11 +125,11 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::merge;
-        using ranges::merge_result;
+        using fermat::ranges::merge;
+        using fermat::ranges::merge_result;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

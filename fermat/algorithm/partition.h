@@ -39,7 +39,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -62,7 +62,7 @@ namespace ranges
             {
                 if(invoke(pred, invoke(proj, *p)))
                 {
-                    ranges::iter_swap(first, p);
+                    fermat::ranges::iter_swap(first, p);
                     ++first;
                 }
             }
@@ -72,7 +72,7 @@ namespace ranges
         template<typename I, typename S, typename C, typename P>
         constexpr I partition_impl(I first, S end_, C pred, P proj, std::bidirectional_iterator_tag)
         {
-            I last = ranges::next(first, end_);
+            I last = fermat::ranges::next(first, end_);
             while(true)
             {
                 while(true)
@@ -88,7 +88,7 @@ namespace ranges
                     if(first == --last)
                         return first;
                 } while(!invoke(pred, invoke(proj, *last)));
-                ranges::iter_swap(first, last);
+                fermat::ranges::iter_swap(first, last);
                 ++first;
             }
         }
@@ -127,10 +127,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::partition;
+        using fermat::ranges::partition;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

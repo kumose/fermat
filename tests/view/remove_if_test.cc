@@ -12,13 +12,13 @@
 
 #include <fermat/range/access.h>
 #include <fermat/range/primitives.h>
-#include <fermat/functional/not_fn.h>          /// ranges::not_fn
+#include <fermat/functional/not_fn.h>          /// fermat::ranges::not_fn
 #include <fermat/view/remove_if.h>             /// views::remove_if
 #include <fermat/view/filter.h>                /// views::filter
 #include <fermat/view/counted.h>               /// views::counted
 #include <fermat/view/concat.h>                /// views::concat
 #include <fermat/view/reverse.h>               /// views::reverse
-#include <fermat/utility/copy.h>               /// ranges::copy (if needed)
+#include <fermat/utility/copy.h>               /// fermat::ranges::copy (if needed)
 
 /// ------------------------------------------------------------
 /// Helper types (is_odd, is_even, my_data)
@@ -67,7 +67,7 @@ public:
 /// debug_input_view (minimal input view for testing)
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T>>
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>>
 {
     struct data
     {
@@ -86,7 +86,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T>>
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T>> = true;
@@ -105,8 +105,8 @@ void has_type(Actual&&) {
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -135,7 +135,7 @@ void check_equal(const std::vector<my_data>& actual, std::initializer_list<my_da
 // ------------------------------------------------------------------
 
 TEST(RemoveIfTest, BasicArrayRemoveEven) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     auto rng = rgi | views::remove_if(is_even());
@@ -150,7 +150,7 @@ TEST(RemoveIfTest, BasicArrayRemoveEven) {
 }
 
 TEST(RemoveIfTest, CountedViewRemoveOdd) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     auto rng2 = views::counted(rgi, 10) | views::remove_if(not_fn(is_odd()));
@@ -161,7 +161,7 @@ TEST(RemoveIfTest, CountedViewRemoveOdd) {
 }
 
 TEST(RemoveIfTest, BidirectionalIteratorRemoveEven) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     auto rng3 = views::counted(BidirectionalIterator<int*>{rgi}, 10)
@@ -176,7 +176,7 @@ TEST(RemoveIfTest, BidirectionalIteratorRemoveEven) {
 }
 
 TEST(RemoveIfTest, MutableLambda) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     bool flag = true;
@@ -186,7 +186,7 @@ TEST(RemoveIfTest, MutableLambda) {
 }
 
 TEST(RemoveIfTest, ConcatRemoveIf) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     const std::array<int, 3> a{{0, 1, 2}};
     const std::vector<int> b{3, 4, 5, 6};
@@ -197,7 +197,7 @@ TEST(RemoveIfTest, ConcatRemoveIf) {
 }
 
 TEST(RemoveIfTest, DebugInputView) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     auto rng = debug_input_view<int const>{rgi, 10} | views::remove_if(is_even{});
@@ -205,7 +205,7 @@ TEST(RemoveIfTest, DebugInputView) {
 }
 
 TEST(RemoveIfTest, Regression793) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int const some_ints[] = {1, 2, 3};
     auto a = some_ints | views::remove_if([](int val) { return val > 0; });
@@ -213,7 +213,7 @@ TEST(RemoveIfTest, Regression793) {
 }
 
 TEST(RemoveIfTest, Projection) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     const std::vector<my_data> some_my_datas{{1}, {2}, {3}, {4}};
 
@@ -230,7 +230,7 @@ TEST(RemoveIfTest, Projection) {
 }
 
 TEST(FilterTest, Projection) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     const std::vector<my_data> some_my_datas{{1}, {2}, {3}, {4}};
 
@@ -247,7 +247,7 @@ TEST(FilterTest, Projection) {
 }
 
 TEST(RemoveIfTest, ConstexprBinding) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     constexpr std::array<int, 4> is = {{1,2,3,4}};
     constexpr auto filter = views::remove_if(is_even()) | views::remove_if(is_odd());
@@ -256,7 +256,7 @@ TEST(RemoveIfTest, ConstexprBinding) {
 }
 
 TEST(RemoveIfTest, ConstexprBindingWithProjection) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     const std::vector<my_data> some_my_datas{{1}, {2}, {3}, {4}};
     constexpr auto filter = views::remove_if(is_even(), &my_data::i) |
@@ -266,7 +266,7 @@ TEST(RemoveIfTest, ConstexprBindingWithProjection) {
 }
 
 TEST(FilterTest, Issue1424) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v{1, 2, 3, 4};
     auto rng = views::filter(v, is_odd());

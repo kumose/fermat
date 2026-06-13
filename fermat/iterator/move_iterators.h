@@ -24,7 +24,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-iterator
     /// @{
@@ -425,12 +425,12 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::make_move_iterator;
-        using ranges::move_iterator;
-        using ranges::move_sentinel;
+        using fermat::ranges::make_move_iterator;
+        using fermat::ranges::move_iterator;
+        using fermat::ranges::move_sentinel;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 /// \cond
 RANGES_DIAGNOSTIC_PUSH
@@ -439,12 +439,12 @@ RANGES_DIAGNOSTIC_IGNORE_MISMATCHED_TAGS
 namespace std
 {
     template<typename I>
-    struct iterator_traits<::ranges::move_iterator<I>>
+    struct iterator_traits<::fermat::ranges::move_iterator<I>>
     {
         using iterator_category = std::input_iterator_tag;
-        using difference_type = typename ::ranges::move_iterator<I>::difference_type;
-        using value_type = typename ::ranges::move_iterator<I>::value_type;
-        using reference = typename ::ranges::move_iterator<I>::reference;
+        using difference_type = typename ::fermat::ranges::move_iterator<I>::difference_type;
+        using value_type = typename ::fermat::ranges::move_iterator<I>::value_type;
+        using reference = typename ::fermat::ranges::move_iterator<I>::reference;
         using pointer = meta::_t<std::add_pointer<reference>>;
     };
 } // namespace std

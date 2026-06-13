@@ -25,7 +25,7 @@
 /// debug_input_view: minimal input view for testing
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T>>
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>>
 {
     struct data
     {
@@ -44,7 +44,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T>>
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T>> = true;
@@ -56,8 +56,8 @@ namespace ranges
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected)
 {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected)
     {
         EXPECT_NE(it, end);
@@ -73,7 +73,7 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected)
 
 TEST(ConcatTest, VectorStringConcatenation)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<std::string> his_face{"this", "is", "his", "face"};
     std::vector<std::string> another_mess{"another", "fine", "mess"};
@@ -127,7 +127,7 @@ TEST(ConcatTest, VectorStringConcatenation)
 
 TEST(ConcatTest, ConstArraysAndFilter)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     const std::array<int, 3> a{{0, 1, 2}};
     const std::array<int, 2> b{{3, 4}};
@@ -143,7 +143,7 @@ TEST(ConcatTest, ConstArraysAndFilter)
 
 TEST(ConcatTest, Regression395)   // generate + take_while
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int i = 0;
     auto rng = views::concat(views::generate([&] { return i++; }))
@@ -153,7 +153,7 @@ TEST(ConcatTest, Regression395)   // generate + take_while
 
 TEST(ConcatTest, DebugInputView)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int const rgi[] = {0,1,2,3};
     auto dv = debug_input_view<int const>{rgi, 4};   // explicitly construct

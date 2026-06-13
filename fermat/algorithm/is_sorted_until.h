@@ -30,7 +30,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -79,10 +79,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::is_sorted_until;
+        using fermat::ranges::is_sorted_until;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

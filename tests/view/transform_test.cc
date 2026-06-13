@@ -58,7 +58,7 @@ public:
 /// debug_input_view: minimal input view for testing (borrowed range)
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T>> {
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>> {
     struct data {
         const T *first_;
         std::ptrdiff_t size_;
@@ -74,7 +74,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T>> {
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges {
+namespace fermat::ranges {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T>> = true;
 }
@@ -106,8 +106,8 @@ struct is_odd {
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng &&rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -119,8 +119,8 @@ void check_equal(Rng &&rng, std::initializer_list<T> expected) {
 /// Overload for vector<MoveOnlyString>
 template<typename Rng>
 void check_equal(Rng &&rng, std::vector<MoveOnlyString> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(it->s, val.s);
@@ -132,8 +132,8 @@ void check_equal(Rng &&rng, std::vector<MoveOnlyString> expected) {
 /// Overload for vector<tuple<string,string>>
 template<typename Rng>
 void check_equal(Rng &&rng, std::vector<std::tuple<std::string, std::string>> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(std::get<0>(*it), std::get<0>(val));
@@ -153,7 +153,7 @@ void has_type(Actual &&) {
 /// Helper: distance for ranges (simple version)
 template<typename Rng>
 std::ptrdiff_t distance(Rng &&rng) {
-    return ranges::end(rng) - ranges::begin(rng);
+    return fermat::ranges::end(rng) - fermat::ranges::begin(rng);
 }
 
 /// ------------------------------------------------------------------
@@ -161,10 +161,10 @@ std::ptrdiff_t distance(Rng &&rng) {
 /// ------------------------------------------------------------------
 void bug_996() {
     std::vector<int> buff(12, -1);
-    ranges::span<int> sp(buff.data(), 12);
-    auto x = ranges::views::transform(sp, [](int a) { return a > 3 ? a : 42; });
-    auto y = ranges::views::transform(x, sp, [](int a, int b) { return a + b; });
-    auto rng = ranges::views::transform(y, [](int a) { return a + 1; });
+    fermat::ranges::span<int> sp(buff.data(), 12);
+    auto x = fermat::ranges::views::transform(sp, [](int a) { return a > 3 ? a : 42; });
+    auto y = fermat::ranges::views::transform(x, sp, [](int a, int b) { return a + b; });
+    auto rng = fermat::ranges::views::transform(y, [](int a) { return a + 1; });
     (void) rng;
 }
 
@@ -173,7 +173,7 @@ void bug_996() {
 /// ------------------------------------------------------------------
 
 TEST(TransformViewTest, ArrayWithIsOdd) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int rgi[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     auto rng = rgi | views::transform(is_odd());
     has_type<int &>(*begin(rgi));
@@ -182,7 +182,7 @@ TEST(TransformViewTest, ArrayWithIsOdd) {
 }
 
 TEST(TransformViewTest, PairArrayWithMemberPointer) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::pair<int, int> rgp[] = {
         {1,1},{2,2},{3,3},{4,4},{5,5},
         {6,6},{7,7},{8,8},{9,9},{10,10}
@@ -196,7 +196,7 @@ TEST(TransformViewTest, PairArrayWithMemberPointer) {
 }
 
 TEST(TransformViewTest, CountedPairArray) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::pair<int, int> rgp[] = {
         {1,1},{2,2},{3,3},{4,4},{5,5},
         {6,6},{7,7},{8,8},{9,9},{10,10}
@@ -209,7 +209,7 @@ TEST(TransformViewTest, CountedPairArray) {
 }
 
 TEST(TransformViewTest, CountedForwardIterator) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::pair<int, int> rgp[] = {
         {1,1},{2,2},{3,3},{4,4},{5,5},
         {6,6},{7,7},{8,8},{9,9},{10,10}
@@ -223,7 +223,7 @@ TEST(TransformViewTest, CountedForwardIterator) {
 }
 
 TEST(TransformViewTest, MutableLambda) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int rgi[] = {1,2,3,4,5,6,7,8,9,10};
     int cnt = 100;
     auto mutable_rng = views::transform(rgi, [cnt](int) mutable { return cnt++; });
@@ -232,7 +232,7 @@ TEST(TransformViewTest, MutableLambda) {
 }
 
 TEST(TransformViewTest, IterTransformWithOverload) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     // Build move‑only vectors without copying
     std::vector<MoveOnlyString> v0, v1;
     v0.emplace_back("a"); v0.emplace_back("b"); v0.emplace_back("c");
@@ -250,7 +250,7 @@ TEST(TransformViewTest, IterTransformWithOverload) {
 
     auto rng2 = rng1 | views::iter_transform(proj);
     std::vector<MoveOnlyString> res;
-    move(rng2, ranges::back_inserter(res));
+    move(rng2, fermat::ranges::back_inserter(res));
     check_equal(res, {MoveOnlyString{"a"}, MoveOnlyString{"b"}, MoveOnlyString{"c"}});
     EXPECT_TRUE(v0[0].s.empty());
     EXPECT_TRUE(v0[1].s.empty());
@@ -259,7 +259,7 @@ TEST(TransformViewTest, IterTransformWithOverload) {
 }
 
 TEST(TransformViewTest, TwoRangeTransform) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::vector<std::string> v0 = {"a","b","c"};
     std::vector<std::string> v1 = {"x","y","z"};
 
@@ -270,7 +270,7 @@ TEST(TransformViewTest, TwoRangeTransform) {
 }
 
 TEST(TransformViewTest, TwoRangeIndirectTransform) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::vector<std::string> v0 = {"a","b","c"};
     std::vector<std::string> v1 = {"x","y","z"};
     using I = std::vector<std::string>::iterator;
@@ -289,7 +289,7 @@ TEST(TransformViewTest, TwoRangeIndirectTransform) {
 }
 
 TEST(TransformViewTest, DebugInputViewTransform) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int rgi[] = {1,2,3,4,5,6,7,8,9,10};
     auto rng = debug_input_view<int const>{rgi, 10} | views::transform(is_odd{});
     check_equal(rng, {true, false, true, false, true, false, true, false, true, false});
@@ -303,7 +303,7 @@ TEST(TransformViewTest, DebugInputViewTransform) {
 TEST(TransformViewTest, DeductionGuide) {
 #if defined(__cpp_deduction_guides) && __cpp_deduction_guides >= 201703
     std::vector<int> vi = {1, 2, 3};
-    ranges::transform_view times_ten{vi, [](int i) { return i * 10; }};
+    fermat::ranges::transform_view times_ten{vi, [](int i) { return i * 10; }};
     check_equal(times_ten, {10, 20, 30});
 #endif
 }

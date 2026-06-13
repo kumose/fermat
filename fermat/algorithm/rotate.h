@@ -41,7 +41,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -52,7 +52,7 @@ namespace ranges
         constexpr subrange<I> rotate_left(I first, I last)
         {
             iter_value_t<I> tmp = iter_move(first);
-            I lm1 = ranges::move(next(first), last, first).out;
+            I lm1 = fermat::ranges::move(next(first), last, first).out;
             *lm1 = std::move(tmp);
             return {lm1, last};
         }
@@ -73,7 +73,7 @@ namespace ranges
             I i = middle;
             while(true)
             {
-                ranges::iter_swap(first, i);
+                fermat::ranges::iter_swap(first, i);
                 ++first;
                 if(++i == last)
                     break;
@@ -86,7 +86,7 @@ namespace ranges
                 I j = middle;
                 while(true)
                 {
-                    ranges::iter_swap(first, j);
+                    fermat::ranges::iter_swap(first, j);
                     ++first;
                     if(++j == last)
                     {
@@ -202,7 +202,7 @@ namespace ranges
         {
             if(first == middle)
             {
-                first = ranges::next(std::move(first), last);
+                first = fermat::ranges::next(std::move(first), last);
                 return {first, first};
             }
             if(middle == last)
@@ -224,10 +224,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::rotate;
+        using fermat::ranges::rotate;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

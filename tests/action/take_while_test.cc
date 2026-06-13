@@ -6,7 +6,7 @@
 #include <fermat/action/take_while.h>
 #include <fermat/range/conversion.h>
 
-using namespace ranges;
+using namespace fermat::ranges;
 
 TEST(ActionTakeWhileTest, Example) {
     using namespace std::placeholders;

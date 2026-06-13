@@ -26,7 +26,7 @@ namespace {
 } // namespace
 
 TEST(ActionPushBackTest, DirectCall) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     {
         std::vector<int> v;
@@ -57,7 +57,7 @@ TEST(ActionPushBackTest, DirectCall) {
 }
 
 TEST(ActionPushBackTest, PipeWithMove) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     {
         std::vector<int> v;
@@ -88,7 +88,7 @@ TEST(ActionPushBackTest, PipeWithMove) {
 }
 
 TEST(ActionPushBackTest, InPlacePipe) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     {
         std::vector<int> v;

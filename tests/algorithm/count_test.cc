@@ -9,7 +9,7 @@ struct S {
 };
 
 TEST(CountTest, Basic) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {0, 1, 2, 2, 0, 1, 2, 3};
     constexpr auto cia = sizeof(ia) / sizeof(ia[0]);
@@ -26,7 +26,7 @@ TEST(CountTest, Basic) {
 }
 
 TEST(CountTest, WithProjection) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     S sa[] = {{0}, {1}, {2}, {2}, {0}, {1}, {2}, {3}};
     constexpr auto csa = sizeof(sa) / sizeof(sa[0]);
@@ -42,6 +42,6 @@ TEST(CountTest, WithProjection) {
 
 TEST(CountTest, ConstexprInitializerList) {
     using IL = std::initializer_list<int>;
-    static_assert(ranges::count(IL{0, 1, 2, 1, 3, 1, 4}, 1) == 3, "");
-    static_assert(ranges::count(IL{0, 1, 2, 1, 3, 1, 4}, 5) == 0, "");
+    static_assert(fermat::ranges::count(IL{0, 1, 2, 1, 3, 1, 4}, 1) == 3, "");
+    static_assert(fermat::ranges::count(IL{0, 1, 2, 1, 3, 1, 4}, 5) == 0, "");
 }

@@ -28,7 +28,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -411,7 +411,7 @@ namespace ranges
             is_writable_cursor_<Cur, (bool)readable_cursor<Cur>>;
     } // namespace detail
     /// \endcond
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

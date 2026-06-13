@@ -16,7 +16,7 @@
 #include <fermat/utility/compressed_pair.h>
 #include <fermat/iterator/unreachable_sentinel.h>   // for unreachable_sentinel_t
 
-using namespace ranges;
+using namespace fermat::ranges;
 
 // Helper to avoid comparing two unreachable_sentinel_t directly
 template<typename T>

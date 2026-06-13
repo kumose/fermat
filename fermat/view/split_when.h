@@ -39,7 +39,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -134,7 +134,7 @@ namespace ranges
         };
         cursor<false> begin_cursor()
         {
-            return {fun_, ranges::begin(rng_), ranges::end(rng_)};
+            return {fun_, fermat::ranges::begin(rng_), fermat::ranges::end(rng_)};
         }
         template(bool Const = true)(
             requires Const AND range<meta::const_if_c<Const, Rng>> AND
@@ -142,7 +142,7 @@ namespace ranges
                           sentinel_t<meta::const_if_c<Const, Rng>>>)
         cursor<Const> begin_cursor() const
         {
-            return {fun_, ranges::begin(rng_), ranges::end(rng_)};
+            return {fun_, fermat::ranges::begin(rng_), fermat::ranges::end(rng_)};
         }
 
     public:
@@ -174,7 +174,7 @@ namespace ranges
                     requires sentinel_for<S, I>)
                 std::pair<bool, I> operator()(I cur, S last) const
                 {
-                    auto where = ranges::find_if_not(cur, last, std::ref(pred_));
+                    auto where = fermat::ranges::find_if_not(cur, last, std::ref(pred_));
                     return {cur != where, where};
                 }
             };
@@ -221,10 +221,10 @@ namespace ranges
         RANGES_INLINE_VARIABLE(split_when_fn, split_when)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::split_when_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::split_when_view)
 
 #endif

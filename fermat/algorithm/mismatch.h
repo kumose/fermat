@@ -33,7 +33,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -53,7 +53,7 @@ namespace ranges
                 input_iterator<I2> AND
                 indirect_relation<C, projected<I1, P1>, projected<I2, P2>>)
         RANGES_DEPRECATED(
-            "Use the variant of ranges::mismatch that takes an upper bound for "
+            "Use the variant of fermat::ranges::mismatch that takes an upper bound for "
             "both sequences")
         mismatch_result<I1, I2> RANGES_FUNC(mismatch)(I1 begin1,
                                                       S1 end1,
@@ -104,7 +104,7 @@ namespace ranges
                                   projected<iterator_t<Rng1>, P1>,
                                   projected<uncvref_t<I2Ref>, P2>>)
         RANGES_DEPRECATED(
-            "Use the variant of ranges::mismatch that takes an upper bound for "
+            "Use the variant of fermat::ranges::mismatch that takes an upper bound for "
             "both sequences")
         mismatch_result<borrowed_iterator_t<Rng1>, uncvref_t<I2Ref>>
         RANGES_FUNC(mismatch)(Rng1 && rng1,
@@ -154,8 +154,8 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::mismatch;
-        using ranges::mismatch_result;
+        using fermat::ranges::mismatch;
+        using fermat::ranges::mismatch_result;
     } // namespace cpp20
 
     // [*] In this case, the 'begin2' iterator is taken by universal reference. Why? So
@@ -168,7 +168,7 @@ namespace ranges
     // to a pointer. Yuk!
 
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

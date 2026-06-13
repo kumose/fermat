@@ -12,14 +12,14 @@ void test_minmax_for_size(unsigned N) {
     std::vector<int> data(N);
     std::iota(data.begin(), data.end(), 0);
     std::shuffle(data.begin(), data.end(), gen);
-    auto res = ranges::minmax(data);
+    auto res = fermat::ranges::minmax(data);
     for (int i : data) {
         EXPECT_FALSE(i < res.min);
         EXPECT_FALSE(res.max < i);
     }
     // test with comparator (greater)
     auto comp = std::greater<int>();
-    res = ranges::minmax(data, comp);
+    res = fermat::ranges::minmax(data, comp);
     for (int i : data) {
         EXPECT_FALSE(comp(i, res.min));
         EXPECT_FALSE(comp(res.max, i));
@@ -39,7 +39,7 @@ TEST(MinmaxTest, Projection) {
     S arr[] = {
         {1,0},{2,1},{3,2},{4,3},{-4,4},{40,5},{-4,6},{40,7},{7,8},{8,9},{9,10}
     };
-    auto res = ranges::minmax(arr, std::less<int>(), &S::value);
+    auto res = fermat::ranges::minmax(arr, std::less<int>(), &S::value);
     EXPECT_EQ(res.min.value, -4);
     EXPECT_EQ(res.min.index, 4);
     EXPECT_EQ(res.max.value, 40);
@@ -47,7 +47,7 @@ TEST(MinmaxTest, Projection) {
 }
 
 TEST(MinmaxTest, InitializerList) {
-    auto res = ranges::minmax({4,3,1,2,6,5});
+    auto res = fermat::ranges::minmax({4,3,1,2,6,5});
     EXPECT_EQ(res.min, 1);
     EXPECT_EQ(res.max, 6);
 }

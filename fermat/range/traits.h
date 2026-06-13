@@ -28,7 +28,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -73,7 +73,7 @@ namespace ranges
     using range_common_reference_t = iter_common_reference_t<iterator_t<Rng>>;
 
     template<typename Rng>
-    using range_size_t = decltype(ranges::size(std::declval<Rng &>()));
+    using range_size_t = decltype(fermat::ranges::size(std::declval<Rng &>()));
 
     /// \cond
     template<typename Rng>
@@ -130,12 +130,12 @@ namespace ranges
     /// @}
     namespace cpp20
     {
-        using ranges::range_difference_t;
-        using ranges::range_reference_t;
-        using ranges::range_rvalue_reference_t;
-        using ranges::range_value_t;
+        using fermat::ranges::range_difference_t;
+        using fermat::ranges::range_reference_t;
+        using fermat::ranges::range_rvalue_reference_t;
+        using fermat::ranges::range_value_t;
     } // namespace cpp20
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

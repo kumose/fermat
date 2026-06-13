@@ -34,7 +34,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -67,7 +67,7 @@ namespace ranges
         }
         sentinel_t<Rng> end()
         {
-            return ranges::end(rng_);
+            return fermat::ranges::end(rng_);
         }
         Rng base() const
         {
@@ -148,18 +148,18 @@ namespace ranges
     {
         namespace views
         {
-            using ranges::views::drop_while;
+            using fermat::ranges::views::drop_while;
         }
         template(typename Rng, typename Pred)(
             requires viewable_range<Rng> AND input_range<Rng> AND
                 indirect_unary_predicate<Pred, iterator_t<Rng>>)
-            using drop_while_view = ranges::drop_while_view<Rng, Pred>;
+            using drop_while_view = fermat::ranges::drop_while_view<Rng, Pred>;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::drop_while_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::drop_while_view)
 
 #endif

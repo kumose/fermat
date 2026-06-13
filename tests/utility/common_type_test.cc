@@ -6,7 +6,7 @@
 #include <utility>
 #include <type_traits>
 
-#include <fermat/utility/common_type.h>   /// Fermat provides ranges::common_type, common_reference
+#include <fermat/utility/common_type.h>   /// Fermat provides fermat::ranges::common_type, common_reference
 #include <fermat/utility/common_tuple.h>  /// For common_pair
 
 struct B {};
@@ -57,13 +57,13 @@ struct ConvTo { operator T(); };
 
 /// Validate that common_type works with ConvTo<int> and int
 static_assert(std::is_same<
-    ranges::common_type_t<ConvTo<int>, int>,
+    fermat::ranges::common_type_t<ConvTo<int>, int>,
     int
 >::value, "common_type with ConvTo should yield int");
 
 /// Test suite for common_reference and common_type
 TEST(CommonTypeTest, CommonReferenceWithInheritance) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     static_assert(std::is_same<common_reference_t<B &, D &>, B &>::value, "");
     static_assert(std::is_same<common_reference_t<B &, D const &>, B const &>::value, "");
@@ -85,7 +85,7 @@ TEST(CommonTypeTest, CommonReferenceWithInheritance) {
 }
 
 TEST(CommonTypeTest, FundamentalTypes) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     static_assert(std::is_same<common_reference_t<int, short>, int>::value, "");
     static_assert(std::is_same<common_reference_t<int, short &>, int>::value, "");
@@ -94,7 +94,7 @@ TEST(CommonTypeTest, FundamentalTypes) {
 }
 
 TEST(CommonTypeTest, VolatileReferences) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     static_assert(std::is_same<common_reference_t<int &&, int volatile &>, int>::value, "");
     static_assert(std::is_same<common_reference_t<int volatile &, int &&>, int>::value, "");
@@ -103,7 +103,7 @@ TEST(CommonTypeTest, VolatileReferences) {
 }
 
 TEST(CommonTypeTest, Arrays) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     static_assert(std::is_same<common_reference_t<int (&)[10], int (&&)[10]>, int const(&)[10]>::value, "");
     static_assert(std::is_same<common_reference_t<int const (&)[10], int volatile (&)[10]>, int const volatile(&)[10]>::value, "");
@@ -111,7 +111,7 @@ TEST(CommonTypeTest, Arrays) {
 }
 
 TEST(CommonTypeTest, CommonPairWithCommonReference) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     /// Test common_reference between std::pair and common_pair
     static_assert(std::is_same<
@@ -136,7 +136,7 @@ TEST(CommonTypeTest, CommonPairWithCommonReference) {
 }
 
 TEST(CommonTypeTest, Noncopyable) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     using t1 = common_reference_t<noncopyable const &, noncopyable>;
     static_assert(std::is_same<t1, noncopyable>::value, "");
@@ -149,13 +149,13 @@ TEST(CommonTypeTest, Noncopyable) {
 }
 
 TEST(CommonTypeTest, CustomCommonType) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     static_assert(std::is_same<common_reference_t<X &, Y const &>, Z>::value, "");
 }
 
 TEST(CommonTypeTest, CommonTypeForCommonPair) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     using CP = common_pair<int, int>;
     static_assert(std::is_same<common_type_t<CP, CP>, CP>::value, "");

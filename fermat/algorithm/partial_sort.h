@@ -31,7 +31,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -44,7 +44,7 @@ namespace ranges
         constexpr I RANGES_FUNC(partial_sort)(
             I first, I middle, S last, C pred = C{}, P proj = P{}) //
         {
-            make_heap(first, middle, ranges::ref(pred), ranges::ref(proj));
+            make_heap(first, middle, fermat::ranges::ref(pred), fermat::ranges::ref(proj));
             auto const len = middle - first;
             I i = middle;
             for(; i != last; ++i)
@@ -53,10 +53,10 @@ namespace ranges
                 {
                     iter_swap(i, first);
                     detail::sift_down_n(
-                        first, len, first, ranges::ref(pred), ranges::ref(proj));
+                        first, len, first, fermat::ranges::ref(pred), fermat::ranges::ref(proj));
                 }
             }
-            sort_heap(first, middle, ranges::ref(pred), ranges::ref(proj));
+            sort_heap(first, middle, fermat::ranges::ref(pred), fermat::ranges::ref(proj));
             return i;
         }
 
@@ -77,10 +77,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::partial_sort;
+        using fermat::ranges::partial_sort;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

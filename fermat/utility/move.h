@@ -24,7 +24,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     namespace aux
     {
@@ -58,7 +58,7 @@ namespace ranges
             meta::if_c<std::is_reference<R>::value, meta::_t<std::remove_reference<R>> &&,
                        detail::decay_t<R>>;
     } // namespace aux
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

@@ -34,7 +34,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -66,13 +66,13 @@ namespace ranges
             }
             counted_iterator<iterator_t<Rng>> begin()
             {
-                return {ranges::begin(rng_), n_};
+                return {fermat::ranges::begin(rng_), n_};
             }
             template(typename BaseRng = Rng)(
                 requires range<BaseRng const>)
             counted_iterator<iterator_t<BaseRng const>> begin() const
             {
-                return {ranges::begin(rng_), n_};
+                return {fermat::ranges::begin(rng_), n_};
             }
             default_sentinel_t end() const
             {
@@ -103,27 +103,27 @@ namespace ranges
               , n_(n)
             {
                 RANGES_EXPECT(n >= 0);
-                RANGES_EXPECT(!(bool)sized_range<Rng> || n <= ranges::distance(rng_));
+                RANGES_EXPECT(!(bool)sized_range<Rng> || n <= fermat::ranges::distance(rng_));
             }
             iterator_t<Rng> begin()
             {
-                return ranges::begin(rng_);
+                return fermat::ranges::begin(rng_);
             }
             iterator_t<Rng> end()
             {
-                return ranges::begin(rng_) + n_;
+                return fermat::ranges::begin(rng_) + n_;
             }
             CPP_auto_member
             auto CPP_fun(begin)()(const //
                 requires range<Rng const>)
             {
-                return ranges::begin(rng_);
+                return fermat::ranges::begin(rng_);
             }
             CPP_auto_member
             auto CPP_fun(end)()(const //
                 requires range<Rng const>)
             {
-                return ranges::begin(rng_) + n_;
+                return fermat::ranges::begin(rng_) + n_;
             }
             detail::iter_size_t<iterator_t<Rng>> size() const
             {
@@ -194,10 +194,10 @@ namespace ranges
         RANGES_INLINE_VARIABLE(take_exactly_fn, take_exactly)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::detail::take_exactly_view_)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::detail::take_exactly_view_)
 
 #endif

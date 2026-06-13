@@ -37,7 +37,7 @@
 RANGES_DIAGNOSTIC_PUSH
 RANGES_DIAGNOSTIC_IGNORE_MULTIPLE_ASSIGNMENT_OPERATORS
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-iterator Iterator
     /// @{
@@ -171,7 +171,7 @@ namespace ranges
             static_assert((bool)common_reference_with<value_t_ &, reference_t_>,
                           "Your readable and writable cursor must have a value type and "
                           "a reference type that share a common reference type. See the "
-                          "ranges::common_reference type trait.");
+                          "fermat::ranges::common_reference type trait.");
             // BUGBUG make these private:
         public:
             constexpr reference_t_ read_() const noexcept(
@@ -325,7 +325,7 @@ namespace ranges
                 input_cursor<Cur>,                              //
                 meta::conditional_t<                            //
                     contiguous_cursor<Cur>,                     //
-                    ranges::contiguous_iterator_tag,            //
+                    fermat::ranges::contiguous_iterator_tag,            //
                     meta::conditional_t<                        //
                         random_access_cursor<Cur>,              //
                         std::random_access_iterator_tag,        //
@@ -898,7 +898,7 @@ namespace ranges
     /// \sa `get_cursor_fn`
     RANGES_INLINE_VARIABLE(get_cursor_fn, get_cursor)
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 /// \cond
 namespace concepts
@@ -906,39 +906,39 @@ namespace concepts
     // common_reference specializations for basic_proxy_reference
     template<typename Cur, typename U, template<typename> class TQual,
              template<typename> class UQual>
-    struct basic_common_reference<::ranges::detail::basic_proxy_reference_<Cur, true>, U,
+    struct basic_common_reference<::fermat::ranges::detail::basic_proxy_reference_<Cur, true>, U,
                                   TQual, UQual>
-      : basic_common_reference<::ranges::detail::cursor_reference_t<Cur>, U, TQual, UQual>
+      : basic_common_reference<::fermat::ranges::detail::cursor_reference_t<Cur>, U, TQual, UQual>
     {};
     template<typename T, typename Cur, template<typename> class TQual,
              template<typename> class UQual>
-    struct basic_common_reference<T, ::ranges::detail::basic_proxy_reference_<Cur, true>,
+    struct basic_common_reference<T, ::fermat::ranges::detail::basic_proxy_reference_<Cur, true>,
                                   TQual, UQual>
-      : basic_common_reference<T, ::ranges::detail::cursor_reference_t<Cur>, TQual, UQual>
+      : basic_common_reference<T, ::fermat::ranges::detail::cursor_reference_t<Cur>, TQual, UQual>
     {};
     template<typename Cur1, typename Cur2, template<typename> class TQual,
              template<typename> class UQual>
-    struct basic_common_reference<::ranges::detail::basic_proxy_reference_<Cur1, true>,
-                                  ::ranges::detail::basic_proxy_reference_<Cur2, true>,
+    struct basic_common_reference<::fermat::ranges::detail::basic_proxy_reference_<Cur1, true>,
+                                  ::fermat::ranges::detail::basic_proxy_reference_<Cur2, true>,
                                   TQual, UQual>
-      : basic_common_reference<::ranges::detail::cursor_reference_t<Cur1>,
-                               ::ranges::detail::cursor_reference_t<Cur2>, TQual, UQual>
+      : basic_common_reference<::fermat::ranges::detail::cursor_reference_t<Cur1>,
+                               ::fermat::ranges::detail::cursor_reference_t<Cur2>, TQual, UQual>
     {};
 
     // common_type specializations for basic_proxy_reference
     template<typename Cur, typename U>
-    struct common_type<::ranges::detail::basic_proxy_reference_<Cur, true>, U>
-      : common_type<::ranges::range_access::cursor_value_t<Cur>, U>
+    struct common_type<::fermat::ranges::detail::basic_proxy_reference_<Cur, true>, U>
+      : common_type<::fermat::ranges::range_access::cursor_value_t<Cur>, U>
     {};
     template<typename T, typename Cur>
-    struct common_type<T, ::ranges::detail::basic_proxy_reference_<Cur, true>>
-      : common_type<T, ::ranges::range_access::cursor_value_t<Cur>>
+    struct common_type<T, ::fermat::ranges::detail::basic_proxy_reference_<Cur, true>>
+      : common_type<T, ::fermat::ranges::range_access::cursor_value_t<Cur>>
     {};
     template<typename Cur1, typename Cur2>
-    struct common_type<::ranges::detail::basic_proxy_reference_<Cur1, true>,
-                       ::ranges::detail::basic_proxy_reference_<Cur2, true>>
-      : common_type<::ranges::range_access::cursor_value_t<Cur1>,
-                    ::ranges::range_access::cursor_value_t<Cur2>>
+    struct common_type<::fermat::ranges::detail::basic_proxy_reference_<Cur1, true>,
+                       ::fermat::ranges::detail::basic_proxy_reference_<Cur2, true>>
+      : common_type<::fermat::ranges::range_access::cursor_value_t<Cur1>,
+                    ::fermat::ranges::range_access::cursor_value_t<Cur2>>
     {};
 } // namespace concepts
 
@@ -953,23 +953,23 @@ RANGES_BEGIN_NAMESPACE_VERSION
     // common_reference specializations for basic_proxy_reference
     template<typename Cur, typename U, template<typename> class TQual,
              template<typename> class UQual>
-    struct basic_common_reference<::ranges::detail::basic_proxy_reference_<Cur, true>, U,
+    struct basic_common_reference<::fermat::ranges::detail::basic_proxy_reference_<Cur, true>, U,
                                   TQual, UQual>
-      : basic_common_reference<::ranges::detail::cursor_reference_t<Cur>, U, TQual, UQual>
+      : basic_common_reference<::fermat::ranges::detail::cursor_reference_t<Cur>, U, TQual, UQual>
     {};
     template<typename T, typename Cur, template<typename> class TQual,
              template<typename> class UQual>
-    struct basic_common_reference<T, ::ranges::detail::basic_proxy_reference_<Cur, true>,
+    struct basic_common_reference<T, ::fermat::ranges::detail::basic_proxy_reference_<Cur, true>,
                                   TQual, UQual>
-      : basic_common_reference<T, ::ranges::detail::cursor_reference_t<Cur>, TQual, UQual>
+      : basic_common_reference<T, ::fermat::ranges::detail::cursor_reference_t<Cur>, TQual, UQual>
     {};
     template<typename Cur1, typename Cur2, template<typename> class TQual,
              template<typename> class UQual>
-    struct basic_common_reference<::ranges::detail::basic_proxy_reference_<Cur1, true>,
-                                  ::ranges::detail::basic_proxy_reference_<Cur2, true>,
+    struct basic_common_reference<::fermat::ranges::detail::basic_proxy_reference_<Cur1, true>,
+                                  ::fermat::ranges::detail::basic_proxy_reference_<Cur2, true>,
                                   TQual, UQual>
-      : basic_common_reference<::ranges::detail::cursor_reference_t<Cur1>,
-                               ::ranges::detail::cursor_reference_t<Cur2>, TQual, UQual>
+      : basic_common_reference<::fermat::ranges::detail::cursor_reference_t<Cur1>,
+                               ::fermat::ranges::detail::cursor_reference_t<Cur2>, TQual, UQual>
     {};
 
     template<typename...>
@@ -977,25 +977,25 @@ RANGES_BEGIN_NAMESPACE_VERSION
 
     // common_type specializations for basic_proxy_reference
     template<typename Cur, typename U>
-    struct common_type<::ranges::detail::basic_proxy_reference_<Cur, true>, U>
-      : common_type<::ranges::range_access::cursor_value_t<Cur>, U>
+    struct common_type<::fermat::ranges::detail::basic_proxy_reference_<Cur, true>, U>
+      : common_type<::fermat::ranges::range_access::cursor_value_t<Cur>, U>
     {};
     template<typename T, typename Cur>
-    struct common_type<T, ::ranges::detail::basic_proxy_reference_<Cur, true>>
-      : common_type<T, ::ranges::range_access::cursor_value_t<Cur>>
+    struct common_type<T, ::fermat::ranges::detail::basic_proxy_reference_<Cur, true>>
+      : common_type<T, ::fermat::ranges::range_access::cursor_value_t<Cur>>
     {};
     template<typename Cur1, typename Cur2>
-    struct common_type<::ranges::detail::basic_proxy_reference_<Cur1, true>,
-                       ::ranges::detail::basic_proxy_reference_<Cur2, true>>
-      : common_type<::ranges::range_access::cursor_value_t<Cur1>,
-                    ::ranges::range_access::cursor_value_t<Cur2>>
+    struct common_type<::fermat::ranges::detail::basic_proxy_reference_<Cur1, true>,
+                       ::fermat::ranges::detail::basic_proxy_reference_<Cur2, true>>
+      : common_type<::fermat::ranges::range_access::cursor_value_t<Cur1>,
+                    ::fermat::ranges::range_access::cursor_value_t<Cur2>>
     {};
 RANGES_END_NAMESPACE_VERSION
 RANGES_END_NAMESPACE_STD
 RANGES_DIAGNOSTIC_POP
 #endif // RANGES_CXX_VER > RANGES_CXX_STD_17
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -1020,13 +1020,13 @@ namespace ranges
         using std_iterator_traits = std_iterator_traits_<Cur, (bool)readable_cursor<Cur>>;
     } // namespace detail
     /// \endcond
-} // namespace ranges
+} // namespace fermat::ranges
 
 namespace std
 {
     template<typename Cur>
-    struct iterator_traits<::ranges::basic_iterator<Cur>>
-      : ::ranges::detail::std_iterator_traits<Cur>
+    struct iterator_traits<::fermat::ranges::basic_iterator<Cur>>
+      : ::fermat::ranges::detail::std_iterator_traits<Cur>
     {};
 } // namespace std
 /// \endcond

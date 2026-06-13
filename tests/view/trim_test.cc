@@ -85,8 +85,8 @@ struct BidirectionalIterator {
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng &&rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -95,15 +95,15 @@ void check_equal(Rng &&rng, std::initializer_list<T> expected) {
     EXPECT_EQ(it, end);
 }
 
-/// Overload to compare two ranges (uses ranges::equal)
+/// Overload to compare two ranges (uses fermat::ranges::equal)
 template<typename Rng1, typename Rng2>
 void check_equal(Rng1 &&rng1, Rng2 &&rng2) {
-    EXPECT_TRUE(ranges::equal(rng1, rng2));
+    EXPECT_TRUE(fermat::ranges::equal(rng1, rng2));
 }
 
-/// Helper: distance for ranges (C++17 compatible) - we use ranges::distance directly.
-/// Helper: front for ranges - use ranges::front.
-/// Helper: empty check - use ranges::empty.
+/// Helper: distance for ranges (C++17 compatible) - we use fermat::ranges::distance directly.
+/// Helper: front for ranges - use fermat::ranges::front.
+/// Helper: empty check - use fermat::ranges::empty.
 
 /// ------------------------------------------------------------
 /// Test cases
@@ -111,7 +111,7 @@ void check_equal(Rng1 &&rng1, Rng2 &&rng2) {
 
 /// Basic test: trim from both ends using predicate
 TEST(TrimViewTest, BasicTrim) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {0, 1, 2, 3, 4, 3, 2, 1, 2, 3, 4, 3, 2, 1, 0};
     int ib[] = {4, 3, 2, 1, 2, 3, 4};
@@ -121,12 +121,12 @@ TEST(TrimViewTest, BasicTrim) {
     auto rng = views::trim(ia, p);
     // Use the overload that compares two ranges
     check_equal(rng, ib);
-    EXPECT_EQ(ranges::distance(rng), bs);
+    EXPECT_EQ(fermat::ranges::distance(rng), bs);
 }
 
 /// Test: trim on a range that already satisfies predicate (no trimming)
 TEST(TrimViewTest, TrimNoOp) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ib[] = {4, 3, 2, 1, 2, 3, 4};
     auto p = [](int i) { return i < 4; };
@@ -139,7 +139,7 @@ TEST(TrimViewTest, TrimNoOp) {
 
 /// Test: trim after a drop (partial range)
 TEST(TrimViewTest, TrimAfterDrop) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {0, 1, 2, 3, 4, 3, 2, 1, 2, 3, 4, 3, 2, 1, 0};
     int ib[] = {4, 3, 2, 1, 2, 3, 4};
@@ -151,7 +151,7 @@ TEST(TrimViewTest, TrimAfterDrop) {
 
 /// Test: trim after reverse and drop
 TEST(TrimViewTest, TrimAfterReverseDrop) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {0, 1, 2, 3, 4, 3, 2, 1, 2, 3, 4, 3, 2, 1, 0};
     int ib[] = {4, 3, 2, 1, 2, 3, 4};
@@ -163,7 +163,7 @@ TEST(TrimViewTest, TrimAfterReverseDrop) {
 
 /// Test: equivalence of trim with drop_while + reverse + drop_while
 TEST(TrimViewTest, TrimEquivalence) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {0, 1, 2, 3, 4, 3, 2, 1, 2, 3, 4, 3, 2, 1, 0};
     auto p = [](int i) { return i < 4; };
@@ -175,45 +175,45 @@ TEST(TrimViewTest, TrimEquivalence) {
 
 /// Test: trim on a subrange that becomes empty
 TEST(TrimViewTest, TrimEmptySubrange) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ib[] = {4, 3, 2, 1, 2, 3, 4};
     constexpr auto bs = sizeof(ib) / sizeof(ib[0]);
     auto p = [](int i) { return i < 4; };
 
     auto rng5 = make_subrange(ib + 1, ib + bs - 1) | views::trim(p);
-    EXPECT_TRUE(ranges::empty(rng5));
+    EXPECT_TRUE(fermat::ranges::empty(rng5));
 }
 
 /// Test: trim on a subrange that reduces to a single element
 TEST(TrimViewTest, TrimSingleElement) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ib[] = {4, 3, 2, 1, 2, 3, 4};
     constexpr auto bs = sizeof(ib) / sizeof(ib[0]);
     auto p = [](int i) { return i < 4; };
 
     auto rng6 = make_subrange(ib, ib + bs - 1) | views::trim(p);
-    EXPECT_EQ(ranges::distance(rng6), 1);
-    EXPECT_EQ(ranges::front(rng6), ib[0]);
+    EXPECT_EQ(fermat::ranges::distance(rng6), 1);
+    EXPECT_EQ(fermat::ranges::front(rng6), ib[0]);
 }
 
 /// Test: trim on a tail view (drop first element)
 TEST(TrimViewTest, TrimTail) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ib[] = {4, 3, 2, 1, 2, 3, 4};
     constexpr auto bs = sizeof(ib) / sizeof(ib[0]);
     auto p = [](int i) { return i < 4; };
 
     auto rng7 = ib | views::tail | views::trim(p);
-    EXPECT_EQ(ranges::distance(rng7), 1);
-    EXPECT_EQ(ranges::front(rng7), ib[bs - 1]);
+    EXPECT_EQ(fermat::ranges::distance(rng7), 1);
+    EXPECT_EQ(fermat::ranges::front(rng7), ib[bs - 1]);
 }
 
 /// Test: trim on a bidirectional iterator range (not contiguous)
 TEST(TrimViewTest, TrimBidirectionalRange) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {0, 1, 2, 3, 4, 3, 2, 1, 2, 3, 4, 3, 2, 1, 0};
     auto p = [](int i) { return i < 4; };

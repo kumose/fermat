@@ -29,7 +29,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename>
     struct optional;
@@ -258,7 +258,7 @@ namespace ranges
             private:
                 constexpr void swap_(std::true_type, optional_base & that) noexcept
                 {
-                    ranges::swap(static_cast<optional_storage<T> &>(*this),
+                    fermat::ranges::swap(static_cast<optional_storage<T> &>(*this),
                                  static_cast<optional_storage<T> &>(that));
                 }
                 constexpr void swap_(std::false_type, optional_base & that) noexcept(
@@ -268,7 +268,7 @@ namespace ranges
                     if(that.engaged_ == engaged_)
                     {
                         if(engaged_)
-                            ranges::swap(data_, that.data_);
+                            fermat::ranges::swap(data_, that.data_);
                     }
                     else
                     {
@@ -315,9 +315,9 @@ namespace ranges
                         requires swappable<T>)
                 {
                     if(ptr_ && that.ptr_)
-                        ranges::swap(*ptr_, *that.ptr_);
+                        fermat::ranges::swap(*ptr_, *that.ptr_);
                     else
-                        ranges::swap(ptr_, that.ptr_);
+                        fermat::ranges::swap(ptr_, that.ptr_);
                 }
 
             protected:
@@ -989,7 +989,7 @@ namespace ranges
         {};
     } // namespace detail
     /// \endcond
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

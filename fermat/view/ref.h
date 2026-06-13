@@ -26,7 +26,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename Rng>
     struct ref_view;
@@ -52,34 +52,34 @@ namespace ranges
         {
             return *rng_;
         }
-        constexpr iterator_t<Rng> begin() const noexcept(noexcept(ranges::begin(*rng_)))
+        constexpr iterator_t<Rng> begin() const noexcept(noexcept(fermat::ranges::begin(*rng_)))
         {
-            return ranges::begin(*rng_);
+            return fermat::ranges::begin(*rng_);
         }
-        constexpr sentinel_t<Rng> end() const noexcept(noexcept(ranges::end(*rng_)))
+        constexpr sentinel_t<Rng> end() const noexcept(noexcept(fermat::ranges::end(*rng_)))
         {
-            return ranges::end(*rng_);
+            return fermat::ranges::end(*rng_);
         }
         CPP_member
-        constexpr auto empty() const noexcept(noexcept(ranges::empty(*rng_)))
+        constexpr auto empty() const noexcept(noexcept(fermat::ranges::empty(*rng_)))
             -> CPP_ret(bool)(
                 requires detail::can_empty_<Rng>)
         {
-            return ranges::empty(*rng_);
+            return fermat::ranges::empty(*rng_);
         }
         CPP_auto_member
         constexpr auto CPP_fun(size)()(const //
-            noexcept(noexcept(ranges::size(*rng_))) //
+            noexcept(noexcept(fermat::ranges::size(*rng_))) //
             requires sized_range<Rng>)
         {
-            return ranges::size(*rng_);
+            return fermat::ranges::size(*rng_);
         }
         CPP_auto_member
         constexpr auto CPP_fun(data)()(const //
-            noexcept(noexcept(ranges::data(*rng_))) //
+            noexcept(noexcept(fermat::ranges::data(*rng_))) //
             requires contiguous_range<Rng>)
         {
-            return ranges::data(*rng_);
+            return fermat::ranges::data(*rng_);
         }
     };
 
@@ -113,12 +113,12 @@ namespace ranges
     {
         template(typename Rng)(
             requires std::is_object<Rng>::value) //
-            using ref_view = ranges::ref_view<Rng>;
+            using ref_view = fermat::ranges::ref_view<Rng>;
     }
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::ref_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::ref_view)
 
 #include <fermat/detail/epilogue.h>
 

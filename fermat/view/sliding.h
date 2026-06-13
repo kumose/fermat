@@ -36,7 +36,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace sliding_view_detail
@@ -66,14 +66,14 @@ namespace ranges
     {
         template<typename Rng>
         using uncounted_t =
-            decltype(ranges::uncounted(std::declval<iterator_t<Rng> &>()));
+            decltype(fermat::ranges::uncounted(std::declval<iterator_t<Rng> &>()));
 
         template<typename Rng, bool = (bool)random_access_range<Rng>>
         struct trailing
         {
             trailing() = default;
             constexpr trailing(Rng & rng)
-              : it_{uncounted(ranges::begin(rng))}
+              : it_{uncounted(fermat::ranges::begin(rng))}
             {}
             constexpr uncounted_t<Rng> get(iterator_t<Rng> const &,
                                            range_difference_t<Rng>) const
@@ -132,7 +132,7 @@ namespace ranges
             auto CPP_fun(size)()(const //
                 requires sized_range<Rng const>)
             {
-                auto const count = ranges::size(this->base());
+                auto const count = fermat::ranges::size(this->base());
                 auto const n = static_cast<range_size_t<Rng const>>(n_);
                 return count < n ? 0 : count - n + 1;
             }
@@ -140,7 +140,7 @@ namespace ranges
             auto CPP_fun(size)()(
                 requires sized_range<Rng>)
             {
-                auto const count = ranges::size(this->base());
+                auto const count = fermat::ranges::size(this->base());
                 auto const n = static_cast<range_size_t<Rng>>(n_);
                 return count < n ? 0 : count - n + 1;
             }
@@ -177,8 +177,8 @@ namespace ranges
             auto & first = this->cache();
             if(!first)
             {
-                first = ranges::next(
-                    ranges::begin(this->base()), this->n_ - 1, ranges::end(this->base()));
+                first = fermat::ranges::next(
+                    fermat::ranges::begin(this->base()), this->n_ - 1, fermat::ranges::end(this->base()));
             }
             return *first;
         }
@@ -253,8 +253,8 @@ namespace ranges
             auto & last = this->cache();
             if(!last)
             {
-                last = ranges::prev(
-                    ranges::end(this->base()), this->n_ - 1, ranges::begin(this->base()));
+                last = fermat::ranges::prev(
+                    fermat::ranges::end(this->base()), this->n_ - 1, fermat::ranges::begin(this->base()));
             }
             return *last;
         }
@@ -320,9 +320,9 @@ namespace ranges
             {}
             iterator_t<CRng> end(meta::const_if_c<Const, sliding_view> & v) const
             {
-                auto const sz = ranges::distance(v.base());
+                auto const sz = fermat::ranges::distance(v.base());
                 auto const offset = n_ - 1 < sz ? n_ - 1 : sz;
-                return ranges::begin(v.base()) + (sz - offset);
+                return fermat::ranges::begin(v.base()) + (sz - offset);
             }
             auto read(iterator_t<CRng> const & it) const
                 -> decltype(views::counted(uncounted(it), n_))
@@ -400,7 +400,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(sliding_fn, sliding)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

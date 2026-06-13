@@ -50,10 +50,10 @@ namespace
         std::make_heap(ia, ia+N);
         for (int i = N; i > 0; --i)
         {
-            CHECK(ranges::pop_heap(ia, ia+i) == ia+i);
+            CHECK(fermat::ranges::pop_heap(ia, ia+i) == ia+i);
             CHECK(std::is_heap(ia, ia+i-1));
         }
-        CHECK(ranges::pop_heap(ia, ia) == ia);
+        CHECK(fermat::ranges::pop_heap(ia, ia) == ia);
         delete[] ia;
     }
 
@@ -66,10 +66,10 @@ namespace
         std::make_heap(ia, ia+N);
         for (int i = N; i > 0; --i)
         {
-            CHECK(ranges::pop_heap(ia, Sentinel<int*>(ia+i)) == ia+i);
+            CHECK(fermat::ranges::pop_heap(ia, Sentinel<int*>(ia+i)) == ia+i);
             CHECK(std::is_heap(ia, ia+i-1));
         }
-        CHECK(ranges::pop_heap(ia, ia) == ia);
+        CHECK(fermat::ranges::pop_heap(ia, ia) == ia);
         delete[] ia;
     }
 
@@ -82,17 +82,17 @@ namespace
         std::make_heap(ia, ia+N);
         for (int i = N; i > 0; --i)
         {
-            CHECK(ranges::pop_heap(::as_lvalue(ranges::make_subrange(ia, ia+i))) == ia+i);
+            CHECK(fermat::ranges::pop_heap(::as_lvalue(fermat::ranges::make_subrange(ia, ia+i))) == ia+i);
             CHECK(std::is_heap(ia, ia+i-1));
         }
         std::shuffle(ia, ia+N, gen);
         std::make_heap(ia, ia+N);
         for (int i = N; i > 0; --i)
         {
-            CHECK(ranges::pop_heap(ranges::make_subrange(ia, ia+i)) == ia+i);
+            CHECK(fermat::ranges::pop_heap(fermat::ranges::make_subrange(ia, ia+i)) == ia+i);
             CHECK(std::is_heap(ia, ia+i-1));
         }
-        CHECK(ranges::pop_heap(ia, ia) == ia);
+        CHECK(fermat::ranges::pop_heap(ia, ia) == ia);
         delete[] ia;
     }
 
@@ -105,17 +105,17 @@ namespace
         std::make_heap(ia, ia+N);
         for (int i = N; i > 0; --i)
         {
-            CHECK(ranges::pop_heap(::as_lvalue(ranges::make_subrange(ia, Sentinel<int*>(ia+i)))) == ia+i);
+            CHECK(fermat::ranges::pop_heap(::as_lvalue(fermat::ranges::make_subrange(ia, Sentinel<int*>(ia+i)))) == ia+i);
             CHECK(std::is_heap(ia, ia+i-1));
         }
         std::shuffle(ia, ia+N, gen);
         std::make_heap(ia, ia+N);
         for (int i = N; i > 0; --i)
         {
-            CHECK(ranges::pop_heap(ranges::make_subrange(ia, Sentinel<int*>(ia+i))) == ia+i);
+            CHECK(fermat::ranges::pop_heap(fermat::ranges::make_subrange(ia, Sentinel<int*>(ia+i))) == ia+i);
             CHECK(std::is_heap(ia, ia+i-1));
         }
-        CHECK(ranges::pop_heap(ia, ia) == ia);
+        CHECK(fermat::ranges::pop_heap(ia, ia) == ia);
         delete[] ia;
     }
 
@@ -128,10 +128,10 @@ namespace
         std::make_heap(ia, ia+N, std::greater<int>());
         for (int i = N; i > 0; --i)
         {
-            CHECK(ranges::pop_heap(ia, ia+i, std::greater<int>()) == ia+i);
+            CHECK(fermat::ranges::pop_heap(ia, ia+i, std::greater<int>()) == ia+i);
             CHECK(std::is_heap(ia, ia+i-1, std::greater<int>()));
         }
-        CHECK(ranges::pop_heap(ia, ia, std::greater<int>()) == ia);
+        CHECK(fermat::ranges::pop_heap(ia, ia, std::greater<int>()) == ia);
         delete[] ia;
     }
 
@@ -144,10 +144,10 @@ namespace
         std::make_heap(ia, ia+N, std::greater<int>());
         for (int i = N; i > 0; --i)
         {
-            CHECK(ranges::pop_heap(ia, Sentinel<int*>(ia+i), std::greater<int>()) == ia+i);
+            CHECK(fermat::ranges::pop_heap(ia, Sentinel<int*>(ia+i), std::greater<int>()) == ia+i);
             CHECK(std::is_heap(ia, ia+i-1, std::greater<int>()));
         }
-        CHECK(ranges::pop_heap(ia, Sentinel<int*>(ia), std::greater<int>()) == ia);
+        CHECK(fermat::ranges::pop_heap(ia, Sentinel<int*>(ia), std::greater<int>()) == ia);
         delete[] ia;
     }
 
@@ -160,17 +160,17 @@ namespace
         std::make_heap(ia, ia+N, std::greater<int>());
         for (int i = N; i > 0; --i)
         {
-            CHECK(ranges::pop_heap(::as_lvalue(ranges::make_subrange(ia, ia+i)), std::greater<int>()) == ia+i);
+            CHECK(fermat::ranges::pop_heap(::as_lvalue(fermat::ranges::make_subrange(ia, ia+i)), std::greater<int>()) == ia+i);
             CHECK(std::is_heap(ia, ia+i-1, std::greater<int>()));
         }
         std::shuffle(ia, ia+N, gen);
         std::make_heap(ia, ia+N, std::greater<int>());
         for (int i = N; i > 0; --i)
         {
-            CHECK(ranges::pop_heap(ranges::make_subrange(ia, ia+i), std::greater<int>()) == ia+i);
+            CHECK(fermat::ranges::pop_heap(fermat::ranges::make_subrange(ia, ia+i), std::greater<int>()) == ia+i);
             CHECK(std::is_heap(ia, ia+i-1, std::greater<int>()));
         }
-        CHECK(ranges::pop_heap(ia, ia, std::greater<int>()) == ia);
+        CHECK(fermat::ranges::pop_heap(ia, ia, std::greater<int>()) == ia);
         delete[] ia;
     }
 
@@ -183,17 +183,17 @@ namespace
         std::make_heap(ia, ia+N, std::greater<int>());
         for (int i = N; i > 0; --i)
         {
-            CHECK(ranges::pop_heap(::as_lvalue(ranges::make_subrange(ia, Sentinel<int*>(ia+i))), std::greater<int>()) == ia+i);
+            CHECK(fermat::ranges::pop_heap(::as_lvalue(fermat::ranges::make_subrange(ia, Sentinel<int*>(ia+i))), std::greater<int>()) == ia+i);
             CHECK(std::is_heap(ia, ia+i-1, std::greater<int>()));
         }
         std::shuffle(ia, ia+N, gen);
         std::make_heap(ia, ia+N, std::greater<int>());
         for (int i = N; i > 0; --i)
         {
-            CHECK(ranges::pop_heap(ranges::make_subrange(ia, Sentinel<int*>(ia+i)), std::greater<int>()) == ia+i);
+            CHECK(fermat::ranges::pop_heap(fermat::ranges::make_subrange(ia, Sentinel<int*>(ia+i)), std::greater<int>()) == ia+i);
             CHECK(std::is_heap(ia, ia+i-1, std::greater<int>()));
         }
-        CHECK(ranges::pop_heap(ia, Sentinel<int*>(ia), std::greater<int>()) == ia);
+        CHECK(fermat::ranges::pop_heap(ia, Sentinel<int*>(ia), std::greater<int>()) == ia);
         delete[] ia;
     }
 
@@ -213,7 +213,7 @@ namespace
         std::make_heap(ia, ia+N, indirect_less());
         for (int i = N; i > 0; --i)
         {
-            CHECK(ranges::pop_heap(ia, ia+i, indirect_less()) == ia+i);
+            CHECK(fermat::ranges::pop_heap(ia, ia+i, indirect_less()) == ia+i);
             CHECK(std::is_heap(ia, ia+i-1, indirect_less()));
         }
         delete[] ia;
@@ -245,11 +245,11 @@ namespace
         std::transform(ia, ia+N, ib, construct<S>());
         for (int i = N; i > 0; --i)
         {
-            CHECK(ranges::pop_heap(ib, ib+i, std::less<int>(), &S::i) == ib+i);
+            CHECK(fermat::ranges::pop_heap(ib, ib+i, std::less<int>(), &S::i) == ib+i);
             std::transform(ib, ib+i, ia, std::mem_fn(&S::i));
             CHECK(std::is_heap(ia, ia+i-1));
         }
-        CHECK(ranges::pop_heap(ib, ib, std::less<int>(), &S::i) == ib);
+        CHECK(fermat::ranges::pop_heap(ib, ib, std::less<int>(), &S::i) == ib);
         delete[] ia;
         delete[] ib;
     }
@@ -257,7 +257,7 @@ namespace
 
 constexpr bool test_constexpr()
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     constexpr int N = 100;
     test::array<int, N> ia{{0}};
     for(int i = 0; i < N; ++i)

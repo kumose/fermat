@@ -44,7 +44,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -61,26 +61,26 @@ namespace ranges
                 if(!invoke(pred, invoke(proj, *z), invoke(proj, *y))) // if y <= z
                     return r;                                         // x <= y && y <= z
                                                                       // x <= y && y > z
-                ranges::iter_swap(y, z);                              // x <= z && y < z
+                fermat::ranges::iter_swap(y, z);                              // x <= z && y < z
                 r = 1;
                 if(invoke(pred, invoke(proj, *y), invoke(proj, *x))) // if x > y
                 {
-                    ranges::iter_swap(x, y); // x < y && y <= z
+                    fermat::ranges::iter_swap(x, y); // x < y && y <= z
                     r = 2;
                 }
                 return r; // x <= y && y < z
             }
             if(invoke(pred, invoke(proj, *z), invoke(proj, *y))) // x > y, if y > z
             {
-                ranges::iter_swap(x, z); // x < y && y < z
+                fermat::ranges::iter_swap(x, z); // x < y && y < z
                 r = 1;
                 return r;
             }
-            ranges::iter_swap(x, y);                             // x > y && y <= z
+            fermat::ranges::iter_swap(x, y);                             // x > y && y <= z
             r = 1;                                               // x < y && x <= z
             if(invoke(pred, invoke(proj, *z), invoke(proj, *y))) // if y > z
             {
-                ranges::iter_swap(y, z); // x <= y && y < z
+                fermat::ranges::iter_swap(y, z); // x <= y && y < z
                 r = 2;
             }
             return r;
@@ -91,11 +91,11 @@ namespace ranges
         void selection_sort(I first, I last, C & pred, P & proj)
         {
             RANGES_EXPECT(first != last);
-            for(I lm1 = ranges::prev(last); first != lm1; ++first)
+            for(I lm1 = fermat::ranges::prev(last); first != lm1; ++first)
             {
-                I i = ranges::min_element(first, last, std::ref(pred), std::ref(proj));
+                I i = fermat::ranges::min_element(first, last, std::ref(pred), std::ref(proj));
                 if(i != first)
-                    ranges::iter_swap(first, i);
+                    fermat::ranges::iter_swap(first, i);
             }
         }
     } // namespace detail
@@ -111,7 +111,7 @@ namespace ranges
         constexpr I RANGES_FUNC(nth_element)(
             I first, I nth, S end_, C pred = C{}, P proj = P{}) //
         {
-            I last = ranges::next(nth, end_), end_orig = last;
+            I last = fermat::ranges::next(nth, end_), end_orig = last;
             // C is known to be a reference type
             using difference_type = iter_difference_t<I>;
             difference_type const limit = 7;
@@ -127,7 +127,7 @@ namespace ranges
                     return end_orig;
                 case 2:
                     if(invoke(pred, invoke(proj, *--last), invoke(proj, *first)))
-                        ranges::iter_swap(first, last);
+                        fermat::ranges::iter_swap(first, last);
                     return end_orig;
                 case 3:
                 {
@@ -181,7 +181,7 @@ namespace ranges
                                     if(invoke(
                                            pred, invoke(proj, *first), invoke(proj, *i)))
                                     {
-                                        ranges::iter_swap(i, j);
+                                        fermat::ranges::iter_swap(i, j);
                                         ++n_swaps;
                                         ++i;
                                         break;
@@ -203,7 +203,7 @@ namespace ranges
                                     ;
                                 if(i >= j)
                                     break;
-                                ranges::iter_swap(i, j);
+                                fermat::ranges::iter_swap(i, j);
                                 ++n_swaps;
                                 ++i;
                             }
@@ -218,7 +218,7 @@ namespace ranges
                         }
                         if(invoke(pred, invoke(proj, *j), invoke(proj, *m)))
                         {
-                            ranges::iter_swap(i, j);
+                            fermat::ranges::iter_swap(i, j);
                             ++n_swaps;
                             break; // found guard for downward moving j, now use unguarded
                                    // partition
@@ -241,7 +241,7 @@ namespace ranges
                             ;
                         if(i >= j)
                             break;
-                        ranges::iter_swap(i, j);
+                        fermat::ranges::iter_swap(i, j);
                         ++n_swaps;
                         // It is known that m != j
                         // If m just moved, follow it
@@ -253,13 +253,13 @@ namespace ranges
                 // [first, i) < *m and *m <= [i, last)
                 if(i != m && invoke(pred, invoke(proj, *m), invoke(proj, *i)))
                 {
-                    ranges::iter_swap(i, m);
+                    fermat::ranges::iter_swap(i, m);
                     ++n_swaps;
                 }
                 // [first, i) < *i and *i <= [i+1, last)
                 if(nth == i)
                     return end_orig;
-                const auto optional_return = [&]() -> ranges::optional<I> {
+                const auto optional_return = [&]() -> fermat::ranges::optional<I> {
                     if(n_swaps == 0)
                     {
                         // We were given a perfectly partitioned sequence.  Coincidence?
@@ -271,7 +271,7 @@ namespace ranges
                             {
                                 if(invoke(pred, invoke(proj, *j), invoke(proj, *m)))
                                     // not yet sorted, so sort
-                                    return ranges::nullopt;
+                                    return fermat::ranges::nullopt;
                                 m = j;
                             }
                             // [first, i) sorted
@@ -285,14 +285,14 @@ namespace ranges
                             {
                                 if(invoke(pred, invoke(proj, *j), invoke(proj, *m)))
                                     // not yet sorted, so sort
-                                    return ranges::nullopt;
+                                    return fermat::ranges::nullopt;
                                 m = j;
                             }
                             // [i, last) sorted
                             return end_orig;
                         }
                     }
-                    return ranges::nullopt;
+                    return fermat::ranges::nullopt;
                 }();
                 if(optional_return)
                 {
@@ -327,10 +327,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::nth_element;
+        using fermat::ranges::nth_element;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

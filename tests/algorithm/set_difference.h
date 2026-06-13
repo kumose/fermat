@@ -42,27 +42,27 @@ TEST(SetDifferenceTest, IteratorPairRawPointer) {
     const int sr = sizeof(ir) / sizeof(ir[0]);
 
     // Default comparison (operator<)
-    auto res = ranges::set_difference(ia, ia + sa, ib, ib + sb, ic);
+    auto res = fermat::ranges::set_difference(ia, ia + sa, ib, ib + sb, ic);
     EXPECT_EQ(res.in1 - ia, sa);
     EXPECT_EQ(res.out - ic, sr);
-    EXPECT_TRUE(ranges::lexicographical_compare(ic, res.out, ir, ir + sr) == false);
+    EXPECT_TRUE(fermat::ranges::lexicographical_compare(ic, res.out, ir, ir + sr) == false);
 
     // Explicit comparator
-    ranges::fill(ic, 0);
-    res = ranges::set_difference(ia, ia + sa, ib, ib + sb, ic, std::less<int>());
+    fermat::ranges::fill(ic, 0);
+    res = fermat::ranges::set_difference(ia, ia + sa, ib, ib + sb, ic, std::less<int>());
     EXPECT_EQ(res.in1 - ia, sa);
     EXPECT_EQ(res.out - ic, sr);
-    EXPECT_TRUE(ranges::lexicographical_compare(ic, res.out, ir, ir + sr) == false);
+    EXPECT_TRUE(fermat::ranges::lexicographical_compare(ic, res.out, ir, ir + sr) == false);
 
     // Second case: difference of ib from ia
     int irr[] = {6};
     const int srr = sizeof(irr) / sizeof(irr[0]);
 
-    ranges::fill(ic, 0);
-    res = ranges::set_difference(ib, ib + sb, ia, ia + sa, ic);
+    fermat::ranges::fill(ic, 0);
+    res = fermat::ranges::set_difference(ib, ib + sb, ia, ia + sa, ic);
     EXPECT_EQ(res.in1 - ib, sb);
     EXPECT_EQ(res.out - ic, srr);
-    EXPECT_TRUE(ranges::lexicographical_compare(ic, res.out, irr, irr + srr) == false);
+    EXPECT_TRUE(fermat::ranges::lexicographical_compare(ic, res.out, irr, irr + srr) == false);
 }
 
 // -----------------------------------------------------------------------------
@@ -76,18 +76,18 @@ TEST(SetDifferenceTest, VectorIterators) {
 
     std::vector<int> ir = {1, 2, 3, 3, 3, 4, 4};
 
-    auto res = ranges::set_difference(ia.begin(), ia.end(), ib.begin(), ib.end(), ic.begin());
+    auto res = fermat::ranges::set_difference(ia.begin(), ia.end(), ib.begin(), ib.end(), ic.begin());
     EXPECT_EQ(res.in1 - ia.begin(), ia.size());
     EXPECT_EQ(res.out - ic.begin(), ir.size());
-    EXPECT_TRUE(ranges::lexicographical_compare(ic.begin(), res.out, ir.begin(), ir.end()) == false);
+    EXPECT_TRUE(fermat::ranges::lexicographical_compare(ic.begin(), res.out, ir.begin(), ir.end()) == false);
 
     // Reverse order
     std::vector<int> irr = {6};
-    ranges::fill(ic, 0);
-    res = ranges::set_difference(ib.begin(), ib.end(), ia.begin(), ia.end(), ic.begin());
+    fermat::ranges::fill(ic, 0);
+    res = fermat::ranges::set_difference(ib.begin(), ib.end(), ia.begin(), ia.end(), ic.begin());
     EXPECT_EQ(res.in1 - ib.begin(), ib.size());
     EXPECT_EQ(res.out - ic.begin(), irr.size());
-    EXPECT_TRUE(ranges::lexicographical_compare(ic.begin(), res.out, irr.begin(), irr.end()) == false);
+    EXPECT_TRUE(fermat::ranges::lexicographical_compare(ic.begin(), res.out, irr.begin(), irr.end()) == false);
 }
 
 // -----------------------------------------------------------------------------
@@ -103,10 +103,10 @@ TEST(SetDifferenceTest, InitializerList) {
     const int sr = sizeof(ir) / sizeof(ir[0]);
 
     // Using initializer_list for second range
-    auto res = ranges::set_difference(ia, std::initializer_list<int>{2, 4, 4, 6}, ic);
+    auto res = fermat::ranges::set_difference(ia, std::initializer_list<int>{2, 4, 4, 6}, ic);
     EXPECT_EQ(res.in1 - ia, 10);
     EXPECT_EQ(res.out - ic, sr);
-    EXPECT_TRUE(ranges::lexicographical_compare(ic, res.out, ir, ir + sr) == false);
+    EXPECT_TRUE(fermat::ranges::lexicographical_compare(ic, res.out, ir, ir + sr) == false);
 }
 
 // -----------------------------------------------------------------------------
@@ -130,19 +130,19 @@ TEST(SetDifferenceTest, Projection) {
     int ir[] = {1, 2, 3, 3, 3, 4, 4};
     const int sr = sizeof(ir) / sizeof(ir[0]);
 
-    auto res = ranges::set_difference(ia, ib, ic, std::less<int>(), &S::i, &T::j);
+    auto res = fermat::ranges::set_difference(ia, ib, ic, std::less<int>(), &S::i, &T::j);
     EXPECT_EQ(res.in1 - ia, sa);
     EXPECT_EQ(res.out - ic, sr);
-    EXPECT_TRUE(ranges::lexicographical_compare(ic, res.out, ir, ir + sr, std::less<int>(), &U::k) == false);
+    EXPECT_TRUE(fermat::ranges::lexicographical_compare(ic, res.out, ir, ir + sr, std::less<int>(), &U::k) == false);
 
     // Reverse order
     int irr[] = {6};
     const int srr = sizeof(irr) / sizeof(irr[0]);
-    ranges::fill(ic, U{0});
-    auto res2 = ranges::set_difference(ib, ia, ic, std::less<int>(), &T::j, &S::i);
+    fermat::ranges::fill(ic, U{0});
+    auto res2 = fermat::ranges::set_difference(ib, ia, ic, std::less<int>(), &T::j, &S::i);
     EXPECT_EQ(res2.in1 - ib, sb);
     EXPECT_EQ(res2.out - ic, srr);
-    EXPECT_TRUE(ranges::lexicographical_compare(ic, res2.out, irr, irr + srr, std::less<int>(), &U::k) == false);
+    EXPECT_TRUE(fermat::ranges::lexicographical_compare(ic, res2.out, irr, irr + srr, std::less<int>(), &U::k) == false);
 }
 
 // -----------------------------------------------------------------------------
@@ -157,19 +157,19 @@ TEST(SetDifferenceTest, RvalueRanges) {
     const int sr = sizeof(ir) / sizeof(ir[0]);
 
     // Move the first range (ia)
-    auto res = ranges::set_difference(std::move(ia), ranges::views::all(ib), ic, std::less<int>(), &S::i, &T::j);
+    auto res = fermat::ranges::set_difference(std::move(ia), fermat::ranges::views::all(ib), ic, std::less<int>(), &S::i, &T::j);
 #ifndef RANGES_WORKAROUND_MSVC_573728
     /// In range-v3, moving an array yields a dangling iterator; we check the output count only
 #endif
     EXPECT_EQ(res.out - ic, sr);
-    EXPECT_TRUE(ranges::lexicographical_compare(ic, res.out, ir, ir + sr, std::less<int>(), &U::k) == false);
+    EXPECT_TRUE(fermat::ranges::lexicographical_compare(ic, res.out, ir, ir + sr, std::less<int>(), &U::k) == false);
 
     // Move the second range (vector)
     std::vector<S> vec{S{1}, S{2}, S{2}, S{3}, S{3}, S{3}, S{4}, S{4}, S{4}, S{4}};
-    ranges::fill(ic, U{0});
-    auto res3 = ranges::set_difference(std::move(vec), ranges::views::all(ib), ic, std::less<int>(), &S::i, &T::j);
+    fermat::ranges::fill(ic, U{0});
+    auto res3 = fermat::ranges::set_difference(std::move(vec), fermat::ranges::views::all(ib), ic, std::less<int>(), &S::i, &T::j);
     EXPECT_EQ(res3.out - ic, sr);
-    EXPECT_TRUE(ranges::lexicographical_compare(ic, res3.out, ir, ir + sr, std::less<int>(), &U::k) == false);
+    EXPECT_TRUE(fermat::ranges::lexicographical_compare(ic, res3.out, ir, ir + sr, std::less<int>(), &U::k) == false);
 }
 
 // -----------------------------------------------------------------------------
@@ -181,15 +181,15 @@ TEST(SetDifferenceTest, CountedRange) {
     int ib[] = {2, 4, 4, 6};
     int ic[20];
 
-    auto rng1 = ranges::views::counted(ia, 10);
-    auto rng2 = ranges::views::counted(ib, 4);
+    auto rng1 = fermat::ranges::views::counted(ia, 10);
+    auto rng2 = fermat::ranges::views::counted(ib, 4);
 
     int ir[] = {1, 2, 3, 3, 3, 4, 4};
     const int sr = sizeof(ir) / sizeof(ir[0]);
 
-    auto res = ranges::set_difference(rng1, rng2, ic);
+    auto res = fermat::ranges::set_difference(rng1, rng2, ic);
     EXPECT_EQ(res.out - ic, sr);
-    EXPECT_TRUE(ranges::lexicographical_compare(ic, res.out, ir, ir + sr) == false);
+    EXPECT_TRUE(fermat::ranges::lexicographical_compare(ic, res.out, ir, ir + sr) == false);
 }
 
 // -----------------------------------------------------------------------------
@@ -201,7 +201,7 @@ TEST(SetDifferenceTest, CountedRange) {
 
 TEST(SetDifferenceTest, Constexpr) {
     constexpr auto test = []() constexpr -> bool {
-        using namespace ranges;
+        using namespace fermat::ranges;
         int ia[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
         int ib[] = {2, 4, 4, 6};
         int ic[20] = {0};
@@ -209,8 +209,8 @@ TEST(SetDifferenceTest, Constexpr) {
         const int sr = sizeof(ir) / sizeof(ir[0]);
 
         // Use set_difference with ranges (not pointer pairs) for constexpr
-        auto res = set_difference(ranges::begin(ia), ranges::end(ia),
-                                  ranges::begin(ib), ranges::end(ib),
+        auto res = set_difference(fermat::ranges::begin(ia), fermat::ranges::end(ia),
+                                  fermat::ranges::begin(ib), fermat::ranges::end(ib),
                                   ic, std::less<int>{});
         if (res.out - ic != sr) return false;
         // Compare element-wise
@@ -221,8 +221,8 @@ TEST(SetDifferenceTest, Constexpr) {
         fill(ic, 0);
         int irr[] = {6};
         const int srr = sizeof(irr) / sizeof(irr[0]);
-        auto res2 = set_difference(ranges::begin(ib), ranges::end(ib),
-                                   ranges::begin(ia), ranges::end(ia),
+        auto res2 = set_difference(fermat::ranges::begin(ib), fermat::ranges::end(ib),
+                                   fermat::ranges::begin(ia), fermat::ranges::end(ia),
                                    ic, std::less<int>{});
         if (res2.out - ic != srr) return false;
         for (int i = 0; i < srr; ++i) {

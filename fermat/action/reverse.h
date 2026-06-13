@@ -25,7 +25,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-actions
     /// @{
@@ -38,7 +38,7 @@ namespace ranges
                 requires bidirectional_range<Rng> AND permutable<iterator_t<Rng>>)
             Rng operator()(Rng && rng) const
             {
-                ranges::reverse(rng);
+                fermat::ranges::reverse(rng);
                 return static_cast<Rng &&>(rng);
             }
         };
@@ -48,7 +48,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(action_closure<reverse_fn>, reverse)
     } // namespace actions
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

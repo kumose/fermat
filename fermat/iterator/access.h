@@ -33,7 +33,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges {
+namespace fermat::ranges {
     /// \addtogroup group-iterator
     /// @{
 
@@ -214,13 +214,13 @@ namespace ranges {
             }
 
             // *Otherwise*, for readable types with swappable reference
-            // types, call ranges::swap(*a, *b)
+            // types, call fermat::ranges::swap(*a, *b)
             template<typename I0, typename I1>
             constexpr detail::enable_if_t<
                 !is_adl_indirectly_swappable_v<I0, I1> &&
                 is_swappable_with<iter_reference_t<I0>, iter_reference_t<I1> >::value>
-            operator()(I0 &&a, I1 &&b) const noexcept(noexcept(ranges::swap(*a, *b))) {
-                ranges::swap(*a, *b);
+            operator()(I0 &&a, I1 &&b) const noexcept(noexcept(fermat::ranges::swap(*a, *b))) {
+                fermat::ranges::swap(*a, *b);
             }
 
             // *Otherwise*, for readable types that are mutually
@@ -283,13 +283,13 @@ namespace ranges {
     };
 
     namespace cpp20 {
-        using ranges::iter_move;
-        using ranges::iter_reference_t;
-        using ranges::iter_swap;
-        using ranges::iter_value_t;
+        using fermat::ranges::iter_move;
+        using fermat::ranges::iter_reference_t;
+        using fermat::ranges::iter_swap;
+        using fermat::ranges::iter_value_t;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

@@ -27,7 +27,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-iterator
     /// @{
@@ -194,9 +194,9 @@ namespace ranges
     {
         template<typename T, typename Char = char,
                  typename Traits = std::char_traits<Char>>
-        using ostream_iterator = ranges::ostream_iterator<T, Char, Traits>;
+        using ostream_iterator = fermat::ranges::ostream_iterator<T, Char, Traits>;
 
-        using ranges::ostreambuf_iterator;
+        using fermat::ranges::ostreambuf_iterator;
     } // namespace cpp20
 
     /// \brief Writes to an ostream object using the unformatted
@@ -245,7 +245,7 @@ namespace ranges
         ostream_type * out_ = nullptr;
     };
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 /// \cond
 RANGES_DIAGNOSTIC_PUSH
@@ -254,13 +254,13 @@ RANGES_DIAGNOSTIC_IGNORE_MISMATCHED_TAGS
 namespace std
 {
     template<typename T, typename Char, typename Traits>
-    struct iterator_traits<::ranges::ostream_iterator<T, Char, Traits>>
-      : ::ranges::detail::std_output_iterator_traits<>
+    struct iterator_traits<::fermat::ranges::ostream_iterator<T, Char, Traits>>
+      : ::fermat::ranges::detail::std_output_iterator_traits<>
     {};
 
     template<typename Char, typename Traits>
-    struct iterator_traits<::ranges::ostreambuf_iterator<Char, Traits>>
-      : ::ranges::detail::std_output_iterator_traits<>
+    struct iterator_traits<::fermat::ranges::ostreambuf_iterator<Char, Traits>>
+      : ::fermat::ranges::detail::std_output_iterator_traits<>
     {};
 } // namespace std
 

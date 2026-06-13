@@ -8,17 +8,17 @@
 #include <vector>
 #include <memory>
 
-#include <fermat/range/access.h>            /// ranges::begin, ranges::end
-#include <fermat/range/primitives.h>        /// ranges::size, ranges::data, ranges::front, ranges::back
-#include <fermat/view/facade.h>             /// ranges::view_facade, ranges::range_access
+#include <fermat/range/access.h>            /// fermat::ranges::begin, fermat::ranges::end
+#include <fermat/range/primitives.h>        /// fermat::ranges::size, fermat::ranges::data, fermat::ranges::front, fermat::ranges::back
+#include <fermat/view/facade.h>             /// fermat::ranges::view_facade, fermat::ranges::range_access
 
 /// ------------------------------------------------------------
 /// Custom view using view_facade (as in original)
 /// ------------------------------------------------------------
 struct MyRange
-        : ranges::view_facade<MyRange> {
+        : fermat::ranges::view_facade<MyRange> {
 private:
-    friend ranges::range_access;
+    friend fermat::ranges::range_access;
     std::vector<int> ints_;
 
     struct cursor {
@@ -54,8 +54,8 @@ public:
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng &&rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -69,7 +69,7 @@ void check_equal(Rng &&rng, std::initializer_list<T> expected) {
 // ------------------------------------------------------------------
 
 TEST(ViewFacadeTest, MutableRange) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto r = MyRange{};
 
@@ -89,7 +89,7 @@ TEST(ViewFacadeTest, MutableRange) {
 }
 
 TEST(ViewFacadeTest, ConstRange) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     const auto r = MyRange{};
 

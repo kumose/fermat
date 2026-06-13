@@ -26,8 +26,8 @@
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -42,7 +42,7 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected) {
 
 /// Test tokenize view on a string with regex
 TEST(TokenizeViewTest, BasicTokenization) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     // Assume regex support is available (C++11 and later)
     std::string txt{"abc\ndef\tghi"};
@@ -61,6 +61,6 @@ TEST(TokenizeViewTest, BasicTokenization) {
     // Only runtime element comparison is performed.
 
     // Runtime checks: ensure begin/end are not equal
-    EXPECT_NE(ranges::begin(rng), ranges::end(rng));
-    EXPECT_NE(ranges::begin(crng), ranges::end(crng));
+    EXPECT_NE(fermat::ranges::begin(rng), fermat::ranges::end(rng));
+    EXPECT_NE(fermat::ranges::begin(crng), fermat::ranges::end(crng));
 }

@@ -51,32 +51,32 @@ namespace boost
         template<typename... Ts>                                                        \
         struct range_mutable_iterator<                                                  \
             view_name<Ts...>,                                                           \
-            ::meta::if_c<(bool)::ranges::common_range<view_name<Ts...>>>>               \
+            ::meta::if_c<(bool)::fermat::ranges::common_range<view_name<Ts...>>>>               \
         {                                                                               \
-            using type = ::ranges::iterator_t<view_name<Ts...>>;                        \
+            using type = ::fermat::ranges::iterator_t<view_name<Ts...>>;                        \
         };                                                                              \
         template<typename... Ts>                                                        \
         struct range_const_iterator<                                                    \
             view_name<Ts...>,                                                           \
-            ::meta::if_c<(bool)::ranges::common_range<view_name<Ts...> const>>>         \
+            ::meta::if_c<(bool)::fermat::ranges::common_range<view_name<Ts...> const>>>         \
         {                                                                               \
-            using type = ::ranges::iterator_t<view_name<Ts...> const>;                  \
+            using type = ::fermat::ranges::iterator_t<view_name<Ts...> const>;                  \
         };                                                                              \
         template<typename... Ts>                                                        \
         struct range_value<view_name<Ts...>>                                            \
         {                                                                               \
-            using type = ::ranges::range_value_t<view_name<Ts...>>;                     \
+            using type = ::fermat::ranges::range_value_t<view_name<Ts...>>;                     \
         };                                                                              \
         template<typename... Ts>                                                        \
         struct range_size<view_name<Ts...>>                                             \
-          : ::meta::if_c<(bool)::ranges::common_range<view_name<Ts...>>,                \
-                         ::meta::defer<::ranges::range_size_t, view_name<Ts...>>,       \
+          : ::meta::if_c<(bool)::fermat::ranges::common_range<view_name<Ts...>>,                \
+                         ::meta::defer<::fermat::ranges::range_size_t, view_name<Ts...>>,       \
                          ::meta::nil_>                                                  \
         {};                                                                             \
         template<typename... Ts>                                                        \
         struct range_size<view_name<Ts...> const>                                       \
-          : ::meta::if_c<(bool)::ranges::common_range<view_name<Ts...> const>,          \
-                         ::meta::defer<::ranges::range_size_t, view_name<Ts...> const>, \
+          : ::meta::if_c<(bool)::fermat::ranges::common_range<view_name<Ts...> const>,          \
+                         ::meta::defer<::fermat::ranges::range_size_t, view_name<Ts...> const>, \
                          ::meta::nil_>                                                  \
         {};                                                                             \
     }

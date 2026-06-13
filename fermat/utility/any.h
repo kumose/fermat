@@ -31,7 +31,7 @@
 RANGES_DIAGNOSTIC_PUSH
 RANGES_DIAGNOSTIC_IGNORE_DEPRECATED_DECLARATIONS
 
-namespace ranges {
+namespace fermat::ranges {
     struct bad_any_cast : std::bad_cast {
         virtual const char *what() const noexcept override {
             return "bad any_cast";
@@ -39,7 +39,7 @@ namespace ranges {
     };
 
     struct RANGES_DEPRECATED(
-        "ranges::any will be going away in the not-too-distant future. "
+        "fermat::ranges::any will be going away in the not-too-distant future. "
         "We suggest you use std::any or boost::any instead (or simply steal "
         "this header and maintain it yourself).") any;
 
@@ -227,7 +227,7 @@ namespace ranges {
                 return &q->get();
         return nullptr;
     }
-} // namespace ranges
+} // namespace fermat::ranges
 
 RANGES_DIAGNOSTIC_POP
 

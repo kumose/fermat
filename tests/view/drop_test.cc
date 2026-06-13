@@ -12,7 +12,7 @@
 
 #include <fermat/range/access.h>
 #include <fermat/range/primitives.h>
-#include <fermat/range/conversion.h>           /// ranges::to
+#include <fermat/range/conversion.h>           /// fermat::ranges::to
 #include <fermat/view/drop.h>                  /// views::drop
 #include <fermat/view/iota.h>                  /// views::iota
 #include <fermat/view/reverse.h>               /// views::reverse
@@ -20,10 +20,10 @@
 #include <fermat/view/transform.h>             /// views::transform
 #include <fermat/view/chunk.h>                 /// views::chunk
 #include <fermat/view/join.h>                  /// views::join
-#include <fermat/view/subrange.h>              /// ranges::subrange
-#include <fermat/iterator/operations.h>        /// ranges::next, ranges::distance
-#include <fermat/algorithm/copy.h>             /// ranges::copy (if needed)
-#include <fermat/utility/copy.h>               /// ranges::copy (if needed)
+#include <fermat/view/subrange.h>              /// fermat::ranges::subrange
+#include <fermat/iterator/operations.h>        /// fermat::ranges::next, fermat::ranges::distance
+#include <fermat/algorithm/copy.h>             /// fermat::ranges::copy (if needed)
+#include <fermat/utility/copy.h>               /// fermat::ranges::copy (if needed)
 
 /// ------------------------------------------------------------
 /// Helper: has_type (static assert on expression type)
@@ -37,7 +37,7 @@ void has_type(Actual &&) {
 /// debug_input_view (minimal input view for testing)
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T> > {
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T> > {
     struct data {
         const T *first_;
         std::ptrdiff_t size_;
@@ -56,7 +56,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T> > {
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges {
+namespace fermat::ranges {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T> > = true;
 }
@@ -66,8 +66,8 @@ namespace ranges {
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng &&rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -106,7 +106,7 @@ void check_equal(const std::vector<std::vector<T> > &actual,
 // ------------------------------------------------------------------
 
 TEST(DropTest, RawArrayDrop6Reverse) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
@@ -121,7 +121,7 @@ TEST(DropTest, RawArrayDrop6Reverse) {
 }
 
 TEST(DropTest, VectorDrop6Reverse) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     auto rng2 = v | views::drop(6) | views::reverse;
@@ -130,7 +130,7 @@ TEST(DropTest, VectorDrop6Reverse) {
 }
 
 TEST(DropTest, ListDrop6) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::list<int> l{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     auto rng3 = l | views::drop(6);
@@ -139,16 +139,16 @@ TEST(DropTest, ListDrop6) {
 }
 
 TEST(DropTest, IotaInfiniteDrop10) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto rng4 = views::iota(10) | views::drop(10);
-    auto b = ranges::begin(rng4);
+    auto b = fermat::ranges::begin(rng4);
     EXPECT_EQ(*b, 20);
     EXPECT_EQ(*(b+1), 21);
 }
 
 TEST(DropTest, IotaDrop10Take10Reverse) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto rng5 = views::iota(10) | views::drop(10) | views::take(10) | views::reverse;
     check_equal(rng5, {29, 28, 27, 26, 25, 24, 23, 22, 21, 20});
@@ -156,7 +156,7 @@ TEST(DropTest, IotaDrop10Take10Reverse) {
 }
 
 TEST(DropTest, SubrangeDrop) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int some_ints[] = {0, 1, 2};
     auto rng = subrange{some_ints + 0, some_ints + 1};
@@ -166,7 +166,7 @@ TEST(DropTest, SubrangeDrop) {
 }
 
 TEST(DropTest, Regression413) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto skips = [](std::vector<int> xs) {
         return views::ints(0, (int) xs.size())
@@ -194,7 +194,7 @@ TEST(DropTest, Regression413) {
 }
 
 TEST(DropTest, DebugInputView) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     static int const some_ints[] = {0, 1, 2, 3};
     auto rng = debug_input_view<int const>{some_ints, 4} | views::drop(2);
@@ -204,7 +204,7 @@ TEST(DropTest, DebugInputView) {
 }
 
 TEST(DropTest, Regression728) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto rng1 = views::iota(1) | views::chunk(6) | views::take(3);
     int i = 2;
@@ -216,7 +216,7 @@ TEST(DropTest, Regression728) {
 }
 
 TEST(DropTest, Regression813) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     static int const some_ints[] = {0, 1, 2, 3};
     auto rng = some_ints | views::drop(10);

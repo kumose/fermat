@@ -80,11 +80,11 @@ public:
 // Helper to convert a Raw pointer iterator pair to a range
 template <typename Iter, typename Sent>
 auto MakeTestRange(Iter begin, Sent end) {
-    return ranges::subrange<Iter, Sent>(begin, end);
+    return fermat::ranges::subrange<Iter, Sent>(begin, end);
 }
 
 // Placeholder for is_dangling (C++17 compatible template)
-namespace ranges {
+namespace fermat::ranges {
     template<typename T>
     bool is_dangling(T&&) { return false; }
 }
@@ -104,20 +104,20 @@ namespace {
     // Helper to test sort on a given permutation (using raw pointers)
     template<class RI>
     void test_sort_helper(RI f, RI l) {
-        using value_type = ranges::iter_value_t<RI>;
+        using value_type = fermat::ranges::iter_value_t<RI>;
         if (f != l) {
             auto len = l - f;
             value_type* save = new value_type[len];
             do {
                 std::copy(f, l, save);
                 // Default sort
-                auto res = ranges::sort(save, save + len);
+                auto res = fermat::ranges::sort(save, save + len);
                 EXPECT_EQ(res, save + len);
                 EXPECT_TRUE(std::is_sorted(save, save + len));
                 // Copy back original permutation
                 std::copy(f, l, save);
                 // Sort with greater comparator
-                res = ranges::sort(save, save + len, std::greater<int>{});
+                res = fermat::ranges::sort(save, save + len, std::greater<int>{});
                 EXPECT_EQ(res, save + len);
                 EXPECT_TRUE(std::is_sorted(save, save + len, std::greater<int>{}));
                 std::copy(f, l, save);
@@ -162,27 +162,27 @@ namespace {
         }
 
         // sawtooth pattern
-        EXPECT_EQ(ranges::sort(array, array + N), array + N);
+        EXPECT_EQ(fermat::ranges::sort(array, array + N), array + N);
         EXPECT_TRUE(std::is_sorted(array, array + N));
         // random pattern
         std::shuffle(array, array + N, gen);
-        EXPECT_EQ(ranges::sort(array, array + N), array + N);
+        EXPECT_EQ(fermat::ranges::sort(array, array + N), array + N);
         EXPECT_TRUE(std::is_sorted(array, array + N));
         // already sorted
-        EXPECT_EQ(ranges::sort(array, array + N), array + N);
+        EXPECT_EQ(fermat::ranges::sort(array, array + N), array + N);
         EXPECT_TRUE(std::is_sorted(array, array + N));
         // reverse sorted
         std::reverse(array, array + N);
-        EXPECT_EQ(ranges::sort(array, array + N), array + N);
+        EXPECT_EQ(fermat::ranges::sort(array, array + N), array + N);
         EXPECT_TRUE(std::is_sorted(array, array + N));
         // swap ranges 2 pattern
         std::swap_ranges(array, array + N / 2, array + N / 2);
-        EXPECT_EQ(ranges::sort(array, array + N), array + N);
+        EXPECT_EQ(fermat::ranges::sort(array, array + N), array + N);
         EXPECT_TRUE(std::is_sorted(array, array + N));
         // reverse swap ranges 2 pattern
         std::reverse(array, array + N);
         std::swap_ranges(array, array + N / 2, array + N / 2);
-        EXPECT_EQ(ranges::sort(array, array + N), array + N);
+        EXPECT_EQ(fermat::ranges::sort(array, array + N), array + N);
         EXPECT_TRUE(std::is_sorted(array, array + N));
         delete[] array;
     }
@@ -221,9 +221,9 @@ namespace {
         friend bool operator<=(Int const& a, Int const& b) { return a.i_ <= b.i_; }
         friend bool operator>=(Int const& a, Int const& b) { return a.i_ >= b.i_; }
     };
-    static_assert(ranges::default_constructible<Int>);
-    static_assert(ranges::movable<Int>);
-    static_assert(ranges::totally_ordered<Int>);
+    static_assert(fermat::ranges::default_constructible<Int>);
+    static_assert(fermat::ranges::movable<Int>);
+    static_assert(fermat::ranges::totally_ordered<Int>);
 } // unnamed namespace
 
 // ------------------------------------------------------------
@@ -232,7 +232,7 @@ namespace {
 
 TEST(SortTest, NullRange) {
     int d = 0;
-    ranges::sort(&d, &d); // should compile and do nothing
+    fermat::ranges::sort(&d, &d); // should compile and do nothing
 }
 
 TEST(SortTest, SmallPermutations) {
@@ -263,7 +263,7 @@ TEST(SortTest, MoveOnlyTypes) {
     std::vector<std::unique_ptr<int>> v(1000);
     for (size_t i = 0; i < v.size(); ++i)
         v[i].reset(new int(static_cast<int>(v.size() - i - 1)));
-    ranges::sort(v, indirect_less());
+    fermat::ranges::sort(v, indirect_less());
     for (size_t i = 0; i < v.size(); ++i)
         EXPECT_EQ(*v[i], i);
 }
@@ -274,7 +274,7 @@ TEST(SortTest, Projections) {
         v[i].i = static_cast<int>(v.size() - i - 1);
         v[i].j = static_cast<int>(i);
     }
-    ranges::sort(v, std::less<int>{}, &S::i);
+    fermat::ranges::sort(v, std::less<int>{}, &S::i);
     for (size_t i = 0; i < v.size(); ++i) {
         EXPECT_EQ(v[i].i, i);
         EXPECT_EQ(static_cast<size_t>(v[i].j), v.size() - i - 1);
@@ -287,7 +287,7 @@ TEST(SortTest, RvalueRange) {
         v[i].i = static_cast<int>(v.size() - i - 1);
         v[i].j = static_cast<int>(i);
     }
-    EXPECT_EQ(ranges::sort(ranges::views::all(v), std::less<int>{}, &S::i), v.end());
+    EXPECT_EQ(fermat::ranges::sort(fermat::ranges::views::all(v), std::less<int>{}, &S::i), v.end());
     for (size_t i = 0; i < v.size(); ++i) {
         EXPECT_EQ(v[i].i, i);
         EXPECT_EQ(static_cast<size_t>(v[i].j), v.size() - i - 1);
@@ -300,7 +300,7 @@ TEST(SortTest, RvalueMovedRange) {
         v[i].i = static_cast<int>(v.size() - i - 1);
         v[i].j = static_cast<int>(i);
     }
-    auto res = ranges::sort(std::move(v), std::less<int>{}, &S::i);
+    auto res = fermat::ranges::sort(std::move(v), std::less<int>{}, &S::i);
     for (size_t i = 0; i < v.size(); ++i) {
         EXPECT_EQ(v[i].i, i);
         EXPECT_EQ(static_cast<size_t>(v[i].j), v.size() - i - 1);
@@ -309,7 +309,7 @@ TEST(SortTest, RvalueMovedRange) {
 }
 
 TEST(SortTest, ZipViewSort) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     // Build a vector v0: 5 repeated 5 times, then 4 repeated 4 times, ... 1 repeated 1 time
     auto v0 = views::for_each(views::ints(1, 6) | views::reverse, [](int i) {
                  return yield_from(views::repeat_n(i, i));

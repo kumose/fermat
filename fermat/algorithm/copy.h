@@ -30,7 +30,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -77,12 +77,12 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::copy_result;
-        using ranges::RANGES_HIDDEN_DETAIL(_copy::) copy;
+        using fermat::ranges::copy_result;
+        using fermat::ranges::RANGES_HIDDEN_DETAIL(_copy::) copy;
     } // namespace cpp20
 
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

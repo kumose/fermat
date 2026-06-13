@@ -42,14 +42,14 @@ namespace
 
     constexpr bool test_constexpr()
     {
-        using namespace ranges;
+        using namespace fermat::ranges;
         bool r = true;
         constexpr int N = 100;
         test::array<int, N> ia{{0}};
         for(int i = 0; i < N; ++i)
             ia[i] = N - 1 - i;
         make_heap(begin(ia), end(ia));
-        STATIC_CHECK_RETURN(sort_heap(begin(ia), end(ia), ranges::less{}) == end(ia));
+        STATIC_CHECK_RETURN(sort_heap(begin(ia), end(ia), fermat::ranges::less{}) == end(ia));
         STATIC_CHECK_RETURN(is_sorted(ia));
         return r;
     }
@@ -63,7 +63,7 @@ namespace
             ia[i] = i;
         std::shuffle(ia, ia+N, gen);
         std::make_heap(ia, ia+N);
-        CHECK(ranges::sort_heap(ia, ia+N) == ia+N);
+        CHECK(fermat::ranges::sort_heap(ia, ia+N) == ia+N);
         CHECK(std::is_sorted(ia, ia+N));
         delete[] ia;
     }
@@ -75,7 +75,7 @@ namespace
             ia[i] = i;
         std::shuffle(ia, ia+N, gen);
         std::make_heap(ia, ia+N);
-        CHECK(ranges::sort_heap(ia, Sentinel<int*>(ia+N)) == ia+N);
+        CHECK(fermat::ranges::sort_heap(ia, Sentinel<int*>(ia+N)) == ia+N);
         CHECK(std::is_sorted(ia, ia+N));
         delete[] ia;
     }
@@ -87,7 +87,7 @@ namespace
             ia[i] = i;
         std::shuffle(ia, ia+N, gen);
         std::make_heap(ia, ia+N);
-        CHECK(ranges::sort_heap(::as_lvalue(ranges::make_subrange(ia, ia+N))) == ia+N);
+        CHECK(fermat::ranges::sort_heap(::as_lvalue(fermat::ranges::make_subrange(ia, ia+N))) == ia+N);
         CHECK(std::is_sorted(ia, ia+N));
         delete[] ia;
     }
@@ -99,7 +99,7 @@ namespace
             ia[i] = i;
         std::shuffle(ia, ia+N, gen);
         std::make_heap(ia, ia+N);
-        CHECK(ranges::sort_heap(::as_lvalue(ranges::make_subrange(ia, Sentinel<int*>(ia+N)))) == ia+N);
+        CHECK(fermat::ranges::sort_heap(::as_lvalue(fermat::ranges::make_subrange(ia, Sentinel<int*>(ia+N)))) == ia+N);
         CHECK(std::is_sorted(ia, ia+N));
         delete[] ia;
     }
@@ -111,7 +111,7 @@ namespace
             ia[i] = i;
         std::shuffle(ia, ia+N, gen);
         std::make_heap(ia, ia+N, std::greater<int>());
-        CHECK(ranges::sort_heap(ia, ia+N, std::greater<int>()) == ia+N);
+        CHECK(fermat::ranges::sort_heap(ia, ia+N, std::greater<int>()) == ia+N);
         CHECK(std::is_sorted(ia, ia+N, std::greater<int>()));
         delete[] ia;
     }
@@ -123,7 +123,7 @@ namespace
             ia[i] = i;
         std::shuffle(ia, ia+N, gen);
         std::make_heap(ia, ia+N, std::greater<int>());
-        CHECK(ranges::sort_heap(ia, Sentinel<int*>(ia+N), std::greater<int>()) == ia+N);
+        CHECK(fermat::ranges::sort_heap(ia, Sentinel<int*>(ia+N), std::greater<int>()) == ia+N);
         CHECK(std::is_sorted(ia, ia+N, std::greater<int>()));
         delete[] ia;
     }
@@ -135,7 +135,7 @@ namespace
             ia[i] = i;
         std::shuffle(ia, ia+N, gen);
         std::make_heap(ia, ia+N, std::greater<int>());
-        CHECK(ranges::sort_heap(::as_lvalue(ranges::make_subrange(ia, ia+N)), std::greater<int>()) == ia+N);
+        CHECK(fermat::ranges::sort_heap(::as_lvalue(fermat::ranges::make_subrange(ia, ia+N)), std::greater<int>()) == ia+N);
         CHECK(std::is_sorted(ia, ia+N, std::greater<int>()));
         delete[] ia;
     }
@@ -147,7 +147,7 @@ namespace
             ia[i] = i;
         std::shuffle(ia, ia+N, gen);
         std::make_heap(ia, ia+N, std::greater<int>());
-        CHECK(ranges::sort_heap(ranges::make_subrange(ia, Sentinel<int*>(ia+N)), std::greater<int>()) == ia+N);
+        CHECK(fermat::ranges::sort_heap(fermat::ranges::make_subrange(ia, Sentinel<int*>(ia+N)), std::greater<int>()) == ia+N);
         CHECK(std::is_sorted(ia, ia+N, std::greater<int>()));
 
         delete[] ia;
@@ -167,7 +167,7 @@ namespace
             ia[i].reset(new int(i));
         std::shuffle(ia, ia+N, gen);
         std::make_heap(ia, ia+N, indirect_less());
-        CHECK(ranges::sort_heap(ia, ia+N, indirect_less()) == ia+N);
+        CHECK(fermat::ranges::sort_heap(ia, ia+N, indirect_less()) == ia+N);
         CHECK(std::is_sorted(ia, ia+N, indirect_less()));
         delete[] ia;
     }
@@ -186,7 +186,7 @@ namespace
         std::shuffle(ib, ib+N, gen);
         std::make_heap(ib, ib+N);
         std::transform(ib, ib+N, ia, [](int i){return S{i};});
-        CHECK(ranges::sort_heap(ia, ia+N, std::less<int>(), &S::i) == ia+N);
+        CHECK(fermat::ranges::sort_heap(ia, ia+N, std::less<int>(), &S::i) == ia+N);
         std::transform(ia, ia+N, ib, std::mem_fn(&S::i));
         CHECK(std::is_sorted(ib, ib+N));
         delete[] ia;

@@ -26,7 +26,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-actions
     /// @{
@@ -47,7 +47,7 @@ namespace ranges
                         erasable_range<Rng &, iterator_t<Rng>, iterator_t<Rng>>)
             Rng operator()(Rng && rng, Fun fun) const
             {
-                ranges::actions::erase(
+                fermat::ranges::actions::erase(
                     rng, begin(rng), find_if_not(begin(rng), end(rng), std::move(fun)));
                 return static_cast<Rng &&>(rng);
             }
@@ -57,7 +57,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(drop_while_fn, drop_while)
     } // namespace actions
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

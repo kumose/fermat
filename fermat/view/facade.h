@@ -29,7 +29,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -60,7 +60,7 @@ namespace ranges
     /// \tparam Derived A type that derives from `view_facade` and implements
     /// begin and end cursors. This type is permitted to be incomplete.
     /// \tparam Cardinality The cardinality of this view: `finite`, `infinite`,
-    /// or `unknown`. See `ranges::cardinality`.
+    /// or `unknown`. See `fermat::ranges::cardinality`.
     template<typename Derived, cardinality Cardinality>
     struct view_facade : view_interface<Derived, Cardinality>
     {
@@ -90,7 +90,7 @@ namespace ranges
         /// `std::as_const(d).begin_cursor()` if that expression is well-formed;
         /// otherwise, let `b` be `d.begin_cursor()`. Let `B` be the type of
         /// `b`.
-        /// \return `ranges::basic_iterator<B>(b)`
+        /// \return `fermat::ranges::basic_iterator<B>(b)`
         template(typename D = Derived)(
             requires same_as<D, Derived>)
         constexpr auto begin() -> detail::facade_iterator_t<D>
@@ -110,7 +110,7 @@ namespace ranges
         /// `std::as_const(d).end_cursor()` if that expression is well-formed;
         /// otherwise, let `e` be `d.end_cursor()`. Let `E` be the type of
         /// `e`.
-        /// \return `ranges::basic_iterator<E>(e)` if `E` is the same
+        /// \return `fermat::ranges::basic_iterator<E>(e)` if `E` is the same
         /// as `B` computed above for `begin()`; otherwise, return `e`.
         template(typename D = Derived)(
             requires same_as<D, Derived>)
@@ -130,7 +130,7 @@ namespace ranges
     };
 
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

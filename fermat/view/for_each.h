@@ -33,7 +33,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -131,7 +131,7 @@ namespace ranges
         return views::for_each(static_cast<Rng &&>(rng), std::move(fun));
     }
     /// \endcond
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

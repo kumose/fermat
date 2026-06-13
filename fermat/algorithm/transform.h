@@ -33,7 +33,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -148,7 +148,7 @@ namespace ranges
                     O,
                     indirect_result_t<F &, projected<I0, P0>, projected<I1, P1>>>)
         RANGES_DEPRECATED(
-            "Use the variant of ranges::transform that takes an upper bound "
+            "Use the variant of fermat::ranges::transform that takes an upper bound "
             "for both input ranges")
         binary_transform_result<I0, I1, O> //
         RANGES_FUNC(transform)(I0 begin0,
@@ -184,7 +184,7 @@ namespace ranges
                                       projected<iterator_t<Rng0>, P0>,
                                       projected<uncvref_t<I1Ref>, P1>>>)
         RANGES_DEPRECATED(
-            "Use the variant of ranges::transform that takes an upper bound "
+            "Use the variant of fermat::ranges::transform that takes an upper bound "
             "for both input ranges")
         binary_transform_result<borrowed_iterator_t<Rng0>, uncvref_t<I1Ref>, O> //
         RANGES_FUNC(transform)(Rng0 && rng0,
@@ -208,12 +208,12 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::binary_transform_result;
-        using ranges::transform;
-        using ranges::unary_transform_result;
+        using fermat::ranges::binary_transform_result;
+        using fermat::ranges::transform;
+        using fermat::ranges::unary_transform_result;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

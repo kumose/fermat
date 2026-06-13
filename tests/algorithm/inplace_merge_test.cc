@@ -16,7 +16,7 @@ namespace {
         std::sort(v.begin(), v.begin() + M);
         std::sort(v.begin() + M, v.end());
 
-        auto res = ranges::inplace_merge(v.begin(), v.begin() + M, v.end());
+        auto res = fermat::ranges::inplace_merge(v.begin(), v.begin() + M, v.end());
         EXPECT_EQ(res, v.end());
         if (N > 0) {
             EXPECT_EQ(v[0], 0);
@@ -34,7 +34,7 @@ namespace {
         std::sort(v.begin(), v.begin() + M);
         std::sort(v.begin() + M, v.end());
 
-        auto res = ranges::inplace_merge(ranges::make_subrange(v.begin(), v.end()), v.begin() + M);
+        auto res = fermat::ranges::inplace_merge(fermat::ranges::make_subrange(v.begin(), v.end()), v.begin() + M);
         EXPECT_EQ(res, v.end());
         if (N > 0) {
             EXPECT_EQ(v[0], 0);

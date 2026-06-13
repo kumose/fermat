@@ -17,7 +17,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-functional
     /// @{
@@ -105,7 +105,7 @@ namespace ranges
     struct coerce<T &&> : coerce<T>
     {};
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

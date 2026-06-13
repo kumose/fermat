@@ -33,7 +33,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges {
+namespace fermat::ranges {
     /// \addtogroup group-algorithms
     /// @{
     RANGES_FUNC_BEGIN(adjacent_remove_if)
@@ -47,7 +47,7 @@ namespace ranges {
             requires permutable<I> AND sentinel_for<S, I> AND
             indirect_relation<Pred, projected<I, Proj>>)
         constexpr I RANGES_FUNC(adjacent_remove_if)(I first, S last, Pred pred = {}, Proj proj = {}) {
-            first = adjacent_find(std::move(first), last, ranges::ref(pred), ranges::ref(proj));
+            first = adjacent_find(std::move(first), last, fermat::ranges::ref(pred), fermat::ranges::ref(proj));
             if (first == last)
                 return first;
 
@@ -78,11 +78,11 @@ namespace ranges {
     RANGES_FUNC_END(adjacent_remove_if)
 
     namespace cpp20 {
-        using ranges::adjacent_remove_if;
+        using fermat::ranges::adjacent_remove_if;
     }
 
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

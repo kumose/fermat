@@ -32,14 +32,14 @@
 RANGES_DIAGNOSTIC_PUSH
 RANGES_DIAGNOSTIC_IGNORE_DEPRECATED_DECLARATIONS
 
-namespace ranges {
+namespace fermat::ranges {
     /// \addtogroup group-utility Utility
     /// @{
     ///
 
     /// \cond
     template<typename T>
-    struct RANGES_DEPRECATED("The ranges::mutable_ class template is deprecated") mutable_ {
+    struct RANGES_DEPRECATED("The fermat::ranges::mutable_ class template is deprecated") mutable_ {
         mutable T value;
 
         CPP_member
@@ -72,7 +72,7 @@ namespace ranges {
     };
 
     template<typename T, T v>
-    struct RANGES_DEPRECATED("The ranges::constant class template is deprecated") constant {
+    struct RANGES_DEPRECATED("The fermat::ranges::constant class template is deprecated") constant {
         constant() = default;
 
         constexpr explicit constant(T const &) {
@@ -353,7 +353,7 @@ namespace ranges {
     } // namespace _get_
     /// \endcond
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 RANGES_DIAGNOSTIC_POP
 

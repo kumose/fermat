@@ -40,7 +40,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -71,7 +71,7 @@ namespace ranges
                 {
                     len -= d;
                     return aux::partition_point_n(
-                        std::move(first), len, ranges::ref(pred), ranges::ref(proj));
+                        std::move(first), len, fermat::ranges::ref(pred), fermat::ranges::ref(proj));
                 }
                 first = std::move(mid);
                 len *= 2;
@@ -98,10 +98,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::partition_point;
+        using fermat::ranges::partition_point;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

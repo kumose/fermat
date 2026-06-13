@@ -32,7 +32,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-actions
     /// @{
@@ -67,7 +67,7 @@ namespace ranges
     template<typename ActionFn, typename Rng>
     CPP_concept invocable_action_closure =
         invocable<ActionFn, Rng> &&
-        CPP_concept_ref(ranges::invocable_action_closure_, ActionFn, Rng);
+        CPP_concept_ref(fermat::ranges::invocable_action_closure_, ActionFn, Rng);
 
     namespace actions
     {
@@ -240,7 +240,7 @@ namespace ranges
     inline constexpr bool is_pipeable_v<actions::action_closure<ActionFn>> =
         true;
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

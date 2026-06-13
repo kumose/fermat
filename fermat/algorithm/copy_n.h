@@ -31,7 +31,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -58,11 +58,11 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::copy_n;
-        using ranges::copy_n_result;
+        using fermat::ranges::copy_n;
+        using fermat::ranges::copy_n_result;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

@@ -22,7 +22,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -77,7 +77,7 @@ namespace ranges
             {
                 return cursor{};
             }
-            unreachable_sentinel_t end_cursor() const
+           [[nodiscard]] unreachable_sentinel_t end_cursor() const
             {
                 return unreachable;
             }
@@ -116,7 +116,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(view_closure<enumerate_fn>, enumerate)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

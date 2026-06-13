@@ -27,7 +27,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -39,11 +39,11 @@ namespace ranges
     /// ```cpp
     /// auto const haystack = std::vector{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     /// auto const needle = std::vector{3, 4, 5};
-    /// assert(ranges::contains(haystack, needle));
-    /// assert(ranges::contains(haystack, needle, ranges::less));
+    /// assert(fermat::ranges::contains(haystack, needle));
+    /// assert(fermat::ranges::contains(haystack, needle, fermat::ranges::less));
     ///
     /// auto const not_a_needle = std::vector{4, 5, 3};
-    /// assert(not ranges::contains(haystack, not_a_needle));
+    /// assert(not fermat::ranges::contains(haystack, not_a_needle));
     /// ```
     ///
     /// The interface supports both iterator-sentinel pairs and range objects.
@@ -67,7 +67,7 @@ namespace ranges
                                              Proj2 proj2 = {})
         {
             return first2 == last2 ||
-                   ranges::search(first1, last1, first2, last2, pred, proj1, proj2).empty() == false;
+                   fermat::ranges::search(first1, last1, first2, last2, pred, proj1, proj2).empty() == false;
         }
 
         /// \overload
@@ -81,14 +81,14 @@ namespace ranges
                                              Proj1 proj1 = {},
                                              Proj2 proj2 = {})
         {
-            return (*this)(ranges::begin(rng1), ranges::end(rng1),
-                           ranges::begin(rng2), ranges::end(rng2),
+            return (*this)(fermat::ranges::begin(rng1), fermat::ranges::end(rng1),
+                           fermat::ranges::begin(rng2), fermat::ranges::end(rng2),
                            std::move(pred), std::move(proj1), std::move(proj2));
         }
 
     RANGES_FUNC_END(contains_subrange)
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

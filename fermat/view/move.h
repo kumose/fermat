@@ -30,7 +30,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -51,11 +51,11 @@ namespace ranges
             using value_type = range_value_t<Rng>;
             range_rvalue_reference_t<CRng> read(iterator_t<CRng> const & it) const
             {
-                return ranges::iter_move(it);
+                return fermat::ranges::iter_move(it);
             }
             range_rvalue_reference_t<CRng> iter_move(iterator_t<CRng> const & it) const
             {
-                return ranges::iter_move(it);
+                return fermat::ranges::iter_move(it);
             }
         };
         adaptor<simple_view<Rng>()> begin_adaptor()
@@ -90,13 +90,13 @@ namespace ranges
         auto CPP_fun(size)()(const //
             requires sized_range<Rng const>)
         {
-            return ranges::size(this->base());
+            return fermat::ranges::size(this->base());
         }
         CPP_auto_member
         auto CPP_fun(size)()(
             requires sized_range<Rng>)
         {
-            return ranges::size(this->base());
+            return fermat::ranges::size(this->base());
         }
     };
 
@@ -127,10 +127,10 @@ namespace ranges
         RANGES_INLINE_VARIABLE(view_closure<move_fn>, move)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::move_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::move_view)
 
 #endif

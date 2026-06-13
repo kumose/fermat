@@ -11,7 +11,7 @@ void test_replace_copy_if_iter() {
     int ib[sa] = {0};
 
     auto pred = [](int i) { return i == 2; };
-    auto res = ranges::replace_copy_if(ia, ia + sa, ib, pred, 5);
+    auto res = fermat::ranges::replace_copy_if(ia, ia + sa, ib, pred, 5);
     EXPECT_EQ(res.in, ia + sa);
     EXPECT_EQ(res.out, ib + sa);
     EXPECT_EQ(ib[0], 0);
@@ -28,8 +28,8 @@ void test_replace_copy_if_range() {
     int ib[sa] = {0};
 
     auto pred = [](int i) { return i == 2; };
-    auto rng = ranges::make_subrange(ia, ia + sa);
-    auto res = ranges::replace_copy_if(rng, ib, pred, 5);
+    auto rng = fermat::ranges::make_subrange(ia, ia + sa);
+    auto res = fermat::ranges::replace_copy_if(rng, ib, pred, 5);
     EXPECT_EQ(res.in, ia + sa);
     EXPECT_EQ(res.out, ib + sa);
     EXPECT_EQ(ib[0], 0);
@@ -54,7 +54,7 @@ TEST(ReplaceCopyIfTest, Projection) {
     P out[sa] = {};
 
     auto pred = [](int i) { return i == 2; };
-    auto res = ranges::replace_copy_if(in, out, pred, P{5, "5"}, &P::first);
+    auto res = fermat::ranges::replace_copy_if(in, out, pred, P{5, "5"}, &P::first);
     EXPECT_EQ(res.in, std::end(in));
     EXPECT_EQ(res.out, std::end(out));
     // Use parentheses to avoid macro comma issues
@@ -72,7 +72,7 @@ TEST(ReplaceCopyIfTest, Constexpr) {
         constexpr std::size_t sa = sizeof(ia) / sizeof(ia[0]);
         int ib[sa] = {0};
         auto pred = [](int i) { return i == 2; };
-        auto r = ranges::replace_copy_if(ia, ib, pred, 42);
+        auto r = fermat::ranges::replace_copy_if(ia, ib, pred, 42);
         bool ok = (r.in == ia + sa) &&
                   (r.out == ib + sa) &&
                   (ib[0] == 0) && (ib[1] == 1) &&

@@ -31,7 +31,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -43,7 +43,7 @@ namespace ranges
             indirect_unary_predicate<C, projected<I, P>>)
         constexpr I RANGES_FUNC(remove_if)(I first, S last, C pred, P proj = P{})
         {
-            first = find_if(std::move(first), last, ranges::ref(pred), ranges::ref(proj));
+            first = find_if(std::move(first), last, fermat::ranges::ref(pred), fermat::ranges::ref(proj));
             if(first != last)
             {
                 for(I i = next(first); i != last; ++i)
@@ -71,10 +71,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::remove_if;
+        using fermat::ranges::remove_if;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

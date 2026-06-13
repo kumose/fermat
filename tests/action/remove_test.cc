@@ -3,7 +3,7 @@
 #include <string>
 #include <fermat/action/remove.h>
 
-using namespace ranges;
+using namespace fermat::ranges;
 
 struct Data {
     int i;

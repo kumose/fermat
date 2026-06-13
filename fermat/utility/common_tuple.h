@@ -30,7 +30,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -558,99 +558,99 @@ namespace ranges
         {};
     } // namespace detail
     /// \endcond
-} // namespace ranges
+} // namespace fermat::ranges
 
 /// \cond
 namespace concepts
 {
     // common_type for pairs
     template<typename F1, typename S1, typename F2, typename S2>
-    struct common_type<std::pair<F1, S1>, ranges::common_pair<F2, S2>>
-      : ranges::detail::common_type_tuple_like<
-            std::pair<F1, S1>, ranges::common_pair<F2, S2>,
-            meta::quote<ranges::common_pair>>
+    struct common_type<std::pair<F1, S1>, fermat::ranges::common_pair<F2, S2>>
+      : fermat::ranges::detail::common_type_tuple_like<
+            std::pair<F1, S1>, fermat::ranges::common_pair<F2, S2>,
+            meta::quote<fermat::ranges::common_pair>>
     {};
     template<typename F1, typename S1, typename F2, typename S2>
-    struct common_type<ranges::common_pair<F1, S1>, std::pair<F2, S2>>
-      : ranges::detail::common_type_tuple_like<
-            ranges::common_pair<F1, S1>, std::pair<F2, S2>,
-            meta::quote<ranges::common_pair>>
+    struct common_type<fermat::ranges::common_pair<F1, S1>, std::pair<F2, S2>>
+      : fermat::ranges::detail::common_type_tuple_like<
+            fermat::ranges::common_pair<F1, S1>, std::pair<F2, S2>,
+            meta::quote<fermat::ranges::common_pair>>
     {};
     template<typename F1, typename S1, typename F2, typename S2>
-    struct common_type<ranges::common_pair<F1, S1>, ranges::common_pair<F2, S2>>
-      : ranges::detail::common_type_tuple_like<ranges::common_pair<F1, S1>,
-                                               ranges::common_pair<F2, S2>,
-                                               meta::quote<ranges::common_pair>>
+    struct common_type<fermat::ranges::common_pair<F1, S1>, fermat::ranges::common_pair<F2, S2>>
+      : fermat::ranges::detail::common_type_tuple_like<fermat::ranges::common_pair<F1, S1>,
+                                               fermat::ranges::common_pair<F2, S2>,
+                                               meta::quote<fermat::ranges::common_pair>>
     {};
     // common_type for tuples
     template<typename... Ts, typename... Us>
-    struct common_type<ranges::common_tuple<Ts...>, std::tuple<Us...>>
-      : ranges::detail::common_type_tuple_like<
-            ranges::common_tuple<Ts...>, std::tuple<Us...>,
-            meta::quote<ranges::common_tuple>>
+    struct common_type<fermat::ranges::common_tuple<Ts...>, std::tuple<Us...>>
+      : fermat::ranges::detail::common_type_tuple_like<
+            fermat::ranges::common_tuple<Ts...>, std::tuple<Us...>,
+            meta::quote<fermat::ranges::common_tuple>>
     {};
     template<typename... Ts, typename... Us>
-    struct common_type<std::tuple<Ts...>, ranges::common_tuple<Us...>>
-      : ranges::detail::common_type_tuple_like<
-            std::tuple<Ts...>, ranges::common_tuple<Us...>,
-            meta::quote<ranges::common_tuple>>
+    struct common_type<std::tuple<Ts...>, fermat::ranges::common_tuple<Us...>>
+      : fermat::ranges::detail::common_type_tuple_like<
+            std::tuple<Ts...>, fermat::ranges::common_tuple<Us...>,
+            meta::quote<fermat::ranges::common_tuple>>
     {};
     template<typename... Ts, typename... Us>
-    struct common_type<ranges::common_tuple<Ts...>, ranges::common_tuple<Us...>>
-      : ranges::detail::common_type_tuple_like<ranges::common_tuple<Ts...>,
-                                               ranges::common_tuple<Us...>,
-                                               meta::quote<ranges::common_tuple>>
+    struct common_type<fermat::ranges::common_tuple<Ts...>, fermat::ranges::common_tuple<Us...>>
+      : fermat::ranges::detail::common_type_tuple_like<fermat::ranges::common_tuple<Ts...>,
+                                               fermat::ranges::common_tuple<Us...>,
+                                               meta::quote<fermat::ranges::common_tuple>>
     {};
 
     // common reference for pairs
     template<typename F1, typename S1, typename F2, typename S2,
              template<typename> class Qual1, template<typename> class Qual2>
-    struct basic_common_reference<ranges::common_pair<F1, S1>, std::pair<F2, S2>, Qual1,
+    struct basic_common_reference<fermat::ranges::common_pair<F1, S1>, std::pair<F2, S2>, Qual1,
                                   Qual2>
-      : ranges::detail::common_ref_tuple_like<
-            ranges::common_pair<Qual1<F1>, Qual1<S1>>, std::pair<Qual2<F2>, Qual2<S2>>,
-            meta::quote<ranges::common_pair>>
+      : fermat::ranges::detail::common_ref_tuple_like<
+            fermat::ranges::common_pair<Qual1<F1>, Qual1<S1>>, std::pair<Qual2<F2>, Qual2<S2>>,
+            meta::quote<fermat::ranges::common_pair>>
     {};
     template<typename F1, typename S1, typename F2, typename S2,
              template<typename> class Qual1, template<typename> class Qual2>
-    struct basic_common_reference<std::pair<F1, S1>, ranges::common_pair<F2, S2>, Qual1,
+    struct basic_common_reference<std::pair<F1, S1>, fermat::ranges::common_pair<F2, S2>, Qual1,
                                   Qual2>
-      : ranges::detail::common_ref_tuple_like<
-            std::pair<Qual1<F1>, Qual1<S1>>, ranges::common_pair<Qual2<F2>, Qual2<S2>>,
-            meta::quote<ranges::common_pair>>
+      : fermat::ranges::detail::common_ref_tuple_like<
+            std::pair<Qual1<F1>, Qual1<S1>>, fermat::ranges::common_pair<Qual2<F2>, Qual2<S2>>,
+            meta::quote<fermat::ranges::common_pair>>
     {};
     template<typename F1, typename S1, typename F2, typename S2,
              template<typename> class Qual1, template<typename> class Qual2>
-    struct basic_common_reference<ranges::common_pair<F1, S1>,
-                                  ranges::common_pair<F2, S2>, Qual1, Qual2>
-      : ranges::detail::common_ref_tuple_like<ranges::common_pair<Qual1<F1>, Qual1<S1>>,
-                                              ranges::common_pair<Qual2<F2>, Qual2<S2>>,
-                                              meta::quote<ranges::common_pair>>
+    struct basic_common_reference<fermat::ranges::common_pair<F1, S1>,
+                                  fermat::ranges::common_pair<F2, S2>, Qual1, Qual2>
+      : fermat::ranges::detail::common_ref_tuple_like<fermat::ranges::common_pair<Qual1<F1>, Qual1<S1>>,
+                                              fermat::ranges::common_pair<Qual2<F2>, Qual2<S2>>,
+                                              meta::quote<fermat::ranges::common_pair>>
     {};
     // common reference for tuples
     template<typename... Ts, typename... Us, template<typename> class Qual1,
              template<typename> class Qual2>
-    struct basic_common_reference<ranges::common_tuple<Ts...>, std::tuple<Us...>, Qual1,
+    struct basic_common_reference<fermat::ranges::common_tuple<Ts...>, std::tuple<Us...>, Qual1,
                                   Qual2>
-      : ranges::detail::common_ref_tuple_like<
-            ranges::common_tuple<Qual1<Ts>...>, std::tuple<Qual2<Us>...>,
-            meta::quote<ranges::common_tuple>>
+      : fermat::ranges::detail::common_ref_tuple_like<
+            fermat::ranges::common_tuple<Qual1<Ts>...>, std::tuple<Qual2<Us>...>,
+            meta::quote<fermat::ranges::common_tuple>>
     {};
     template<typename... Ts, typename... Us, template<typename> class Qual1,
              template<typename> class Qual2>
-    struct basic_common_reference<std::tuple<Ts...>, ranges::common_tuple<Us...>, Qual1,
+    struct basic_common_reference<std::tuple<Ts...>, fermat::ranges::common_tuple<Us...>, Qual1,
                                   Qual2>
-      : ranges::detail::common_ref_tuple_like<
-            std::tuple<Qual1<Ts>...>, ranges::common_tuple<Qual2<Us>...>,
-            meta::quote<ranges::common_tuple>>
+      : fermat::ranges::detail::common_ref_tuple_like<
+            std::tuple<Qual1<Ts>...>, fermat::ranges::common_tuple<Qual2<Us>...>,
+            meta::quote<fermat::ranges::common_tuple>>
     {};
     template<typename... Ts, typename... Us, template<typename> class Qual1,
              template<typename> class Qual2>
-    struct basic_common_reference<ranges::common_tuple<Ts...>,
-                                  ranges::common_tuple<Us...>, Qual1, Qual2>
-      : ranges::detail::common_ref_tuple_like<ranges::common_tuple<Qual1<Ts>...>,
-                                              ranges::common_tuple<Qual2<Us>...>,
-                                              meta::quote<ranges::common_tuple>>
+    struct basic_common_reference<fermat::ranges::common_tuple<Ts...>,
+                                  fermat::ranges::common_tuple<Us...>, Qual1, Qual2>
+      : fermat::ranges::detail::common_ref_tuple_like<fermat::ranges::common_tuple<Qual1<Ts>...>,
+                                              fermat::ranges::common_tuple<Qual2<Us>...>,
+                                              meta::quote<fermat::ranges::common_tuple>>
     {};
 } // namespace concepts
 /// \endcond
@@ -659,29 +659,29 @@ RANGES_DIAGNOSTIC_PUSH
 RANGES_DIAGNOSTIC_IGNORE_MISMATCHED_TAGS
 RANGES_BEGIN_NAMESPACE_STD
     template<typename First, typename Second>
-    struct tuple_size<::ranges::common_pair<First, Second>>
+    struct tuple_size<::fermat::ranges::common_pair<First, Second>>
       : std::integral_constant<size_t, 2>
     {};
 
     template<typename First, typename Second>
-    struct tuple_element<0, ::ranges::common_pair<First, Second>>
+    struct tuple_element<0, ::fermat::ranges::common_pair<First, Second>>
     {
         using type = First;
     };
 
     template<typename First, typename Second>
-    struct tuple_element<1, ::ranges::common_pair<First, Second>>
+    struct tuple_element<1, ::fermat::ranges::common_pair<First, Second>>
     {
         using type = Second;
     };
 
     template<typename... Ts>
-    struct tuple_size<::ranges::common_tuple<Ts...>>
+    struct tuple_size<::fermat::ranges::common_tuple<Ts...>>
       : std::integral_constant<size_t, sizeof...(Ts)>
     {};
 
     template<size_t N, typename... Ts>
-    struct tuple_element<N, ::ranges::common_tuple<Ts...>>
+    struct tuple_element<N, ::fermat::ranges::common_tuple<Ts...>>
       : tuple_element<N, tuple<Ts...>>
     {};
 
@@ -692,41 +692,41 @@ RANGES_BEGIN_NAMESPACE_VERSION
 
     // common_type for pairs
     template<typename F1, typename S1, typename F2, typename S2>
-    struct common_type<std::pair<F1, S1>, ::ranges::common_pair<F2, S2>>
-      : ::ranges::detail::common_type_tuple_like<
-            std::pair<F1, S1>, ::ranges::common_pair<F2, S2>,
-            ::meta::quote<::ranges::common_pair>>
+    struct common_type<std::pair<F1, S1>, ::fermat::ranges::common_pair<F2, S2>>
+      : ::fermat::ranges::detail::common_type_tuple_like<
+            std::pair<F1, S1>, ::fermat::ranges::common_pair<F2, S2>,
+            ::meta::quote<::fermat::ranges::common_pair>>
     {};
     template<typename F1, typename S1, typename F2, typename S2>
-    struct common_type<::ranges::common_pair<F1, S1>, std::pair<F2, S2>>
-      : ::ranges::detail::common_type_tuple_like<
-            ::ranges::common_pair<F1, S1>, std::pair<F2, S2>,
-            ::meta::quote<::ranges::common_pair>>
+    struct common_type<::fermat::ranges::common_pair<F1, S1>, std::pair<F2, S2>>
+      : ::fermat::ranges::detail::common_type_tuple_like<
+            ::fermat::ranges::common_pair<F1, S1>, std::pair<F2, S2>,
+            ::meta::quote<::fermat::ranges::common_pair>>
     {};
     template<typename F1, typename S1, typename F2, typename S2>
-    struct common_type<::ranges::common_pair<F1, S1>, ::ranges::common_pair<F2, S2>>
-      : ::ranges::detail::common_type_tuple_like<::ranges::common_pair<F1, S1>,
-                                               ::ranges::common_pair<F2, S2>,
-                                               ::meta::quote<::ranges::common_pair>>
+    struct common_type<::fermat::ranges::common_pair<F1, S1>, ::fermat::ranges::common_pair<F2, S2>>
+      : ::fermat::ranges::detail::common_type_tuple_like<::fermat::ranges::common_pair<F1, S1>,
+                                               ::fermat::ranges::common_pair<F2, S2>,
+                                               ::meta::quote<::fermat::ranges::common_pair>>
     {};
     // common_type for tuples
     template<typename... Ts, typename... Us>
-    struct common_type<::ranges::common_tuple<Ts...>, std::tuple<Us...>>
-      : ::ranges::detail::common_type_tuple_like<
-            ::ranges::common_tuple<Ts...>, std::tuple<Us...>,
-            ::meta::quote<::ranges::common_tuple>>
+    struct common_type<::fermat::ranges::common_tuple<Ts...>, std::tuple<Us...>>
+      : ::fermat::ranges::detail::common_type_tuple_like<
+            ::fermat::ranges::common_tuple<Ts...>, std::tuple<Us...>,
+            ::meta::quote<::fermat::ranges::common_tuple>>
     {};
     template<typename... Ts, typename... Us>
-    struct common_type<std::tuple<Ts...>, ::ranges::common_tuple<Us...>>
-      : ::ranges::detail::common_type_tuple_like<
-            std::tuple<Ts...>, ::ranges::common_tuple<Us...>,
-            ::meta::quote<::ranges::common_tuple>>
+    struct common_type<std::tuple<Ts...>, ::fermat::ranges::common_tuple<Us...>>
+      : ::fermat::ranges::detail::common_type_tuple_like<
+            std::tuple<Ts...>, ::fermat::ranges::common_tuple<Us...>,
+            ::meta::quote<::fermat::ranges::common_tuple>>
     {};
     template<typename... Ts, typename... Us>
-    struct common_type<::ranges::common_tuple<Ts...>, ::ranges::common_tuple<Us...>>
-      : ::ranges::detail::common_type_tuple_like<::ranges::common_tuple<Ts...>,
-                                               ::ranges::common_tuple<Us...>,
-                                               ::meta::quote<::ranges::common_tuple>>
+    struct common_type<::fermat::ranges::common_tuple<Ts...>, ::fermat::ranges::common_tuple<Us...>>
+      : ::fermat::ranges::detail::common_type_tuple_like<::fermat::ranges::common_tuple<Ts...>,
+                                               ::fermat::ranges::common_tuple<Us...>,
+                                               ::meta::quote<::fermat::ranges::common_tuple>>
     {};
 
     template<typename, typename, template<typename> class, template<typename> class>
@@ -735,52 +735,52 @@ RANGES_BEGIN_NAMESPACE_VERSION
     // common reference for pairs
     template<typename F1, typename S1, typename F2, typename S2,
              template<typename> class Qual1, template<typename> class Qual2>
-    struct basic_common_reference<::ranges::common_pair<F1, S1>, std::pair<F2, S2>, Qual1,
+    struct basic_common_reference<::fermat::ranges::common_pair<F1, S1>, std::pair<F2, S2>, Qual1,
                                   Qual2>
-      : ::ranges::detail::common_ref_tuple_like<
-            ::ranges::common_pair<Qual1<F1>, Qual1<S1>>, std::pair<Qual2<F2>, Qual2<S2>>,
-            ::meta::quote<::ranges::common_pair>>
+      : ::fermat::ranges::detail::common_ref_tuple_like<
+            ::fermat::ranges::common_pair<Qual1<F1>, Qual1<S1>>, std::pair<Qual2<F2>, Qual2<S2>>,
+            ::meta::quote<::fermat::ranges::common_pair>>
     {};
     template<typename F1, typename S1, typename F2, typename S2,
              template<typename> class Qual1, template<typename> class Qual2>
-    struct basic_common_reference<std::pair<F1, S1>, ::ranges::common_pair<F2, S2>, Qual1,
+    struct basic_common_reference<std::pair<F1, S1>, ::fermat::ranges::common_pair<F2, S2>, Qual1,
                                   Qual2>
-      : ::ranges::detail::common_ref_tuple_like<
-            std::pair<Qual1<F1>, Qual1<S1>>, ::ranges::common_pair<Qual2<F2>, Qual2<S2>>,
-            ::meta::quote<::ranges::common_pair>>
+      : ::fermat::ranges::detail::common_ref_tuple_like<
+            std::pair<Qual1<F1>, Qual1<S1>>, ::fermat::ranges::common_pair<Qual2<F2>, Qual2<S2>>,
+            ::meta::quote<::fermat::ranges::common_pair>>
     {};
     template<typename F1, typename S1, typename F2, typename S2,
              template<typename> class Qual1, template<typename> class Qual2>
-    struct basic_common_reference<::ranges::common_pair<F1, S1>,
-                                  ::ranges::common_pair<F2, S2>, Qual1, Qual2>
-      : ::ranges::detail::common_ref_tuple_like<::ranges::common_pair<Qual1<F1>, Qual1<S1>>,
-                                              ::ranges::common_pair<Qual2<F2>, Qual2<S2>>,
-                                              ::meta::quote<::ranges::common_pair>>
+    struct basic_common_reference<::fermat::ranges::common_pair<F1, S1>,
+                                  ::fermat::ranges::common_pair<F2, S2>, Qual1, Qual2>
+      : ::fermat::ranges::detail::common_ref_tuple_like<::fermat::ranges::common_pair<Qual1<F1>, Qual1<S1>>,
+                                              ::fermat::ranges::common_pair<Qual2<F2>, Qual2<S2>>,
+                                              ::meta::quote<::fermat::ranges::common_pair>>
     {};
     // common reference for tuples
     template<typename... Ts, typename... Us, template<typename> class Qual1,
              template<typename> class Qual2>
-    struct basic_common_reference<::ranges::common_tuple<Ts...>, std::tuple<Us...>, Qual1,
+    struct basic_common_reference<::fermat::ranges::common_tuple<Ts...>, std::tuple<Us...>, Qual1,
                                   Qual2>
-      : ::ranges::detail::common_ref_tuple_like<
-            ::ranges::common_tuple<Qual1<Ts>...>, std::tuple<Qual2<Us>...>,
-            ::meta::quote<::ranges::common_tuple>>
+      : ::fermat::ranges::detail::common_ref_tuple_like<
+            ::fermat::ranges::common_tuple<Qual1<Ts>...>, std::tuple<Qual2<Us>...>,
+            ::meta::quote<::fermat::ranges::common_tuple>>
     {};
     template<typename... Ts, typename... Us, template<typename> class Qual1,
              template<typename> class Qual2>
-    struct basic_common_reference<std::tuple<Ts...>, ::ranges::common_tuple<Us...>, Qual1,
+    struct basic_common_reference<std::tuple<Ts...>, ::fermat::ranges::common_tuple<Us...>, Qual1,
                                   Qual2>
-      : ::ranges::detail::common_ref_tuple_like<
-            std::tuple<Qual1<Ts>...>, ::ranges::common_tuple<Qual2<Us>...>,
-            ::meta::quote<::ranges::common_tuple>>
+      : ::fermat::ranges::detail::common_ref_tuple_like<
+            std::tuple<Qual1<Ts>...>, ::fermat::ranges::common_tuple<Qual2<Us>...>,
+            ::meta::quote<::fermat::ranges::common_tuple>>
     {};
     template<typename... Ts, typename... Us, template<typename> class Qual1,
              template<typename> class Qual2>
-    struct basic_common_reference<::ranges::common_tuple<Ts...>,
-                                  ::ranges::common_tuple<Us...>, Qual1, Qual2>
-      : ::ranges::detail::common_ref_tuple_like<::ranges::common_tuple<Qual1<Ts>...>,
-                                              ::ranges::common_tuple<Qual2<Us>...>,
-                                              ::meta::quote<::ranges::common_tuple>>
+    struct basic_common_reference<::fermat::ranges::common_tuple<Ts...>,
+                                  ::fermat::ranges::common_tuple<Us...>, Qual1, Qual2>
+      : ::fermat::ranges::detail::common_ref_tuple_like<::fermat::ranges::common_tuple<Qual1<Ts>...>,
+                                              ::fermat::ranges::common_tuple<Qual2<Us>...>,
+                                              ::meta::quote<::fermat::ranges::common_tuple>>
     {};
 RANGES_END_NAMESPACE_VERSION
 #endif // RANGES_CXX_VER > RANGES_CXX_STD_17

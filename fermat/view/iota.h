@@ -37,7 +37,7 @@ RANGES_DIAGNOSTIC_PUSH
 RANGES_DIAGNOSTIC_IGNORE_UNSIGNED_MATH
 RANGES_DIAGNOSTIC_IGNORE_TRUNCATION
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -509,7 +509,7 @@ namespace ranges
         /// \ingroup group-views
         RANGES_INLINE_VARIABLE(closed_iota_fn, closed_iota)
 
-        /// # ranges::views::ints
+        /// # fermat::ranges::views::ints
         /// The ints view returns a range of monotonically increasing ints.
         ///
         /// ## Example
@@ -520,7 +520,7 @@ namespace ranges
         ///
         /// ## Syntax
         /// ```cpp
-        /// auto output_range = ranges::views::ints(lower_bound, upper_bound);
+        /// auto output_range = fermat::ranges::views::ints(lower_bound, upper_bound);
         /// ```
         ///
         /// ## Parameters
@@ -531,7 +531,7 @@ namespace ranges
         ///   - Exclusive upper bound
         ///   - Required when `lower_bound` is specified
         ///     - To create an infinite range with a `lower_bound`, use
-        ///     `ranges::unreachable` as the `upper_bound`
+        ///     `fermat::ranges::unreachable` as the `upper_bound`
         ///
         /// <pre><b>output_range</b></pre>
         ///   - Range of monotonically increasing ints
@@ -545,7 +545,7 @@ namespace ranges
                 requires integral<Val>)
             RANGES_DEPRECATED(
                 "This potentially confusing API is deprecated. Prefer to "
-                "explicitly specify the upper bound as with ranges::unreachable, as in "
+                "explicitly specify the upper bound as with fermat::ranges::unreachable, as in "
                 "views::ints( n, unreachable )")
             constexpr iota_view<Val> operator()(Val value) const //
             {
@@ -574,15 +574,15 @@ namespace ranges
     {
         namespace views
         {
-            using ranges::views::iota;
+            using fermat::ranges::views::iota;
         }
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::closed_iota_view)
-RANGES_SATISFY_BOOST_RANGE(::ranges::iota_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::closed_iota_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::iota_view)
 
 RANGES_DIAGNOSTIC_POP
 

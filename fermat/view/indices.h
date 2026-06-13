@@ -25,7 +25,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     namespace views
     {
@@ -73,7 +73,7 @@ namespace ranges
         /// \ingroup group-views
         RANGES_INLINE_VARIABLE(closed_indices_fn, closed_indices)
     } // namespace views
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

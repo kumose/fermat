@@ -31,7 +31,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-namespace ranges
+namespace fermat::ranges
 {
     namespace detail
     {
@@ -42,7 +42,7 @@ namespace ranges
             std::abort();
         }
     } // namespace detail
-} // namespace ranges
+} // namespace fermat::ranges
 
 #endif
 
@@ -56,7 +56,7 @@ namespace ranges
 #define RANGES_ASSERT(...)                                    \
     static_cast<void>((__VA_ARGS__)                           \
                           ? void(0)                           \
-                          : ::ranges::detail::assert_failure( \
+                          : ::fermat::ranges::detail::assert_failure( \
                                 __FILE__, __LINE__, "assertion failed: " #__VA_ARGS__))
 #else
 #include <cassert>
@@ -88,7 +88,7 @@ namespace ranges
 #if defined(NDEBUG)
 #define RANGES_ENSURE_MSG(COND, MSG)                             \
     static_cast<void>((COND) ? void(0)                           \
-                             : ::ranges::detail::assert_failure( \
+                             : ::fermat::ranges::detail::assert_failure( \
                                    __FILE__, __LINE__, "ensure failed: " MSG))
 #else
 #define RANGES_ENSURE_MSG(COND, MSG) RANGES_ASSERT((COND) && MSG)
@@ -570,7 +570,7 @@ namespace ranges
 #define RANGES_INLINE_VARIABLE(type, name)
     namespace                                                        \
     {                                                                \
-        constexpr auto & name = ::ranges::static_const<type>::value; \
+        constexpr auto & name = ::fermat::ranges::static_const<type>::value; \
     }
 #else // RANGES_CXX_INLINE_VARIABLES >= RANGES_CXX_INLINE_VARIABLES_17
 #define RANGES_INLINE_VARIABLE(type, name) \
@@ -586,7 +586,7 @@ namespace ranges
 #define RANGES_DEFINE_CPO(type, name)                                \
     namespace                                                        \
     {                                                                \
-        constexpr auto & name = ::ranges::static_const<type>::value; \
+        constexpr auto & name = ::fermat::ranges::static_const<type>::value; \
     }                                                                \
     /**/
 #else // RANGES_CXX_INLINE_VARIABLES >= RANGES_CXX_INLINE_VARIABLES_17

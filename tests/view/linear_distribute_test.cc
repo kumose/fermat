@@ -17,13 +17,13 @@
 #include <fermat/algorithm/equal.h>
 #include <fermat/view/linear_distribute.h>
 
-using namespace ranges;
+using namespace fermat::ranges;
 
 /// Helper: check_equal for ranges vs initializer_list
 template<typename Rng, typename T>
 void check_equal(Rng &&rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -40,8 +40,8 @@ bool fuzzy_equal(T a, T b, T eps = T(1e-6)) {
 
 template<typename Rng>
 void check_float_equal(Rng &&rng, std::initializer_list<double> expected, double eps = 1e-6) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_TRUE(fuzzy_equal(*it, val, eps));
@@ -76,7 +76,7 @@ TEST(LinearDistributeTest, IntegerToDoubleConversion) {
     EXPECT_EQ(size(irng), 22u);
     std::vector<int> expected;
     for (int i = 0; i <= 21; ++i) expected.push_back(i);
-    auto it = ranges::begin(irng);
+    auto it = fermat::ranges::begin(irng);
     for (int d: expected) {
         EXPECT_EQ(*it, d);
         ++it;
@@ -93,7 +93,7 @@ TEST(LinearDistributeTest, FloatingPointRange) {
 }
 
 TEST(LinearDistributeTest, FloatingPointRangeWithStartNotZero) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto frng = views::linear_distribute(1.0, 3.0, 21);
     EXPECT_EQ(size(frng), 21u);
 
@@ -129,7 +129,7 @@ TEST(LinearDistributeTest, Regression1088) {
     EXPECT_EQ(ld.size(), 10u);
     check_equal(ld, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
     // Use std::next to advance (forward iterator only)
-    auto it = ranges::begin(ld);
+    auto it = fermat::ranges::begin(ld);
     it = std::next(it, 3);
     EXPECT_EQ(*it, 4);
 }
@@ -137,13 +137,13 @@ TEST(LinearDistributeTest, Regression1088) {
 TEST(LinearDistributeTest, IntegralSpacing) {
     auto irng = views::linear_distribute(0, 10, 22);
     EXPECT_EQ(size(irng), 22u);
-    EXPECT_EQ(*ranges::begin(irng), 0);
+    EXPECT_EQ(*fermat::ranges::begin(irng), 0);
     // Check last element: iterate to end and back up one (forward only)
-    auto it = ranges::begin(irng);
+    auto it = fermat::ranges::begin(irng);
     for (std::size_t i = 0; i < size(irng) - 1; ++i) ++it;
     EXPECT_EQ(*it, 10);
     // Check monotonic increase
-    auto prev = ranges::begin(irng);
+    auto prev = fermat::ranges::begin(irng);
     auto cur = std::next(prev);
     for (std::size_t i = 1; i < 22; ++i) {
         EXPECT_LE(*prev, *cur);

@@ -25,8 +25,8 @@ bool operator==(Int left, Int right) {
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -38,8 +38,8 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected) {
 /// Overload for Int
 template<typename Rng>
 void check_equal(Rng&& rng, std::initializer_list<Int> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(it->i, val.i);
@@ -53,7 +53,7 @@ void check_equal(Rng&& rng, std::initializer_list<Int> expected) {
 // ------------------------------------------------------------------
 
 TEST(RemoveTest, Straight) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> vec = {1, 2, 3, 4, 5};
     auto out = vec | views::remove(2);
@@ -61,7 +61,7 @@ TEST(RemoveTest, Straight) {
 }
 
 TEST(RemoveTest, Projection) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     const std::vector<Int> vec{ Int{1}, Int{2}, Int{3}, Int{4}, Int{5} };
     auto out = vec | views::remove(2, &Int::i);

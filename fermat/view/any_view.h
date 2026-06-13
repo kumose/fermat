@@ -36,24 +36,24 @@ RANGES_DIAGNOSTIC_PUSH
 RANGES_DIAGNOSTIC_IGNORE_INCONSISTENT_OVERRIDE
 RANGES_DIAGNOSTIC_SUGGEST_OVERRIDE
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \brief An enum that denotes the supported subset of range concepts supported by a
     /// range.
     enum class category
     {
         none = 0,             ///<\brief No concepts met.
-        input = 1,            ///<\brief satisfies ranges::concepts::input_range
-        forward = 3,          ///<\brief satisfies ranges::concepts::forward_range
-        bidirectional = 7,    ///<\brief satisfies ranges::concepts::bidirectional_range
-        random_access = 15,   ///<\brief satisfies ranges::concepts::random_access_range
+        input = 1,            ///<\brief satisfies fermat::ranges::concepts::input_range
+        forward = 3,          ///<\brief satisfies fermat::ranges::concepts::forward_range
+        bidirectional = 7,    ///<\brief satisfies fermat::ranges::concepts::bidirectional_range
+        random_access = 15,   ///<\brief satisfies fermat::ranges::concepts::random_access_range
         mask = random_access, ///<\brief Mask away any properties other than iterator
                               ///< category
-        sized = 16,           ///<\brief satisfies ranges::concepts::sized_range
+        sized = 16,           ///<\brief satisfies fermat::ranges::concepts::sized_range
     };
 
-    /** \name Binary operators for ranges::category
-     *  \relates ranges::category
+    /** \name Binary operators for fermat::ranges::category
+     *  \relates fermat::ranges::category
      *  \{
      */
     constexpr category operator&(category lhs, category rhs) noexcept
@@ -99,7 +99,7 @@ namespace ranges
     }
     //!\}
 
-    /// \brief For a given range, return a ranges::category enum with the satisfied
+    /// \brief For a given range, return a fermat::ranges::category enum with the satisfied
     /// concepts.
     template<typename Rng>
     constexpr category get_categories() noexcept
@@ -178,11 +178,11 @@ namespace ranges
         public:
             any_view_sentinel_impl() = default;
             any_view_sentinel_impl(Rng & rng)
-              : box_t(ranges::end(rng))
+              : box_t(fermat::ranges::end(rng))
             {}
             void init(Rng & rng) noexcept
             {
-                box_t::get() = ranges::end(rng);
+                box_t::get() = fermat::ranges::end(rng);
             }
             sentinel_t<Rng> const & get(Rng &) const noexcept
             {
@@ -192,7 +192,7 @@ namespace ranges
 
         template<typename Rng>
         struct any_view_sentinel_impl<
-            Rng, meta::void_<decltype(ranges::end(std::declval<Rng const &>()))>>
+            Rng, meta::void_<decltype(fermat::ranges::end(std::declval<Rng const &>()))>>
         {
             any_view_sentinel_impl() = default;
             any_view_sentinel_impl(Rng &) noexcept
@@ -201,7 +201,7 @@ namespace ranges
             {}
             sentinel_t<Rng> get(Rng & rng) const noexcept
             {
-                return ranges::end(rng);
+                return fermat::ranges::end(rng);
             }
         };
 
@@ -270,7 +270,7 @@ namespace ranges
             virtual void init() override
             {
                 sentinel_box_t::init(rng_);
-                current_ = ranges::begin(rng_);
+                current_ = fermat::ranges::begin(rng_);
             }
             virtual bool done() override
             {
@@ -286,7 +286,7 @@ namespace ranges
             }
             std::size_t size() // override-ish
             {
-                return static_cast<std::size_t>(ranges::size(rng_));
+                return static_cast<std::size_t>(fermat::ranges::size(rng_));
             }
 
             RANGES_NO_UNIQUE_ADDRESS Rng rng_;
@@ -537,7 +537,7 @@ namespace ranges
             }
             std::size_t size() // override-ish
             {
-                return static_cast<std::size_t>(ranges::size(range_box_t::get()));
+                return static_cast<std::size_t>(fermat::ranges::size(range_box_t::get()));
             }
         };
     } // namespace detail
@@ -680,10 +680,10 @@ namespace ranges
     using any_random_access_view RANGES_DEPRECATED(
         "Use any_view<Ref, category::random_access> instead.") =
         any_view<Ref, category::random_access>;
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::any_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::any_view)
 
 RANGES_DIAGNOSTIC_POP
 

@@ -16,7 +16,7 @@ struct T {
 static constexpr bool even(int i) { return i % 2 == 0; }
 
 TEST(CountIfTest, Basic) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {0, 1, 2, 2, 0, 1, 2, 3};
     constexpr std::size_t cia = sizeof(ia) / sizeof(ia[0]);
@@ -33,7 +33,7 @@ TEST(CountIfTest, Basic) {
 }
 
 TEST(CountIfTest, WithProjection) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     S sa[] = {{0}, {1}, {2}, {2}, {0}, {1}, {2}, {3}};
     constexpr std::size_t csa = sizeof(sa) / sizeof(sa[0]);
@@ -48,7 +48,7 @@ TEST(CountIfTest, WithProjection) {
 }
 
 TEST(CountIfTest, MemberFunctionPointer) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     T ta[] = {{true}, {false}, {true}, {false}, {false}, {true}, {false}, {false}, {true}, {false}};
     constexpr std::size_t n = sizeof(ta) / sizeof(ta[0]);
@@ -61,6 +61,6 @@ TEST(CountIfTest, MemberFunctionPointer) {
 
 TEST(CountIfTest, ConstexprInitializerList) {
     using IL = std::initializer_list<int>;
-    static_assert(ranges::count_if(IL{0, 1, 2, 1, 3, 1, 4}, even) == 3, "");
-    static_assert(ranges::count_if(IL{1, 1, 3, 1}, even) == 0, "");
+    static_assert(fermat::ranges::count_if(IL{0, 1, 2, 1, 3, 1, 4}, even) == 3, "");
+    static_assert(fermat::ranges::count_if(IL{1, 1, 3, 1}, even) == 0, "");
 }

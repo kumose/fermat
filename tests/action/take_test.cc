@@ -5,7 +5,7 @@
 #include <fermat/action/take.h>
 #include <fermat/range/conversion.h>
 
-using namespace ranges;
+using namespace fermat::ranges;
 
 TEST(ActionTakeTest, Example) {
     auto v = views::ints(1, 21) | to<std::vector>();

@@ -32,7 +32,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -51,7 +51,7 @@ namespace ranges
             requires sortable<I, C, P> AND sentinel_for<S, I>)
         constexpr I RANGES_FUNC(unique)(I first, S last, C pred = C{}, P proj = P{})
         {
-            first = adjacent_find(std::move(first), last, ranges::ref(pred), ranges::ref(proj));
+            first = adjacent_find(std::move(first), last, fermat::ranges::ref(pred), fermat::ranges::ref(proj));
 
             if(first != last)
             {
@@ -76,10 +76,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::unique;
+        using fermat::ranges::unique;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

@@ -7,7 +7,7 @@
 #include <fermat/range/conversion.h>
 
 TEST(ActionDropWhileTest, Example) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     using namespace std::placeholders;
 
     auto v = views::ints(1, 21) | to<std::vector>();

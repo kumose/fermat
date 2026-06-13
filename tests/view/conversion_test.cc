@@ -29,8 +29,8 @@
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng &&rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -71,38 +71,38 @@ void check_equal(const std::map<K, V> &actual,
 // ------------------------------------------------------------------
 
 TEST(ConversionTest, VectorFromIotaTake) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto v = views::ints | views::take(10) | to<std::vector<int> >();
     check_equal(v, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
 }
 
 TEST(ConversionTest, VectorFromIotaReverse) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto v = views::iota(10) | views::take(10) | views::reverse | to<std::vector<int> >();
     check_equal(v, {19, 18, 17, 16, 15, 14, 13, 12, 11, 10});
 }
 
 TEST(ConversionTest, ListFromIotaTake) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto l = views::ints | views::take(10) | to<std::list<int> >();
     check_equal(l, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
 }
 
 TEST(ConversionTest, ListFromIotaReverse) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto l = views::iota(10) | views::take(10) | views::reverse | to<std::list<int> >();
     check_equal(l, {19, 18, 17, 16, 15, 14, 13, 12, 11, 10});
 }
 
 TEST(ConversionTest, VectorOfVectors) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto vv = views::repeat_n(views::ints(0, 8), 10) | to<std::vector<std::vector<int> > >();
     std::vector<std::vector<int> > expected(10, {0, 1, 2, 3, 4, 5, 6, 7});
     check_equal(vv, expected);
 }
 
 TEST(ConversionTest, Issue556) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::string s{"abc"};
     any_view<any_view<char, category::random_access>, category::random_access> v1 =
             views::single(s | views::drop(1));
@@ -120,7 +120,7 @@ TEST(ConversionTest, Issue556) {
 }
 
 TEST(ConversionTest, MapFromZip) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto to_string = [](int i) {
         std::stringstream str;
         str << i;
@@ -133,7 +133,7 @@ TEST(ConversionTest, MapFromZip) {
 }
 
 TEST(ConversionTest, MapFromForEach) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto to_string = [](int i) {
         std::stringstream str;
         str << i;
@@ -147,7 +147,7 @@ TEST(ConversionTest, MapFromForEach) {
 }
 
 TEST(ConversionTest, SetFromIotaTake) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto s = views::ints | views::take(10) | to<std::set<int> >();
     check_equal(s, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
     static_assert(!view_<std::initializer_list<int> >, "");

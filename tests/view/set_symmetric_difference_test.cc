@@ -67,7 +67,7 @@ struct MoveOnlyString {
 /// debug_input_view (minimal input view for testing)
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T> > {
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T> > {
     struct data {
         const T *first_;
         std::ptrdiff_t size_;
@@ -86,7 +86,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T> > {
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges {
+namespace fermat::ranges {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T> > = true;
 }
@@ -96,8 +96,8 @@ namespace ranges {
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng &&rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -109,8 +109,8 @@ void check_equal(Rng &&rng, std::initializer_list<T> expected) {
 /// Overload for MoveOnlyString ranges vs initializer_list<const char*>
 template<typename Rng>
 void check_equal(Rng &&rng, std::initializer_list<const char *> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(it->s_, val);
@@ -168,8 +168,8 @@ void check_equal(const std::vector<B> &actual, std::initializer_list<B> expected
 
 template<typename Rng>
 void check_equal(Rng &&rng, std::initializer_list<B> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         // Use (*it).val instead of it->val to avoid operator-> issues
@@ -185,7 +185,7 @@ void check_equal(Rng &&rng, std::initializer_list<B> expected) {
 
 // Finite + finite
 TEST(SetSymmetricDifferenceTest, FiniteFinite) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int i1_finite[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     int i2_finite[] = {-3, 2, 4, 4, 6, 9};
@@ -205,7 +205,7 @@ TEST(SetSymmetricDifferenceTest, FiniteFinite) {
 
 // Infinite + infinite
 TEST(SetSymmetricDifferenceTest, InfiniteInfinite) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto i1_infinite = views::ints | views::stride(3);
     auto i2_infinite = views::ints | views::transform([](int x) { return x * x; });
@@ -217,12 +217,12 @@ TEST(SetSymmetricDifferenceTest, InfiniteInfinite) {
     set_symmetric_difference(i1_infinite | views::take(10),
                              i2_infinite | views::take(10),
                              back_inserter(greedy_sd));
-    EXPECT_TRUE(ranges::equal(res | views::take(6), greedy_sd | views::take(6)));
+    EXPECT_TRUE(fermat::ranges::equal(res | views::take(6), greedy_sd | views::take(6)));
 }
 
 // Finite + infinite
 TEST(SetSymmetricDifferenceTest, FiniteInfinite) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int i1_finite[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     auto i2_infinite = views::ints | views::transform([](int x) { return x * x; });
@@ -231,12 +231,12 @@ TEST(SetSymmetricDifferenceTest, FiniteInfinite) {
     check_equal(res1 | views::take(10), {0, 2, 2, 3, 3, 3, 4, 4, 4, 9});
 
     auto res2 = views::set_symmetric_difference(i2_infinite, i1_finite);
-    EXPECT_TRUE(ranges::equal(res2 | views::take(10), res1 | views::take(10)));
+    EXPECT_TRUE(fermat::ranges::equal(res2 | views::take(10), res1 | views::take(10)));
 }
 
 // Unknown cardinalities
 TEST(SetSymmetricDifferenceTest, UnknownCardinality) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto rng0 = views::iota(10) | views::drop_while([](int i) { return i < 25; });
     int i2_finite[] = {-3, 2, 4, 4, 6, 9};
@@ -257,7 +257,7 @@ TEST(SetSymmetricDifferenceTest, UnknownCardinality) {
 
 // Const ranges
 TEST(SetSymmetricDifferenceTest, ConstRanges) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int i1_finite[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     int i2_finite[] = {-3, 2, 4, 4, 6, 9};
@@ -271,7 +271,7 @@ TEST(SetSymmetricDifferenceTest, ConstRanges) {
 
 // Different ordering
 TEST(SetSymmetricDifferenceTest, DifferentOrdering) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int i1_finite[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     int i2_finite[] = {-3, 2, 4, 4, 6, 9};
@@ -286,7 +286,7 @@ TEST(SetSymmetricDifferenceTest, DifferentOrdering) {
 
 // Different element types, custom ordering (B and D)
 TEST(SetSymmetricDifferenceTest, DifferentElementTypes) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     B b_finite[] = {B{-20}, B{-10}, B{1}, B{3}, B{3}, B{6}, B{8}, B{20}};
     D d_finite[] = {D{0}, D{2}, D{4}, D{6}};
@@ -302,7 +302,7 @@ TEST(SetSymmetricDifferenceTest, DifferentElementTypes) {
 
 // Projections
 TEST(SetSymmetricDifferenceTest, Projections) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     B b_finite[] = {B{-20}, B{-10}, B{1}, B{3}, B{3}, B{6}, B{8}, B{20}};
     D d_finite[] = {D{0}, D{2}, D{4}, D{6}};
@@ -319,7 +319,7 @@ TEST(SetSymmetricDifferenceTest, Projections) {
 
 /// Move-only test: check the view yields correct elements, but do not verify source ranges after move.
 TEST(SetSymmetricDifferenceTest, MoveOnly) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto v0 = to<std::vector<MoveOnlyString> >({"a", "b", "b", "c", "x", "x"});
     auto v1 = to<std::vector<MoveOnlyString> >({"b", "x", "y", "z"});
@@ -339,28 +339,28 @@ TEST(SetSymmetricDifferenceTest, MoveOnly) {
 
 // Iterator equality
 TEST(SetSymmetricDifferenceTest, IteratorEquality) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int r1[] = {1, 2, 3};
     int r2[] = {2, 3, 4, 5};
     auto res = views::set_symmetric_difference(r1, r2); // 1, 4, 5
 
-    auto it1 = ranges::next(res.begin()); // points to 4
-    auto it2 = ranges::next(it1); // points to 5
+    auto it1 = fermat::ranges::next(res.begin()); // points to 4
+    auto it2 = fermat::ranges::next(it1); // points to 5
     auto sentinel = res.end();
 
     EXPECT_EQ(*it1, 4);
     EXPECT_EQ(*it2, 5);
     EXPECT_NE(it1, it2);
     EXPECT_NE(it1, sentinel);
-    EXPECT_EQ(ranges::next(it1, 2), sentinel);
+    EXPECT_EQ(fermat::ranges::next(it1, 2), sentinel);
     EXPECT_NE(it2, sentinel);
-    EXPECT_EQ(ranges::next(it2, 1), sentinel);
+    EXPECT_EQ(fermat::ranges::next(it2, 1), sentinel);
 }
 
 // debug_input_view
 TEST(SetSymmetricDifferenceTest, DebugInputView) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int i1_finite[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     int i2_finite[] = {-3, 2, 4, 4, 6, 9};

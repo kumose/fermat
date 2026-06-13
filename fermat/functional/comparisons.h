@@ -20,7 +20,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-functional
     /// @{
@@ -91,7 +91,7 @@ namespace ranges
     };
 
     using ordered_less RANGES_DEPRECATED(
-        "Repace uses of ranges::ordered_less with ranges::less") = less;
+        "Repace uses of fermat::ranges::ordered_less with fermat::ranges::less") = less;
 
 #if __cplusplus > 201703L && __has_include(<compare>) && \
     defined(__cpp_concepts) && defined(__cpp_impl_three_way_comparison)
@@ -111,15 +111,15 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::equal_to;
-        using ranges::greater;
-        using ranges::greater_equal;
-        using ranges::less;
-        using ranges::less_equal;
-        using ranges::not_equal_to;
+        using fermat::ranges::equal_to;
+        using fermat::ranges::greater;
+        using fermat::ranges::greater_equal;
+        using fermat::ranges::less;
+        using fermat::ranges::less_equal;
+        using fermat::ranges::not_equal_to;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

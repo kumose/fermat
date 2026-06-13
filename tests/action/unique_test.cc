@@ -14,7 +14,7 @@
 #include <fermat/action/unique.h>
 #include <fermat/range/conversion.h>
 
-using namespace ranges;
+using namespace fermat::ranges;
 
 TEST(ActionSortUniqueTest, ShuffleThenSortUnique) {
     std::mt19937 gen;

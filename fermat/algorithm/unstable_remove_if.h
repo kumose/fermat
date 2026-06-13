@@ -34,7 +34,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -52,14 +52,14 @@ namespace ranges
         {
             while(true)
             {
-                first = find_if(std::move(first), last, ranges::ref(pred), ranges::ref(proj));
+                first = find_if(std::move(first), last, fermat::ranges::ref(pred), fermat::ranges::ref(proj));
                 if(first == last)
                     return first;
 
                 last = next(find_if_not(make_reverse_iterator(std::move(last)),
                                         make_reverse_iterator(next(first)),
-                                        ranges::ref(pred),
-                                        ranges::ref(proj)))
+                                        fermat::ranges::ref(pred),
+                                        fermat::ranges::ref(proj)))
                            .base();
                 if(first == last)
                     return first;
@@ -84,7 +84,7 @@ namespace ranges
 
     RANGES_FUNC_END(unstable_remove_if)
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

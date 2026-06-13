@@ -9,15 +9,15 @@
 #include <string>
 #include <memory>
 
-#include <fermat/range/access.h>                /// ranges::begin, ranges::end
+#include <fermat/range/access.h>                /// fermat::ranges::begin, fermat::ranges::end
 #include <fermat/range/traits.h>                /// range_value_t, range_reference_t, etc.
 #include <fermat/iterator/traits.h>             /// iterator_traits (if needed)
 #include <fermat/view/cache1.h>                 /// views::cache1
 #include <fermat/view/transform.h>              /// views::transform
 #include <fermat/view/c_str.h>                  /// views::c_str
 #include <fermat/view/move.h>                   /// views::move
-#include <fermat/algorithm/copy.h>              /// ranges::copy (if needed)
-#include <fermat/utility/swap.h>                /// ranges::swap
+#include <fermat/algorithm/copy.h>              /// fermat::ranges::copy (if needed)
+#include <fermat/utility/swap.h>                /// fermat::ranges::swap
 
 /// ------------------------------------------------------------
 /// MoveOnlyString (as in original test)
@@ -46,8 +46,8 @@ struct MoveOnlyString
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -59,8 +59,8 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected) {
 // Overload for MoveOnlyString
 template<typename Rng>
 void check_equal(Rng&& rng, std::initializer_list<MoveOnlyString> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -74,7 +74,7 @@ void check_equal(Rng&& rng, std::initializer_list<MoveOnlyString> expected) {
 // ------------------------------------------------------------------
 
 TEST(Cache1Test, VectorTransform) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int count = 0;
     std::vector<int> v{1, 2, 3};
@@ -82,21 +82,21 @@ TEST(Cache1Test, VectorTransform) {
                  | views::cache1;
 
     using Rng = decltype(rng);
-    static_assert(!ranges::range<const Rng>, "");
-    static_assert(ranges::input_range<Rng>, "");
-    static_assert(!ranges::forward_range<Rng>, "");
-    static_assert(ranges::common_range<Rng>, "");
-    static_assert(ranges::view_<Rng>, "");
-    static_assert(ranges::sized_range<Rng>, "");
-    static_assert(ranges::sized_sentinel_for<sentinel_t<Rng>, iterator_t<Rng>>, "");
+    static_assert(!fermat::ranges::range<const Rng>, "");
+    static_assert(fermat::ranges::input_range<Rng>, "");
+    static_assert(!fermat::ranges::forward_range<Rng>, "");
+    static_assert(fermat::ranges::common_range<Rng>, "");
+    static_assert(fermat::ranges::view_<Rng>, "");
+    static_assert(fermat::ranges::sized_range<Rng>, "");
+    static_assert(fermat::ranges::sized_sentinel_for<sentinel_t<Rng>, iterator_t<Rng>>, "");
     static_assert(std::is_same<range_value_t<Rng>, int>::value, "");
     static_assert(std::is_same<range_reference_t<Rng>, int&&>::value, "");
     static_assert(std::is_same<range_rvalue_reference_t<Rng>, int&&>::value, "");
 
     EXPECT_EQ(count, 0);
-    auto it = ranges::begin(rng);
+    auto it = fermat::ranges::begin(rng);
     EXPECT_EQ(count, 0);
-    auto last = ranges::end(rng);
+    auto last = fermat::ranges::end(rng);
     EXPECT_NE(it, last);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(*it, 1);
@@ -123,7 +123,7 @@ TEST(Cache1Test, VectorTransform) {
 }
 
 TEST(Cache1Test, CStringTransform) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int count = 0;
     const char* hi = "hi";
@@ -132,21 +132,21 @@ TEST(Cache1Test, CStringTransform) {
                | views::cache1;
 
     using Rng = decltype(rng);
-    static_assert(!ranges::range<const Rng>, "");
-    static_assert(ranges::input_range<Rng>, "");
-    static_assert(!ranges::forward_range<Rng>, "");
-    static_assert(!ranges::common_range<Rng>, "");
-    static_assert(ranges::view_<Rng>, "");
-    static_assert(!ranges::sized_range<Rng>, "");
-    static_assert(!ranges::sized_sentinel_for<sentinel_t<Rng>, iterator_t<Rng>>, "");
+    static_assert(!fermat::ranges::range<const Rng>, "");
+    static_assert(fermat::ranges::input_range<Rng>, "");
+    static_assert(!fermat::ranges::forward_range<Rng>, "");
+    static_assert(!fermat::ranges::common_range<Rng>, "");
+    static_assert(fermat::ranges::view_<Rng>, "");
+    static_assert(!fermat::ranges::sized_range<Rng>, "");
+    static_assert(!fermat::ranges::sized_sentinel_for<sentinel_t<Rng>, iterator_t<Rng>>, "");
     static_assert(std::is_same<range_value_t<Rng>, char>::value, "");
     static_assert(std::is_same<range_reference_t<Rng>, char&&>::value, "");
     static_assert(std::is_same<range_rvalue_reference_t<Rng>, char&&>::value, "");
 
     EXPECT_EQ(count, 0);
-    auto it = ranges::begin(rng);
+    auto it = fermat::ranges::begin(rng);
     EXPECT_EQ(count, 0);
-    auto last = ranges::end(rng);
+    auto last = fermat::ranges::end(rng);
     EXPECT_NE(it, last);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(*it, 'h');
@@ -166,7 +166,7 @@ TEST(Cache1Test, CStringTransform) {
 }
 
 TEST(Cache1Test, MoveOnlyStringArray) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int count = 0;
     MoveOnlyString rg[] = {"hello", "world"};
@@ -180,21 +180,21 @@ TEST(Cache1Test, MoveOnlyStringArray) {
                | views::cache1;
 
     using Rng = decltype(rng);
-    static_assert(!ranges::range<const Rng>, "");
-    static_assert(ranges::input_range<Rng>, "");
-    static_assert(!ranges::forward_range<Rng>, "");
-    static_assert(ranges::common_range<Rng>, "");
-    static_assert(ranges::view_<Rng>, "");
-    static_assert(ranges::sized_range<Rng>, "");
-    static_assert(ranges::sized_sentinel_for<sentinel_t<Rng>, iterator_t<Rng>>, "");
+    static_assert(!fermat::ranges::range<const Rng>, "");
+    static_assert(fermat::ranges::input_range<Rng>, "");
+    static_assert(!fermat::ranges::forward_range<Rng>, "");
+    static_assert(fermat::ranges::common_range<Rng>, "");
+    static_assert(fermat::ranges::view_<Rng>, "");
+    static_assert(fermat::ranges::sized_range<Rng>, "");
+    static_assert(fermat::ranges::sized_sentinel_for<sentinel_t<Rng>, iterator_t<Rng>>, "");
     static_assert(std::is_same<range_value_t<Rng>, MoveOnlyString>::value, "");
     static_assert(std::is_same<range_reference_t<Rng>, MoveOnlyString&&>::value, "");
     static_assert(std::is_same<range_rvalue_reference_t<Rng>, MoveOnlyString&&>::value, "");
 
     EXPECT_EQ(count, 0);
-    auto it = ranges::begin(rng);
+    auto it = fermat::ranges::begin(rng);
     EXPECT_EQ(count, 0);
-    auto last = ranges::end(rng);
+    auto last = fermat::ranges::end(rng);
     EXPECT_NE(it, last);
     EXPECT_EQ(count, 0);
     EXPECT_EQ(*it, MoveOnlyString("hello"));

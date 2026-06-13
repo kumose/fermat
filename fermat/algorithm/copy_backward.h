@@ -29,7 +29,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -44,7 +44,7 @@ namespace ranges
             bidirectional_iterator<O> AND indirectly_copyable<I, O>)
         constexpr copy_backward_result<I, O> RANGES_FUNC(copy_backward)(I first, S end_, O out)
         {
-            I i = ranges::next(first, end_), last = i;
+            I i = fermat::ranges::next(first, end_), last = i;
             while(first != i)
                 *--out = *--i;
             return {last, out};
@@ -63,11 +63,11 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::copy_backward;
-        using ranges::copy_backward_result;
+        using fermat::ranges::copy_backward;
+        using fermat::ranges::copy_backward_result;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

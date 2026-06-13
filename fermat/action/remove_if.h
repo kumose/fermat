@@ -28,7 +28,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     // TODO Look at all the special cases handled by erase_if in Library Fundamentals 2
 
@@ -53,8 +53,8 @@ namespace ranges
                             indirect_unary_predicate<C, projected<iterator_t<Rng>, P>>)
             Rng operator()(Rng && rng, C pred, P proj = P{}) const
             {
-                auto it = ranges::remove_if(rng, std::move(pred), std::move(proj));
-                ranges::erase(rng, it, ranges::end(rng));
+                auto it = fermat::ranges::remove_if(rng, std::move(pred), std::move(proj));
+                fermat::ranges::erase(rng, it, fermat::ranges::end(rng));
                 return static_cast<Rng &&>(rng);
             }
         };
@@ -63,7 +63,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(remove_if_fn, remove_if)
     } // namespace actions
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

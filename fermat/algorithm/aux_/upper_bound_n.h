@@ -25,7 +25,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -80,7 +80,7 @@ namespace ranges
 
         RANGES_INLINE_VARIABLE(upper_bound_n_fn, upper_bound_n)
     } // namespace aux
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

@@ -6,7 +6,7 @@
 #include <fermat/range/conversion.h>
 
 TEST(ActionDropTest, Example) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto v = views::ints(1, 21) | to<std::vector>();
     auto& v2 = actions::drop(v, 3);

@@ -25,7 +25,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-functional
     /// @{
@@ -88,10 +88,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::not_fn;
+        using fermat::ranges::not_fn;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

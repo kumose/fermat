@@ -140,26 +140,26 @@ void test() {
     int ir[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4, 6};
     static const int sr = sizeof(ir)/sizeof(ir[0]);
 
-    using R = ranges::set_union_result<Iter1, Iter2, OutIter>;
+    using R = fermat::ranges::set_union_result<Iter1, Iter2, OutIter>;
 
     auto checker = [&](R res) {
         EXPECT_EQ((base(res.out) - ic), sr);
-        EXPECT_FALSE(ranges::lexicographical_compare(ic, base(res.out), ir, ir+sr));
-        ranges::fill(ic, 0);
+        EXPECT_FALSE(fermat::ranges::lexicographical_compare(ic, base(res.out), ir, ir+sr));
+        fermat::ranges::fill(ic, 0);
     };
 
     // Default comparison
-    checker(ranges::set_union(Iter1(ia), Iter1(ia+sa),
+    checker(fermat::ranges::set_union(Iter1(ia), Iter1(ia+sa),
                               Iter2(ib), Iter2(ib+sb),
                               OutIter(ic)));
-    checker(ranges::set_union(Iter1(ib), Iter1(ib+sb),
+    checker(fermat::ranges::set_union(Iter1(ib), Iter1(ib+sb),
                               Iter2(ia), Iter2(ia+sa),
                               OutIter(ic)));
     // With comparator
-    checker(ranges::set_union(Iter1(ia), Iter1(ia+sa),
+    checker(fermat::ranges::set_union(Iter1(ia), Iter1(ia+sa),
                               Iter2(ib), Iter2(ib+sb),
                               OutIter(ic), std::less<int>()));
-    checker(ranges::set_union(Iter1(ib), Iter1(ib+sb),
+    checker(fermat::ranges::set_union(Iter1(ib), Iter1(ib+sb),
                               Iter2(ia), Iter2(ia+sa),
                               OutIter(ic), std::less<int>()));
 }
@@ -179,7 +179,7 @@ struct U {
 /// Constexpr test (same as original)
 /// -------------------------------------------------------------------------
 constexpr bool test_constexpr() {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int ia[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     int ib[] = {2, 4, 4, 6};
     int ic[20] = {0};
@@ -371,16 +371,16 @@ TEST(SetUnion, Projection) {
     int ir[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4, 6};
     static const int sr = sizeof(ir)/sizeof(ir[0]);
 
-    using R = ranges::set_union_result<S*, T*, U*>;
-    R res = ranges::set_union(ia, ib, ic, std::less<int>(), &S::i, &T::j);
+    using R = fermat::ranges::set_union_result<S*, T*, U*>;
+    R res = fermat::ranges::set_union(ia, ib, ic, std::less<int>(), &S::i, &T::j);
     EXPECT_EQ((res.out - ic), sr);
-    EXPECT_FALSE(ranges::lexicographical_compare(ic, res.out, ir, ir+sr, std::less<int>(), &U::k));
-    ranges::fill(ic, U{0});
+    EXPECT_FALSE(fermat::ranges::lexicographical_compare(ic, res.out, ir, ir+sr, std::less<int>(), &U::k));
+    fermat::ranges::fill(ic, U{0});
 
-    using R2 = ranges::set_union_result<T*, S*, U*>;
-    R2 res2 = ranges::set_union(ib, ia, ic, std::less<int>(), &T::j, &S::i);
+    using R2 = fermat::ranges::set_union_result<T*, S*, U*>;
+    R2 res2 = fermat::ranges::set_union(ib, ia, ic, std::less<int>(), &T::j, &S::i);
     EXPECT_EQ((res2.out - ic), sr);
-    EXPECT_FALSE(ranges::lexicographical_compare(ic, res2.out, ir, ir+sr, std::less<int>(), &U::k));
+    EXPECT_FALSE(fermat::ranges::lexicographical_compare(ic, res2.out, ir, ir+sr, std::less<int>(), &U::k));
 }
 
 /// Rvalue ranges tests (dangling check)
@@ -391,22 +391,22 @@ TEST(SetUnion, RvalueRanges) {
     int ir[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4, 6};
     static const int sr = sizeof(ir)/sizeof(ir[0]);
 
-    auto res1 = ranges::set_union(std::move(ia), ranges::views::all(ib), ic, std::less<int>(), &S::i, &T::j);
+    auto res1 = fermat::ranges::set_union(std::move(ia), fermat::ranges::views::all(ib), ic, std::less<int>(), &S::i, &T::j);
     /// res1.in1 is dangling; only check output
     EXPECT_EQ((res1.out - ic), sr);
-    EXPECT_FALSE(ranges::lexicographical_compare(ic, res1.out, ir, ir+sr, std::less<int>(), &U::k));
+    EXPECT_FALSE(fermat::ranges::lexicographical_compare(ic, res1.out, ir, ir+sr, std::less<int>(), &U::k));
 
-    ranges::fill(ic, U{0});
-    auto res2 = ranges::set_union(std::move(ib), ranges::views::all(ia), ic, std::less<int>(), &T::j, &S::i);
+    fermat::ranges::fill(ic, U{0});
+    auto res2 = fermat::ranges::set_union(std::move(ib), fermat::ranges::views::all(ia), ic, std::less<int>(), &T::j, &S::i);
     EXPECT_EQ((res2.out - ic), sr);
-    EXPECT_FALSE(ranges::lexicographical_compare(ic, res2.out, ir, ir+sr, std::less<int>(), &U::k));
+    EXPECT_FALSE(fermat::ranges::lexicographical_compare(ic, res2.out, ir, ir+sr, std::less<int>(), &U::k));
 
     std::vector<S> vec_ia{S{1}, S{2}, S{2}, S{3}, S{3}, S{3}, S{4}, S{4}, S{4}, S{4}};
     std::vector<T> vec_ib{T{2}, T{4}, T{4}, T{6}};
-    ranges::fill(ic, U{0});
-    auto res3 = ranges::set_union(std::move(vec_ia), ranges::views::all(vec_ib), ic, std::less<int>(), &S::i, &T::j);
+    fermat::ranges::fill(ic, U{0});
+    auto res3 = fermat::ranges::set_union(std::move(vec_ia), fermat::ranges::views::all(vec_ib), ic, std::less<int>(), &S::i, &T::j);
     EXPECT_EQ((res3.out - ic), sr);
-    EXPECT_FALSE(ranges::lexicographical_compare(ic, res3.out, ir, ir+sr, std::less<int>(), &U::k));
+    EXPECT_FALSE(fermat::ranges::lexicographical_compare(ic, res3.out, ir, ir+sr, std::less<int>(), &U::k));
 }
 
 TEST(SetUnion, Constexpr) {

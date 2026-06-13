@@ -10,7 +10,7 @@ void test_replace_copy_iter() {
     constexpr std::size_t sa = sizeof(ia) / sizeof(ia[0]);
     int ib[sa] = {0};
 
-    auto res = ranges::replace_copy(ia, ia + sa, ib, 2, 5);
+    auto res = fermat::ranges::replace_copy(ia, ia + sa, ib, 2, 5);
     EXPECT_EQ(res.in, ia + sa);
     EXPECT_EQ(res.out, ib + sa);
     EXPECT_EQ(ib[0], 0);
@@ -26,8 +26,8 @@ void test_replace_copy_range() {
     constexpr std::size_t sa = sizeof(ia) / sizeof(ia[0]);
     int ib[sa] = {0};
 
-    auto rng = ranges::make_subrange(ia, ia + sa);
-    auto res = ranges::replace_copy(rng, ib, 2, 5);
+    auto rng = fermat::ranges::make_subrange(ia, ia + sa);
+    auto res = fermat::ranges::replace_copy(rng, ib, 2, 5);
     EXPECT_EQ(res.in, ia + sa);
     EXPECT_EQ(res.out, ib + sa);
     EXPECT_EQ(ib[0], 0);
@@ -52,7 +52,7 @@ TEST(ReplaceCopyTest, Projection) {
     constexpr std::size_t sa = sizeof(in) / sizeof(in[0]);
     P out[sa] = {};
 
-    auto res = ranges::replace_copy(in, out, 2, P{5, "5"}, &P::first);
+    auto res = fermat::ranges::replace_copy(in, out, 2, P{5, "5"}, &P::first);
     EXPECT_EQ(res.in, std::end(in));
     EXPECT_EQ(res.out, std::end(out));
     EXPECT_EQ(out[0], (P{0, "0"}));
@@ -68,7 +68,7 @@ TEST(ReplaceCopyTest, Constexpr) {
         int ia[] = {0, 1, 2, 3, 4};
         constexpr std::size_t sa = sizeof(ia) / sizeof(ia[0]);
         int ib[sa] = {0};
-        auto r = ranges::replace_copy(ia, ib, 2, 42);
+        auto r = fermat::ranges::replace_copy(ia, ib, 2, 42);
         bool ok = (r.in == ia + sa) &&
                   (r.out == ib + sa) &&
                   (ib[0] == 0) && (ib[1] == 1) &&

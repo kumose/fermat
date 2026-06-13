@@ -21,11 +21,11 @@ struct Iterator {
     bool operator!=(const Iterator& rhs) const { return !(*this == rhs); }
 };
 
-static_assert(ranges::input_iterator<Iterator>, "Iterator must model input_iterator");
+static_assert(fermat::ranges::input_iterator<Iterator>, "Iterator must model input_iterator");
 
 TEST(CountedIteratorTest, Basic) {
-    auto cnt = ranges::counted_iterator<Iterator>(Iterator(), 1);
+    auto cnt = fermat::ranges::counted_iterator<Iterator>(Iterator(), 1);
     EXPECT_EQ(*cnt, 0);
     cnt++;
-    EXPECT_EQ(cnt, ranges::default_sentinel);
+    EXPECT_EQ(cnt, fermat::ranges::default_sentinel);
 }

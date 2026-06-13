@@ -20,7 +20,7 @@ namespace {
 } // namespace
 
 TEST(EqualTest, IteratorPairs) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {0, 1, 2, 3, 4, 5};
     constexpr std::size_t s = sizeof(ia) / sizeof(ia[0]);
@@ -32,7 +32,7 @@ TEST(EqualTest, IteratorPairs) {
 }
 
 TEST(EqualTest, RangeVersions) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {0, 1, 2, 3, 4, 5};
     constexpr std::size_t s = sizeof(ia) / sizeof(ia[0]);
@@ -47,7 +47,7 @@ TEST(EqualTest, RangeVersions) {
 }
 
 TEST(EqualTest, WithPredicate) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {0, 1, 2, 3, 4, 5};
     constexpr std::size_t s = sizeof(ia) / sizeof(ia[0]);
@@ -71,7 +71,7 @@ TEST(EqualTest, WithPredicate) {
 }
 
 TEST(EqualTest, RangeWithPredicate) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {0, 1, 2, 3, 4, 5};
     constexpr std::size_t s = sizeof(ia) / sizeof(ia[0]);
@@ -97,8 +97,8 @@ TEST(EqualTest, RangeWithPredicate) {
 
 TEST(EqualTest, ConstexprInitializerList) {
     using IL = std::initializer_list<int>;
-    static_assert(ranges::equal(IL{1, 2, 3, 4}, IL{1, 2, 3, 4}), "");
-    static_assert(!ranges::equal(IL{1, 2, 3, 4}, IL{1, 2, 3}), "");
-    static_assert(!ranges::equal(IL{1, 2, 3, 4}, IL{1, 2, 4, 3}), "");
-    static_assert(ranges::equal(IL{}, IL{}), "");
+    static_assert(fermat::ranges::equal(IL{1, 2, 3, 4}, IL{1, 2, 3, 4}), "");
+    static_assert(!fermat::ranges::equal(IL{1, 2, 3, 4}, IL{1, 2, 3}), "");
+    static_assert(!fermat::ranges::equal(IL{1, 2, 3, 4}, IL{1, 2, 4, 3}), "");
+    static_assert(fermat::ranges::equal(IL{}, IL{}), "");
 }

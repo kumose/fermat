@@ -24,7 +24,7 @@ TEST(AdjacentRemoveIfTest, Basic) {
     int ia[] = {0, 1, 1, 1, 4, 2, 2, 4, 2};
     constexpr std::size_t sa = sizeof(ia) / sizeof(ia[0]);
 
-    int* r = ranges::adjacent_remove_if(std::begin(ia), std::end(ia), ranges::equal_to{});
+    int* r = fermat::ranges::adjacent_remove_if(std::begin(ia), std::end(ia), fermat::ranges::equal_to{});
     EXPECT_EQ(r, ia + sa - 3);
     EXPECT_EQ(ia[0], 0);
     EXPECT_EQ(ia[1], 1);
@@ -38,7 +38,7 @@ TEST(AdjacentRemoveIfTest, Range) {
     int ia[] = {0, 1, 1, 1, 4, 2, 2, 4, 2};
     constexpr std::size_t sa = sizeof(ia) / sizeof(ia[0]);
 
-    int* r = ranges::adjacent_remove_if(ranges::make_subrange(std::begin(ia), std::end(ia)), ranges::equal_to{});
+    int* r = fermat::ranges::adjacent_remove_if(fermat::ranges::make_subrange(std::begin(ia), std::end(ia)), fermat::ranges::equal_to{});
     EXPECT_EQ(r, ia + sa - 3);
     EXPECT_EQ(ia[0], 0);
     EXPECT_EQ(ia[1], 1);
@@ -61,7 +61,7 @@ TEST(AdjacentRemoveIfTest, UniquePtr) {
     ia[7].reset(new int(4));
     ia[8].reset(new int(2));
 
-    std::unique_ptr<int>* r = ranges::adjacent_remove_if(std::begin(ia), std::end(ia), Pred{});
+    std::unique_ptr<int>* r = fermat::ranges::adjacent_remove_if(std::begin(ia), std::end(ia), Pred{});
     EXPECT_EQ(r, ia + sa - 2);
     EXPECT_EQ(*ia[0], 0);
     EXPECT_EQ(*ia[1], 1);
@@ -85,7 +85,7 @@ TEST(AdjacentRemoveIfTest, UniquePtrRange) {
     ia[7].reset(new int(4));
     ia[8].reset(new int(2));
 
-    std::unique_ptr<int>* r = ranges::adjacent_remove_if(ranges::make_subrange(std::begin(ia), std::end(ia)), Pred{});
+    std::unique_ptr<int>* r = fermat::ranges::adjacent_remove_if(fermat::ranges::make_subrange(std::begin(ia), std::end(ia)), Pred{});
     EXPECT_EQ(r, ia + sa - 2);
     EXPECT_EQ(*ia[0], 0);
     EXPECT_EQ(*ia[1], 1);
@@ -100,7 +100,7 @@ TEST(AdjacentRemoveIfTest, Projection) {
     S ia[] = {S{0}, S{1}, S{1}, S{1}, S{4}, S{2}, S{2}, S{4}, S{2}};
     constexpr std::size_t sa = sizeof(ia) / sizeof(ia[0]);
 
-    S* r = ranges::adjacent_remove_if(ia, ranges::equal_to{}, &S::i);
+    S* r = fermat::ranges::adjacent_remove_if(ia, fermat::ranges::equal_to{}, &S::i);
     EXPECT_EQ(r, ia + sa - 3);
     EXPECT_EQ(ia[0].i, 0);
     EXPECT_EQ(ia[1].i, 1);
@@ -114,7 +114,7 @@ TEST(AdjacentRemoveIfTest, RvalueRange) {
     S ia[] = {S{0}, S{1}, S{1}, S{2}, S{3}, S{5}, S{8}, S{13}, S{21}};
     constexpr std::size_t sa = sizeof(ia) / sizeof(ia[0]);
 
-    auto r = ranges::adjacent_remove_if(ranges::views::all(ia),
+    auto r = fermat::ranges::adjacent_remove_if(fermat::ranges::views::all(ia),
                                         [](int x, int y) noexcept { return (x + y) % 2 == 0; },
                                         &S::i);
     EXPECT_EQ(r, ia + sa - 3);
@@ -136,7 +136,7 @@ TEST(AdjacentRemoveIfTest, Constexpr) {
     // So we create a mutable array in constexpr context.
     constexpr auto test = []() constexpr {
         int arr[] = {0, 1, 1, 1, 4, 2, 2, 4, 2};
-        auto* r = ranges::adjacent_remove_if(std::begin(arr), std::end(arr), ranges::equal_to{});
+        auto* r = fermat::ranges::adjacent_remove_if(std::begin(arr), std::end(arr), fermat::ranges::equal_to{});
         bool ok = (r == arr + sa - 3) &&
                   (arr[0] == 0) && (arr[1] == 1) && (arr[2] == 4) &&
                   (arr[3] == 2) && (arr[4] == 4) && (arr[5] == 2);

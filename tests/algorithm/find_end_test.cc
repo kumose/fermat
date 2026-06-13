@@ -19,7 +19,7 @@ namespace {
 
 // constexpr test
 constexpr bool test_constexpr() {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int ia[] = {0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 0, 1, 2, 3, 0, 1, 2, 0, 1, 0};
     auto ia_b = begin(ia);
     auto ia_e = end(ia);
@@ -46,7 +46,7 @@ constexpr bool test_constexpr() {
 static_assert(test_constexpr(), "");
 
 TEST(FindEndTest, Basic) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int ia[] = {0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 0, 1, 2, 3, 0, 1, 2, 0, 1, 0};
     constexpr auto sa = sizeof(ia) / sizeof(ia[0]);
     int b[] = {0};
@@ -115,7 +115,7 @@ TEST(FindEndTest, Basic) {
 }
 
 TEST(FindEndTest, WithPredicate) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int ia[] = {0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 0, 1, 2, 3, 0, 1, 2, 0, 1, 0};
     constexpr auto sa = sizeof(ia) / sizeof(ia[0]);
     int b[] = {0};
@@ -200,7 +200,7 @@ TEST(FindEndTest, WithPredicate) {
 }
 
 TEST(FindEndTest, WithProjection) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     S ia[] = {{0}, {1}, {2}, {3}, {4}, {5}, {0}, {1}, {2}, {3}, {4}, {0}, {1}, {2}, {3}, {0}, {1}, {2}, {0}, {1}, {0}};
     constexpr auto sa = sizeof(ia) / sizeof(ia[0]);
     int b[] = {0};

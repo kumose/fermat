@@ -13,14 +13,14 @@ TEST(MoveTest, Basic) {
     for (int i = 0; i < N; ++i) src[i] = i;
     std::vector<int> dst(N, 0);
 
-    auto res = ranges::move(src.begin(), src.end(), dst.begin());
+    auto res = fermat::ranges::move(src.begin(), src.end(), dst.begin());
     EXPECT_EQ(res.in, src.end());
     EXPECT_EQ(res.out, dst.end());
     for (int i = 0; i < N; ++i) EXPECT_EQ(src[i], dst[i]);
 
     // Range version
     std::fill(dst.begin(), dst.end(), 0);
-    res = ranges::move(src, dst.begin());
+    res = fermat::ranges::move(src, dst.begin());
     EXPECT_EQ(res.in, src.end());
     EXPECT_EQ(res.out, dst.end());
     for (int i = 0; i < N; ++i) EXPECT_EQ(src[i], dst[i]);
@@ -33,7 +33,7 @@ TEST(MoveTest, MoveOnly) {
     for (int i = 0; i < N; ++i) src[i] = std::make_unique<int>(i);
     std::vector<std::unique_ptr<int>> dst(N);
 
-    auto res = ranges::move(src.begin(), src.end(), dst.begin());
+    auto res = fermat::ranges::move(src.begin(), src.end(), dst.begin());
     EXPECT_EQ(res.in, src.end());
     EXPECT_EQ(res.out, dst.end());
     for (int i = 0; i < N; ++i) {
@@ -42,8 +42,8 @@ TEST(MoveTest, MoveOnly) {
     }
 
     // Move back to source
-    ranges::move(dst.begin(), dst.end(), src.begin());
-    res = ranges::move(src.begin(), src.end(), dst.begin());
+    fermat::ranges::move(dst.begin(), dst.end(), src.begin());
+    res = fermat::ranges::move(src.begin(), src.end(), dst.begin());
     EXPECT_EQ(res.in, src.end());
     EXPECT_EQ(res.out, dst.end());
     for (int i = 0; i < N; ++i) {
@@ -59,7 +59,7 @@ TEST(MoveTest, Constexpr) {
         std::array<int, N> src{};
         for (int i = 0; i < N; ++i) src[i] = i;
         std::array<int, N> dst{};
-        auto res = ranges::move(src.begin(), src.end(), dst.begin());
+        auto res = fermat::ranges::move(src.begin(), src.end(), dst.begin());
         bool ok = (res.in == src.end()) && (res.out == dst.end());
         for (int i = 0; i < N; ++i) ok = ok && (src[i] == dst[i]);
         return ok;

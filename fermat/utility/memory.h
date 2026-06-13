@@ -35,7 +35,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -239,7 +239,7 @@ namespace ranges
         }
         iterator_wrapper<raw_storage_iterator<Val *, Val>> begin()
         {
-            return ranges::iter_ref(rsi_);
+            return fermat::ranges::iter_ref(rsi_);
         }
     };
 
@@ -249,7 +249,7 @@ namespace ranges
         return raw_buffer<Val>(val);
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

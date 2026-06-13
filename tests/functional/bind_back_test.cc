@@ -13,14 +13,14 @@ int* test(int& i) {
 
 TEST(BindBackTest, Basic) {
     int i = 42;
-    auto fn = ranges::bind_back(test, i);
+    auto fn = fermat::ranges::bind_back(test, i);
     int* pi = fn();
     EXPECT_NE(pi, &i);   // bind_back copies the argument
     EXPECT_EQ(*pi, i);
 }
 
 // Check invocable concepts at compile time
-using FnType = decltype(ranges::bind_back(test, 0));
-static_assert(!ranges::invocable<FnType>, "FnType should not be invocable as prvalue");
-static_assert(ranges::invocable<FnType&>, "FnType& should be invocable");
-static_assert(!ranges::invocable<const FnType&>, "const FnType& should not be invocable");
+using FnType = decltype(fermat::ranges::bind_back(test, 0));
+static_assert(!fermat::ranges::invocable<FnType>, "FnType should not be invocable as prvalue");
+static_assert(fermat::ranges::invocable<FnType&>, "FnType& should be invocable");
+static_assert(!fermat::ranges::invocable<const FnType&>, "const FnType& should not be invocable");

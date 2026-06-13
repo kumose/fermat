@@ -31,7 +31,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -59,7 +59,7 @@ namespace ranges
             {
                 RANGES_ENSURE(mid - first <= PTRDIFF_MAX);
                 if(auto const i = uid(gen, param_t{0, D2(mid - first)}))
-                    ranges::iter_swap(mid - i, mid);
+                    fermat::ranges::iter_swap(mid - i, mid);
             }
             return mid;
         }
@@ -80,10 +80,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::shuffle;
+        using fermat::ranges::shuffle;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

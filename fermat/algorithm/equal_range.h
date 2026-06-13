@@ -31,7 +31,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges {
+namespace fermat::ranges {
     /// \addtogroup group-algorithms
     /// @{
     RANGES_FUNC_BEGIN(equal_range)
@@ -63,25 +63,25 @@ namespace ranges {
                     // at the end of the input range
                     dist -= d;
                     return aux::equal_range_n(
-                        std::move(first), dist, val, ranges::ref(pred), ranges::ref(proj));
+                        std::move(first), dist, val, fermat::ranges::ref(pred), fermat::ranges::ref(proj));
                 }
                 // if val < *mid, mid is after the target range.
                 auto &&v = *mid;
                 auto &&pv = invoke(proj, (decltype(v) &&) v);
                 if (invoke(pred, val, pv)) {
                     return aux::equal_range_n(
-                        std::move(first), dist, val, ranges::ref(pred), ranges::ref(proj));
+                        std::move(first), dist, val, fermat::ranges::ref(pred), fermat::ranges::ref(proj));
                 } else if (!invoke(pred, pv, val)) {
                     // *mid == val: the lower bound is <= mid, and the upper bound is >
                     // mid.
                     return {
                         aux::lower_bound_n(
-                            std::move(first), dist, val, ranges::ref(pred), ranges::ref(proj)),
+                            std::move(first), dist, val, fermat::ranges::ref(pred), fermat::ranges::ref(proj)),
                         upper_bound(std::move(mid),
                                     std::move(last),
                                     val,
-                                    ranges::ref(pred),
-                                    ranges::ref(proj))
+                                    fermat::ranges::ref(pred),
+                                    fermat::ranges::ref(proj))
                     };
                 }
                 // *mid < val, mid is before the target range.
@@ -110,11 +110,11 @@ namespace ranges {
     RANGES_FUNC_END(equal_range)
 
     namespace cpp20 {
-        using ranges::equal_range;
+        using fermat::ranges::equal_range;
     }
 
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

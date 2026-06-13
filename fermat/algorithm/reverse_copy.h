@@ -29,7 +29,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -44,7 +44,7 @@ namespace ranges
             weakly_incrementable<O> AND indirectly_copyable<I, O>)
         constexpr reverse_copy_result<I, O> RANGES_FUNC(reverse_copy)(I first, S end_, O out) //
         {
-            I last = ranges::next(first, end_), res = last;
+            I last = fermat::ranges::next(first, end_), res = last;
             for(; first != last; ++out)
                 *out = *--last;
             return {res, out};
@@ -64,11 +64,11 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::reverse_copy;
-        using ranges::reverse_copy_result;
+        using fermat::ranges::reverse_copy;
+        using fermat::ranges::reverse_copy_result;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

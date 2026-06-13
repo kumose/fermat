@@ -38,7 +38,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -117,9 +117,9 @@ namespace ranges
             void satisfy(meta::size_t<N>)
             {
                 RANGES_EXPECT(its_.index() == N);
-                if(ranges::get<N>(its_) == end(std::get<N>(rng_->rngs_)))
+                if(fermat::ranges::get<N>(its_) == end(std::get<N>(rng_->rngs_)))
                 {
-                    ranges::emplace<N + 1>(its_, begin(std::get<N + 1>(rng_->rngs_)));
+                    fermat::ranges::emplace<N + 1>(its_, begin(std::get<N + 1>(rng_->rngs_)));
                     this->satisfy(meta::size_t<N + 1>{});
                 }
             }
@@ -156,9 +156,9 @@ namespace ranges
                     if(it.get() == begin(std::get<N>(pos->rng_->rngs_)))
                     {
                         auto && rng = std::get<N - 1>(pos->rng_->rngs_);
-                        ranges::emplace<N - 1>(
+                        fermat::ranges::emplace<N - 1>(
                             pos->its_,
-                            ranges::next(ranges::begin(rng), ranges::end(rng)));
+                            fermat::ranges::next(fermat::ranges::begin(rng), fermat::ranges::end(rng)));
                         pos->its_.visit_i(*this);
                     }
                     else
@@ -173,18 +173,18 @@ namespace ranges
                     requires random_access_iterator<I>)
                 void operator()(indexed_element<I, cranges - 1> it) const
                 {
-                    ranges::advance(it.get(), n);
+                    fermat::ranges::advance(it.get(), n);
                 }
                 template(typename I, std::size_t N)(
                     requires random_access_iterator<I>)
                 void operator()(indexed_element<I, N> it) const
                 {
-                    auto last = ranges::end(std::get<N>(pos->rng_->rngs_));
+                    auto last = fermat::ranges::end(std::get<N>(pos->rng_->rngs_));
                     // BUGBUG If distance(it, last) > n, then using bounded advance
                     // is O(n) when it need not be since the last iterator position
                     // is actually not interesting. Only the "rest" is needed, which
                     // can sometimes be O(1).
-                    auto rest = ranges::advance(it.get(), n, std::move(last));
+                    auto rest = fermat::ranges::advance(it.get(), n, std::move(last));
                     pos->satisfy(meta::size_t<N>{});
                     if(rest != 0)
                         pos->its_.visit_i(advance_fwd_fun{pos, rest});
@@ -198,24 +198,24 @@ namespace ranges
                     requires random_access_iterator<I>)
                 void operator()(indexed_element<I, 0> it) const
                 {
-                    ranges::advance(it.get(), n);
+                    fermat::ranges::advance(it.get(), n);
                 }
                 template(typename I, std::size_t N)(
                     requires random_access_iterator<I>)
                 void operator()(indexed_element<I, N> it) const
                 {
-                    auto first = ranges::begin(std::get<N>(pos->rng_->rngs_));
+                    auto first = fermat::ranges::begin(std::get<N>(pos->rng_->rngs_));
                     if(it.get() == first)
                     {
                         auto && rng = std::get<N - 1>(pos->rng_->rngs_);
-                        ranges::emplace<N - 1>(
+                        fermat::ranges::emplace<N - 1>(
                             pos->its_,
-                            ranges::next(ranges::begin(rng), ranges::end(rng)));
+                            fermat::ranges::next(fermat::ranges::begin(rng), fermat::ranges::end(rng)));
                         pos->its_.visit_i(*this);
                     }
                     else
                     {
-                        auto rest = ranges::advance(it.get(), n, std::move(first));
+                        auto rest = fermat::ranges::advance(it.get(), n, std::move(first));
                         if(rest != 0)
                             pos->its_.visit_i(advance_rev_fun{pos, rest});
                     }
@@ -236,9 +236,9 @@ namespace ranges
                 if(from.its_.index() == N)
                 {
                     if(to.its_.index() == N)
-                        return distance(ranges::get<N>(from.its_),
-                                        ranges::get<N>(to.its_));
-                    return distance(ranges::get<N>(from.its_),
+                        return distance(fermat::ranges::get<N>(from.its_),
+                                        fermat::ranges::get<N>(to.its_));
+                    return distance(fermat::ranges::get<N>(from.its_),
                                     end(std::get<N>(from.rng_->rngs_))) +
                            cursor::distance_to_(meta::size_t<N + 1>{}, from, to);
                 }
@@ -247,7 +247,7 @@ namespace ranges
                            cursor::distance_to_(meta::size_t<N + 1>{}, from, to);
                 RANGES_EXPECT(to.its_.index() == N);
                 return distance(begin(std::get<N>(from.rng_->rngs_)),
-                                ranges::get<N>(to.its_));
+                                fermat::ranges::get<N>(to.its_));
             }
 
         public:
@@ -274,7 +274,7 @@ namespace ranges
             reference read() const
             {
                 // Kind of a dumb implementation. Surely there's a better way.
-                return ranges::get<0>(unique_variant(its_.visit(
+                return fermat::ranges::get<0>(unique_variant(its_.visit(
                     compose(convert_to<reference>{}, detail::dereference_fn{}))));
             }
             void next()
@@ -292,7 +292,7 @@ namespace ranges
             bool equal(sentinel<IsConst> const & pos) const
             {
                 return its_.index() == cranges - 1 &&
-                       ranges::get<cranges - 1>(its_) == pos.end_;
+                       fermat::ranges::get<cranges - 1>(its_) == pos.end_;
             }
             CPP_member
             auto prev() //
@@ -371,7 +371,7 @@ namespace ranges
             using size_type = common_type_t<range_size_t<Rngs const>...>;
             return tuple_foldl(
                 tuple_transform(rngs_,
-                                [](auto && r) -> size_type { return ranges::size(r); }),
+                                [](auto && r) -> size_type { return fermat::ranges::size(r); }),
                 size_type{0},
                 plus{});
         }
@@ -383,7 +383,7 @@ namespace ranges
             using size_type = common_type_t<range_size_t<Rngs>...>;
             return tuple_foldl(
                 tuple_transform(rngs_,
-                                [](auto && r) -> size_type { return ranges::size(r); }),
+                                [](auto && r) -> size_type { return fermat::ranges::size(r); }),
                 size_type{0},
                 plus{});
         }
@@ -443,10 +443,10 @@ namespace ranges
         RANGES_INLINE_VARIABLE(concat_fn, concat)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::concat_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::concat_view)
 
 #endif

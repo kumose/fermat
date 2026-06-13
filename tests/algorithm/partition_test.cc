@@ -16,29 +16,29 @@ void test_iter() {
     constexpr std::size_t sa = sizeof(ia) / sizeof(ia[0]);
 
     // mixed
-    int* r = ranges::partition(ia, ia + sa, is_odd{});
+    int* r = fermat::ranges::partition(ia, ia + sa, is_odd{});
     EXPECT_EQ(r, ia + 5);
     for (int* i = ia; i < r; ++i) EXPECT_TRUE(is_odd{}(*i));
     for (int* i = r; i < ia + sa; ++i) EXPECT_FALSE(is_odd{}(*i));
 
     // empty
-    r = ranges::partition(ia, ia, is_odd{});
+    r = fermat::ranges::partition(ia, ia, is_odd{});
     EXPECT_EQ(r, ia);
 
     // all false
     for (std::size_t i = 0; i < sa; ++i) ia[i] = 2 * i;
-    r = ranges::partition(ia, ia + sa, is_odd{});
+    r = fermat::ranges::partition(ia, ia + sa, is_odd{});
     EXPECT_EQ(r, ia);
 
     // all true
     for (std::size_t i = 0; i < sa; ++i) ia[i] = 2 * i + 1;
-    r = ranges::partition(ia, ia + sa, is_odd{});
+    r = fermat::ranges::partition(ia, ia + sa, is_odd{});
     EXPECT_EQ(r, ia + sa);
 
     // all true but last
     for (std::size_t i = 0; i < sa; ++i) ia[i] = 2 * i + 1;
     ia[sa - 1] = 10;
-    r = ranges::partition(ia, ia + sa, is_odd{});
+    r = fermat::ranges::partition(ia, ia + sa, is_odd{});
     EXPECT_EQ(r, ia + sa - 1);
     for (int* i = ia; i < r; ++i) EXPECT_TRUE(is_odd{}(*i));
     for (int* i = r; i < ia + sa; ++i) EXPECT_FALSE(is_odd{}(*i));
@@ -46,7 +46,7 @@ void test_iter() {
     // all true but first
     for (std::size_t i = 0; i < sa; ++i) ia[i] = 2 * i + 1;
     ia[0] = 10;
-    r = ranges::partition(ia, ia + sa, is_odd{});
+    r = fermat::ranges::partition(ia, ia + sa, is_odd{});
     EXPECT_EQ(r, ia + sa - 1);
     for (int* i = ia; i < r; ++i) EXPECT_TRUE(is_odd{}(*i));
     for (int* i = r; i < ia + sa; ++i) EXPECT_FALSE(is_odd{}(*i));
@@ -54,7 +54,7 @@ void test_iter() {
     // all false but last
     for (std::size_t i = 0; i < sa; ++i) ia[i] = 2 * i;
     ia[sa - 1] = 11;
-    r = ranges::partition(ia, ia + sa, is_odd{});
+    r = fermat::ranges::partition(ia, ia + sa, is_odd{});
     EXPECT_EQ(r, ia + 1);
     for (int* i = ia; i < r; ++i) EXPECT_TRUE(is_odd{}(*i));
     for (int* i = r; i < ia + sa; ++i) EXPECT_FALSE(is_odd{}(*i));
@@ -62,7 +62,7 @@ void test_iter() {
     // all false but first
     for (std::size_t i = 0; i < sa; ++i) ia[i] = 2 * i;
     ia[0] = 11;
-    r = ranges::partition(ia, ia + sa, is_odd{});
+    r = fermat::ranges::partition(ia, ia + sa, is_odd{});
     EXPECT_EQ(r, ia + 1);
     for (int* i = ia; i < r; ++i) EXPECT_TRUE(is_odd{}(*i));
     for (int* i = r; i < ia + sa; ++i) EXPECT_FALSE(is_odd{}(*i));
@@ -74,29 +74,29 @@ void test_range() {
     constexpr std::size_t sa = sizeof(ia) / sizeof(ia[0]);
 
     // mixed
-    auto r = ranges::partition(ranges::make_subrange(ia, ia + sa), is_odd{});
+    auto r = fermat::ranges::partition(fermat::ranges::make_subrange(ia, ia + sa), is_odd{});
     EXPECT_EQ(r, ia + 5);
     for (int* i = ia; i < r; ++i) EXPECT_TRUE(is_odd{}(*i));
     for (int* i = r; i < ia + sa; ++i) EXPECT_FALSE(is_odd{}(*i));
 
     // empty
-    r = ranges::partition(ranges::make_subrange(ia, ia), is_odd{});
+    r = fermat::ranges::partition(fermat::ranges::make_subrange(ia, ia), is_odd{});
     EXPECT_EQ(r, ia);
 
     // all false
     for (std::size_t i = 0; i < sa; ++i) ia[i] = 2 * i;
-    r = ranges::partition(ranges::make_subrange(ia, ia + sa), is_odd{});
+    r = fermat::ranges::partition(fermat::ranges::make_subrange(ia, ia + sa), is_odd{});
     EXPECT_EQ(r, ia);
 
     // all true
     for (std::size_t i = 0; i < sa; ++i) ia[i] = 2 * i + 1;
-    r = ranges::partition(ranges::make_subrange(ia, ia + sa), is_odd{});
+    r = fermat::ranges::partition(fermat::ranges::make_subrange(ia, ia + sa), is_odd{});
     EXPECT_EQ(r, ia + sa);
 
     // all true but last
     for (std::size_t i = 0; i < sa; ++i) ia[i] = 2 * i + 1;
     ia[sa - 1] = 10;
-    r = ranges::partition(ranges::make_subrange(ia, ia + sa), is_odd{});
+    r = fermat::ranges::partition(fermat::ranges::make_subrange(ia, ia + sa), is_odd{});
     EXPECT_EQ(r, ia + sa - 1);
     for (int* i = ia; i < r; ++i) EXPECT_TRUE(is_odd{}(*i));
     for (int* i = r; i < ia + sa; ++i) EXPECT_FALSE(is_odd{}(*i));
@@ -104,7 +104,7 @@ void test_range() {
     // all true but first
     for (std::size_t i = 0; i < sa; ++i) ia[i] = 2 * i + 1;
     ia[0] = 10;
-    r = ranges::partition(ranges::make_subrange(ia, ia + sa), is_odd{});
+    r = fermat::ranges::partition(fermat::ranges::make_subrange(ia, ia + sa), is_odd{});
     EXPECT_EQ(r, ia + sa - 1);
     for (int* i = ia; i < r; ++i) EXPECT_TRUE(is_odd{}(*i));
     for (int* i = r; i < ia + sa; ++i) EXPECT_FALSE(is_odd{}(*i));
@@ -112,7 +112,7 @@ void test_range() {
     // all false but last
     for (std::size_t i = 0; i < sa; ++i) ia[i] = 2 * i;
     ia[sa - 1] = 11;
-    r = ranges::partition(ranges::make_subrange(ia, ia + sa), is_odd{});
+    r = fermat::ranges::partition(fermat::ranges::make_subrange(ia, ia + sa), is_odd{});
     EXPECT_EQ(r, ia + 1);
     for (int* i = ia; i < r; ++i) EXPECT_TRUE(is_odd{}(*i));
     for (int* i = r; i < ia + sa; ++i) EXPECT_FALSE(is_odd{}(*i));
@@ -120,7 +120,7 @@ void test_range() {
     // all false but first
     for (std::size_t i = 0; i < sa; ++i) ia[i] = 2 * i;
     ia[0] = 11;
-    r = ranges::partition(ranges::make_subrange(ia, ia + sa), is_odd{});
+    r = fermat::ranges::partition(fermat::ranges::make_subrange(ia, ia + sa), is_odd{});
     EXPECT_EQ(r, ia + 1);
     for (int* i = ia; i < r; ++i) EXPECT_TRUE(is_odd{}(*i));
     for (int* i = r; i < ia + sa; ++i) EXPECT_FALSE(is_odd{}(*i));
@@ -140,7 +140,7 @@ TEST(PartitionTest, Range) {
 TEST(PartitionTest, Projection) {
     S arr[] = {S{1}, S{2}, S{3}, S{4}, S{5}, S{6}, S{7}, S{8}, S{9}};
     constexpr std::size_t sa = sizeof(arr) / sizeof(arr[0]);
-    S* r = ranges::partition(arr, is_odd{}, &S::i);
+    S* r = fermat::ranges::partition(arr, is_odd{}, &S::i);
     EXPECT_EQ(r, arr + 5);
     for (S* i = arr; i < r; ++i) EXPECT_TRUE(is_odd{}(i->i));
     for (S* i = r; i < arr + sa; ++i) EXPECT_FALSE(is_odd{}(i->i));
@@ -149,11 +149,11 @@ TEST(PartitionTest, Projection) {
 /// rvalue range test (compile only, we just check dangling is not required)
 TEST(PartitionTest, RvalueRange) {
     S arr[] = {S{1}, S{2}, S{3}, S{4}, S{5}, S{6}, S{7}, S{8}, S{9}};
-    auto r = ranges::partition(std::move(arr), is_odd{}, &S::i);
+    auto r = fermat::ranges::partition(std::move(arr), is_odd{}, &S::i);
     // r is a dangling iterator; no runtime check needed.
     (void)r;
     std::vector<S> vec(std::begin(arr), std::end(arr));
-    auto r3 = ranges::partition(std::move(vec), is_odd{}, &S::i);
+    auto r3 = fermat::ranges::partition(std::move(vec), is_odd{}, &S::i);
     (void)r3;
 }
 
@@ -161,7 +161,7 @@ TEST(PartitionTest, RvalueRange) {
 TEST(PartitionTest, Constexpr) {
     constexpr auto test = []() constexpr {
         std::array<int, 9> arr{1, 2, 3, 4, 5, 6, 7, 8, 9};
-        int* r = ranges::partition(arr.begin(), arr.end(), is_odd{});
+        int* r = fermat::ranges::partition(arr.begin(), arr.end(), is_odd{});
         bool ok = (r == arr.begin() + 5);
         for (int* i = arr.begin(); i < r; ++i) ok = ok && (is_odd{})(*i);
         for (int* i = r; i < arr.end(); ++i) ok = ok && !(is_odd{})(*i);

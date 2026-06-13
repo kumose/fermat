@@ -9,7 +9,7 @@
 // Helper: raw pointer version of is_heap_until (returns pointer)
 template<typename Iter, typename Comp = std::less<>>
 Iter is_heap_until_raw(Iter first, Iter last, Comp comp = {}) {
-    return ranges::is_heap_until(first, last, comp);
+    return fermat::ranges::is_heap_until(first, last, comp);
 }
 
 // ---------- test_basic ----------
@@ -72,13 +72,13 @@ TEST(IsHeapUntilTest, WithComparator) {
 TEST(IsHeapUntilTest, WithProjection) {
     struct S { int i; };
     S arr[] = {S{1}, S{0}, S{0}, S{0}, S{0}, S{0}, S{1}};
-    auto result = ranges::is_heap_until(arr, arr+7, std::greater<int>(), &S::i);
+    auto result = fermat::ranges::is_heap_until(arr, arr+7, std::greater<int>(), &S::i);
     EXPECT_EQ(result, arr + 1);
 }
 
 // ---------- constexpr test ----------
 TEST(IsHeapUntilTest, Constexpr) {
     constexpr std::array<int, 7> arr{1,0,0,0,0,0,1};
-    static_assert(ranges::is_heap_until(arr, std::greater{}) == arr.begin() + 1,
+    static_assert(fermat::ranges::is_heap_until(arr, std::greater{}) == arr.begin() + 1,
                   "constexpr is_heap_until failed");
 }

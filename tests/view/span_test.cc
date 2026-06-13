@@ -14,15 +14,15 @@
 #include <string>
 #include <vector>
 
-#include <fermat/view/span.h>               /// ranges::span, ranges::dynamic_extent, ranges::make_span
-#include <fermat/range/access.h>            /// ranges::data, ranges::size, ranges::begin, ranges::end
-#include <fermat/range/concepts.h>          /// ranges::view_, ranges::contiguous_range
+#include <fermat/view/span.h>               /// fermat::ranges::span, fermat::ranges::dynamic_extent, fermat::ranges::make_span
+#include <fermat/range/access.h>            /// fermat::ranges::data, fermat::ranges::size, fermat::ranges::begin, fermat::ranges::end
+#include <fermat/range/concepts.h>          /// fermat::ranges::view_, fermat::ranges::contiguous_range
 
-using ranges::span;
-using ranges::dynamic_extent;
-using ranges::make_span;
-using ranges::as_bytes;
-using ranges::as_writeable_bytes;
+using fermat::ranges::span;
+using fermat::ranges::dynamic_extent;
+using fermat::ranges::make_span;
+using fermat::ranges::as_bytes;
+using fermat::ranges::as_writeable_bytes;
 // Use the narrow_cast provided by fermat (in spans.h) - do not define our own.
 
 namespace {
@@ -412,7 +412,7 @@ TEST(SpanTest, FromContainerConstructor) {
         auto use_span = [](span<const int>) {};
         use_span(get_temp_vector());
     }
-    static_assert(!ranges::detail::is_convertible<const std::vector<int>, span<const char>>::value, "");
+    static_assert(!fermat::ranges::detail::is_convertible<const std::vector<int>, span<const char>>::value, "");
     {
         auto get_temp_string = []() -> const std::string { return {}; };
         auto use_span = [](span<const char> s) { static_cast<void>(s); };
@@ -473,11 +473,11 @@ TEST(SpanTest, ClassTemplateArgumentDeduction) {
         static_assert(std::is_same<span<int,5>, decltype(s)>::value, "");
     }
     {
-        span s{ranges::data(arr), ranges::size(arr)};
+        span s{fermat::ranges::data(arr), fermat::ranges::size(arr)};
         static_assert(std::is_same<span<int>, decltype(s)>::value, "");
     }
     {
-        span s{ranges::begin(arr), ranges::end(arr)};
+        span s{fermat::ranges::begin(arr), fermat::ranges::end(arr)};
         static_assert(std::is_same<span<int>, decltype(s)>::value, "");
     }
     std::array<int,5> std_arr = {1,2,3,4,5};
@@ -816,8 +816,8 @@ TEST(SpanTest, FixedSizeConversions) {
         span<int> s = s4;
         EXPECT_EQ(s.size(), s4.size());
     }
-    static_assert(!ranges::detail::is_convertible<decltype(arr), span<int,2>>::value, "");
-    static_assert(!ranges::detail::is_convertible<span<int,4>, span<int,2>>::value, "");
+    static_assert(!fermat::ranges::detail::is_convertible<decltype(arr), span<int,2>>::value, "");
+    static_assert(!fermat::ranges::detail::is_convertible<span<int,4>, span<int,2>>::value, "");
     {
         const span<int,2> s2 = {arr, 2};
         (void)s2;
@@ -861,7 +861,7 @@ TEST(SpanTest, DefaultConstructible) {
 }
 
 // Compile-time concept checks
-static_assert(ranges::view_<span<int>>, "");
-static_assert(ranges::contiguous_range<span<int>>, "");
-static_assert(ranges::view_<span<int, 42>>, "");
-static_assert(ranges::contiguous_range<span<int, 42>>, "");
+static_assert(fermat::ranges::view_<span<int>>, "");
+static_assert(fermat::ranges::contiguous_range<span<int>>, "");
+static_assert(fermat::ranges::view_<span<int, 42>>, "");
+static_assert(fermat::ranges::contiguous_range<span<int, 42>>, "");

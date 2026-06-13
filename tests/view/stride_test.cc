@@ -18,7 +18,7 @@
 #include <fermat/iterator/insert_iterators.h>
 #include <fermat/iterator/stream_iterators.h>
 #include <fermat/algorithm/copy.h>
-#include <fermat/algorithm/equal.h>     // for ranges::equal
+#include <fermat/algorithm/equal.h>     // for fermat::ranges::equal
 #include <fermat/view/stride.h>
 #include <fermat/view/reverse.h>
 #include <fermat/view/iota.h>
@@ -58,7 +58,7 @@ public:
 /// debug_input_view (minimal input view for testing)
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T>>
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>>
 {
     struct data
     {
@@ -77,7 +77,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T>>
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T>> = true;
@@ -88,8 +88,8 @@ namespace ranges
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -101,7 +101,7 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected) {
 /// Overload for comparing two ranges (used for reverse)
 template<typename Rng1, typename Rng2>
 void check_equal(Rng1&& rng1, Rng2&& rng2) {
-    EXPECT_TRUE(ranges::equal(rng1, rng2));
+    EXPECT_TRUE(fermat::ranges::equal(rng1, rng2));
 }
 
 /// ------------------------------------------------------------
@@ -109,8 +109,8 @@ void check_equal(Rng1&& rng1, Rng2&& rng2) {
 /// ------------------------------------------------------------
 void bug_1291() {
     std::vector<int> vec;
-    auto tx = vec | ranges::views::stride(2) | ranges::views::partial_sum;
-    ranges::accumulate(tx, 0);
+    auto tx = vec | fermat::ranges::views::stride(2) | fermat::ranges::views::partial_sum;
+    fermat::ranges::accumulate(tx, 0);
 }
 
 // ------------------------------------------------------------------
@@ -118,7 +118,7 @@ void bug_1291() {
 // ------------------------------------------------------------------
 
 TEST(StrideTest, VectorStride3) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v(50);
     iota(v, 0);
@@ -130,7 +130,7 @@ TEST(StrideTest, VectorStride3) {
 }
 
 TEST(StrideTest, IstreamStride3) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v(50);
     iota(v, 0);
@@ -144,7 +144,7 @@ TEST(StrideTest, IstreamStride3) {
 }
 
 TEST(StrideTest, ListStride3) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v(50);
     iota(v, 0);
@@ -160,16 +160,16 @@ TEST(StrideTest, ListStride3) {
 }
 
 TEST(StrideTest, DistanceAndIteratorDifference) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v(50);
     iota(v, 0);
 
     auto x2 = v | views::stride(3);
-    EXPECT_EQ(ranges::distance(x2), 17);
+    EXPECT_EQ(fermat::ranges::distance(x2), 17);
 
     auto it0 = x2.begin();
-    auto it1 = ranges::next(it0, 10);
+    auto it1 = fermat::ranges::next(it0, 10);
     EXPECT_EQ(it1 - it0, 10);
     EXPECT_EQ(it0 - it1, -10);
     EXPECT_EQ(it0 - it0, 0);
@@ -177,25 +177,25 @@ TEST(StrideTest, DistanceAndIteratorDifference) {
 }
 
 TEST(StrideTest, MoveAndStride) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v(50);
     iota(v, 0);
 
     const auto n = 4;
     auto rng = v | views::move | views::stride(2);
-    EXPECT_EQ(ranges::next(begin(rng), n) - begin(rng), n);
+    EXPECT_EQ(fermat::ranges::next(begin(rng), n) - begin(rng), n);
 }
 
 TEST(StrideTest, StrideWithIntegerLiteral) {
     // Regression test #368 – just ensure it compiles.
     int n = 42;
-    (void)ranges::views::stride(n);
+    (void)fermat::ranges::views::stride(n);
     SUCCEED();
 }
 
 TEST(StrideTest, DebugInputViewStride2) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int const some_ints[] = {0,1,2,3,4,5,6,7};
     auto rng = debug_input_view<int const>{some_ints, 8} | views::stride(2);
@@ -203,7 +203,7 @@ TEST(StrideTest, DebugInputViewStride2) {
 }
 
 TEST(StrideTest, ConstSubrangeStride3) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v(50);
     iota(v, 0);
@@ -218,7 +218,7 @@ TEST(StrideTest, ConstSubrangeStride3) {
 }
 
 TEST(StrideTest, SizedSubrangeStride3) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v(50);
     iota(v, 0);
@@ -235,7 +235,7 @@ TEST(StrideTest, SizedSubrangeStride3) {
 }
 
 TEST(StrideTest, IotaStrideEvenlyDivisible) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto r = views::iota(0, 12);
     auto strided = r | views::stride(3);
@@ -249,7 +249,7 @@ TEST(StrideTest, IotaStrideEvenlyDivisible) {
 }
 
 TEST(StrideTest, IotaStrideNotEvenlyDivisible) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto r = views::iota(0, 12);
     auto strided = r | views::stride(5);

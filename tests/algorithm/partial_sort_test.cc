@@ -14,24 +14,24 @@ void test_partial_sort_sizes(int N, int M) {
     std::shuffle(data.begin(), data.end(), gen);
 
     // Iterator version: partial_sort(first, middle, last)
-    auto res = ranges::partial_sort(data.data(), data.data() + M, data.data() + N);
+    auto res = fermat::ranges::partial_sort(data.data(), data.data() + M, data.data() + N);
     EXPECT_EQ(res, data.data() + N);
     for (int i = 0; i < M; ++i) EXPECT_EQ(data[i], i);
 
     // Range version: partial_sort(rng, middle)
     std::shuffle(data.begin(), data.end(), gen);
-    auto res2 = ranges::partial_sort(data, data.begin() + M);
+    auto res2 = fermat::ranges::partial_sort(data, data.begin() + M);
     EXPECT_EQ(res2, data.end());
     for (int i = 0; i < M; ++i) EXPECT_EQ(data[i], i);
 
     // With comparator (std::greater)
     std::shuffle(data.begin(), data.end(), gen);
-    auto res3 = ranges::partial_sort(data.data(), data.data() + M, data.data() + N, std::greater<int>());
+    auto res3 = fermat::ranges::partial_sort(data.data(), data.data() + M, data.data() + N, std::greater<int>());
     EXPECT_EQ(res3, data.data() + N);
     for (int i = 0; i < M; ++i) EXPECT_EQ(data[i], N - i - 1);
 
     std::shuffle(data.begin(), data.end(), gen);
-    auto res4 = ranges::partial_sort(data, data.begin() + M, std::greater<int>());
+    auto res4 = fermat::ranges::partial_sort(data, data.begin() + M, std::greater<int>());
     EXPECT_EQ(res4, data.end());
     for (int i = 0; i < M; ++i) EXPECT_EQ(data[i], N - i - 1);
 }
@@ -51,7 +51,7 @@ void test_partial_sort_for_N(int N) {
 
 TEST(PartialSortTest, SingleElement) {
     int i = 0;
-    auto res = ranges::partial_sort(&i, &i, &i);
+    auto res = fermat::ranges::partial_sort(&i, &i, &i);
     EXPECT_EQ(i, 0);
     EXPECT_EQ(res, &i);
 }
@@ -75,7 +75,7 @@ TEST(PartialSortTest, MoveOnly) {
     auto indirect_less = [](const std::unique_ptr<int>& x, const std::unique_ptr<int>& y) {
         return *x < *y;
     };
-    auto res = ranges::partial_sort(v, middle, indirect_less);
+    auto res = fermat::ranges::partial_sort(v, middle, indirect_less);
     EXPECT_EQ(res, v.end());
     for (int i = 0; i < N/2; ++i) EXPECT_EQ(*v[i], i);
 }
@@ -89,7 +89,7 @@ TEST(PartialSortTest, Projection) {
         v[i].j = i;
     }
     auto middle = v.begin() + N/2;
-    auto res = ranges::partial_sort(v, middle, std::less<int>(), &S::i);
+    auto res = fermat::ranges::partial_sort(v, middle, std::less<int>(), &S::i);
     EXPECT_EQ(res, v.end());
     for (int i = 0; i < N/2; ++i) {
         EXPECT_EQ(v[i].i, i);
@@ -101,7 +101,7 @@ TEST(PartialSortTest, ConstexprRuntime) {
     const int N = 100;
     std::array<int, N> ia;
     for (int i = 0; i < N; ++i) ia[i] = N - i - 1;
-    auto res = ranges::partial_sort(ia.begin(), ia.begin() + N/2, ia.end(), std::less<int>());
+    auto res = fermat::ranges::partial_sort(ia.begin(), ia.begin() + N/2, ia.end(), std::less<int>());
     EXPECT_EQ(res, ia.end());
     for (int i = 0; i < N/2; ++i) EXPECT_EQ(ia[i], i);
 }

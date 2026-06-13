@@ -29,7 +29,7 @@
 RANGES_DIAGNOSTIC_PUSH
 RANGES_DIAGNOSTIC_IGNORE_UNSIGNED_MATH
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -428,7 +428,7 @@ namespace ranges
 #endif
     } // namespace detail
     /// \endcond
-} // namespace ranges
+} // namespace fermat::ranges
 
 /// \cond
 RANGES_DIAGNOSTIC_IGNORE_MISMATCHED_TAGS
@@ -436,60 +436,60 @@ RANGES_DIAGNOSTIC_IGNORE_MISMATCHED_TAGS
 namespace std
 {
     template<>
-    struct numeric_limits<::ranges::detail::diffmax_t>
-      : ::ranges::detail::diffmax_numeric_limits<>
+    struct numeric_limits<::fermat::ranges::detail::diffmax_t>
+      : ::fermat::ranges::detail::diffmax_numeric_limits<>
     {
-        static constexpr ::ranges::detail::diffmax_t max() noexcept
+        static constexpr ::fermat::ranges::detail::diffmax_t max() noexcept
         {
             return std::uintmax_t(-1);
         }
-        static constexpr ::ranges::detail::diffmax_t min() noexcept
+        static constexpr ::fermat::ranges::detail::diffmax_t min() noexcept
         {
             return -max();
         }
-        static constexpr ::ranges::detail::diffmax_t lowest() noexcept
+        static constexpr ::fermat::ranges::detail::diffmax_t lowest() noexcept
         {
             return min();
         }
-        static constexpr ::ranges::detail::diffmax_t epsilon() noexcept
+        static constexpr ::fermat::ranges::detail::diffmax_t epsilon() noexcept
         {
             return 0;
         }
-        static constexpr ::ranges::detail::diffmax_t round_error() noexcept
+        static constexpr ::fermat::ranges::detail::diffmax_t round_error() noexcept
         {
             return 0;
         }
-        static constexpr ::ranges::detail::diffmax_t infinity() noexcept
+        static constexpr ::fermat::ranges::detail::diffmax_t infinity() noexcept
         {
             return 0;
         }
-        static constexpr ::ranges::detail::diffmax_t quiet_NaN() noexcept
+        static constexpr ::fermat::ranges::detail::diffmax_t quiet_NaN() noexcept
         {
             return 0;
         }
-        static constexpr ::ranges::detail::diffmax_t signaling_NaN() noexcept
+        static constexpr ::fermat::ranges::detail::diffmax_t signaling_NaN() noexcept
         {
             return 0;
         }
-        static constexpr ::ranges::detail::diffmax_t denorm_min() noexcept
+        static constexpr ::fermat::ranges::detail::diffmax_t denorm_min() noexcept
         {
             return 0;
         }
     };
 
     template<>
-    struct numeric_limits<::ranges::detail::diffmax_t const>
-      : numeric_limits<::ranges::detail::diffmax_t>
+    struct numeric_limits<::fermat::ranges::detail::diffmax_t const>
+      : numeric_limits<::fermat::ranges::detail::diffmax_t>
     {};
 
     template<>
-    struct numeric_limits<::ranges::detail::diffmax_t volatile>
-      : numeric_limits<::ranges::detail::diffmax_t>
+    struct numeric_limits<::fermat::ranges::detail::diffmax_t volatile>
+      : numeric_limits<::fermat::ranges::detail::diffmax_t>
     {};
 
     template<>
-    struct numeric_limits<::ranges::detail::diffmax_t const volatile>
-      : numeric_limits<::ranges::detail::diffmax_t>
+    struct numeric_limits<::fermat::ranges::detail::diffmax_t const volatile>
+      : numeric_limits<::fermat::ranges::detail::diffmax_t>
     {};
 } // namespace std
 /// \endcond

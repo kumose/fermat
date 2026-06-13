@@ -29,7 +29,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-actions
     /// @{
@@ -37,7 +37,7 @@ namespace ranges
     {
         template<typename Rng>
         using join_action_value_t_ =
-            meta::if_c<(bool)ranges::container<range_value_t<Rng>>, //
+            meta::if_c<(bool)fermat::ranges::container<range_value_t<Rng>>, //
                        range_value_t<Rng>,                          //
                        std::vector<range_value_t<range_value_t<Rng>>>>;
 
@@ -49,7 +49,7 @@ namespace ranges
             join_action_value_t_<Rng> operator()(Rng && rng) const
             {
                 join_action_value_t_<Rng> ret;
-                auto last = ranges::end(rng);
+                auto last = fermat::ranges::end(rng);
                 for(auto it = begin(rng); it != last; ++it)
                     push_back(ret, *it);
                 return ret;
@@ -61,7 +61,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(action_closure<join_fn>, join)
     } // namespace actions
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

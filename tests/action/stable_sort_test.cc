@@ -15,7 +15,7 @@
 #include <fermat/action/stable_sort.h>
 #include <fermat/range/conversion.h>
 
-using namespace ranges;
+using namespace fermat::ranges;
 
 #if !defined(__clang__) || !defined(_MSVC_STL_VERSION) // Avoid #890
 

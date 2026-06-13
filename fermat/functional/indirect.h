@@ -25,7 +25,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-functional
     /// @{
@@ -93,7 +93,7 @@ namespace ranges
     /// \sa `indirect_fn`
     RANGES_INLINE_VARIABLE(indirect_fn, indirect)
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

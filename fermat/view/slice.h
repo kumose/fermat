@@ -37,7 +37,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -46,7 +46,7 @@ namespace ranges
         iterator_t<Rng> pos_at_(Rng && rng, Int i, input_range_tag, std::true_type)
         {
             RANGES_EXPECT(0 <= i);
-            return next(ranges::begin(rng), i);
+            return next(fermat::ranges::begin(rng), i);
         }
 
         template<typename Rng, typename Int>
@@ -57,11 +57,11 @@ namespace ranges
             {
                 // If it's not common and we know the size, faster to count from the front
                 if(RANGES_CONSTEXPR_IF(sized_range<Rng> && !common_range<Rng>))
-                    return next(ranges::begin(rng), distance(rng) + i);
+                    return next(fermat::ranges::begin(rng), distance(rng) + i);
                 // Otherwise, probably faster to count from the back.
-                return next(ranges::next(ranges::begin(rng), ranges::end(rng)), i);
+                return next(fermat::ranges::next(fermat::ranges::begin(rng), fermat::ranges::end(rng)), i);
             }
-            return next(ranges::begin(rng), i);
+            return next(fermat::ranges::begin(rng), i);
         }
 
         template<typename Rng, typename Int>
@@ -69,8 +69,8 @@ namespace ranges
         {
             RANGES_EXPECT(i >= 0 || (bool)sized_range<Rng> || (bool)forward_range<Rng>);
             if(0 > i)
-                return next(ranges::begin(rng), distance(rng) + i);
-            return next(ranges::begin(rng), i);
+                return next(fermat::ranges::begin(rng), distance(rng) + i);
+            return next(fermat::ranges::begin(rng), i);
         }
 
         template<typename Rng, bool IsRandomAccess>
@@ -268,7 +268,7 @@ namespace ranges
             auto operator()(Rng && rng, range_difference_t<Rng> from, end_fn) const
             {
                 RANGES_EXPECT(0 <= from);
-                return ranges::views::drop_exactly(static_cast<Rng &&>(rng), from);
+                return fermat::ranges::views::drop_exactly(static_cast<Rng &&>(rng), from);
             }
             // slice(rng, end-4, end)
             template(typename Rng)(
@@ -317,7 +317,7 @@ namespace ranges
             constexpr auto operator()(Int from, end_fn) const
             {
                 return make_view_closure(
-                    bind_back(ranges::views::drop_exactly_base_fn{}, from));
+                    bind_back(fermat::ranges::views::drop_exactly_base_fn{}, from));
             }
             template(typename Int)(
                 requires detail::integer_like_<Int>)
@@ -332,10 +332,10 @@ namespace ranges
         RANGES_INLINE_VARIABLE(slice_fn, slice)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::slice_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::slice_view)
 
 #endif

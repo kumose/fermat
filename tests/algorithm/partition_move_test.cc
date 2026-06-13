@@ -9,7 +9,7 @@ struct is_odd {
 
 /// constexpr test (compiler‑time)
 constexpr bool test_constexpr() {
-    using namespace ranges;
+    using namespace fermat::ranges;
     const int ia[] = {1, 2, 3, 4, 6, 8, 5, 7};
     int r1[10] = {0};
     int r2[10] = {0};

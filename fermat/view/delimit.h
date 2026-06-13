@@ -30,7 +30,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -123,10 +123,10 @@ namespace ranges
         RANGES_INLINE_VARIABLE(delimit_fn, delimit)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::delimit_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::delimit_view)
 
 #endif

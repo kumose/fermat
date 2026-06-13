@@ -27,7 +27,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-actions
     /// @{
@@ -47,7 +47,7 @@ namespace ranges
                 requires forward_range<Rng> AND sortable<iterator_t<Rng>, C, P>)
             Rng operator()(Rng && rng, C pred = {}, P proj = {}) const
             {
-                ranges::sort(rng, std::move(pred), std::move(proj));
+                fermat::ranges::sort(rng, std::move(pred), std::move(proj));
                 return static_cast<Rng &&>(rng);
             }
         };
@@ -57,7 +57,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(action_closure<sort_fn>, sort)
     } // namespace actions
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

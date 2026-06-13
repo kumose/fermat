@@ -25,7 +25,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -113,10 +113,10 @@ namespace ranges
     namespace cpp20
     {
         template<typename Val>
-        using basic_istream_view = ::ranges::istream_view<Val>;
+        using basic_istream_view = ::fermat::ranges::istream_view<Val>;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

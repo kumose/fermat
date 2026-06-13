@@ -30,7 +30,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -67,11 +67,11 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::for_each;
-        using ranges::for_each_result;
+        using fermat::ranges::for_each;
+        using fermat::ranges::for_each_result;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

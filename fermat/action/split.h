@@ -31,7 +31,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-actions
     /// @{
@@ -41,7 +41,7 @@ namespace ranges
         {
             template<typename Rng>
             using split_value_t =
-                meta::if_c<(bool)ranges::container<Rng>, //
+                meta::if_c<(bool)fermat::ranges::container<Rng>, //
                            uncvref_t<Rng>, std::vector<range_value_t<Rng>>>;
 
             template(typename T)(
@@ -62,7 +62,7 @@ namespace ranges
             // to move a container into a split and have elements moved into the result.
             template(typename Rng)(
                 requires input_range<Rng> AND indirectly_comparable<
-                        iterator_t<Rng>, range_value_t<Rng> const *, ranges::equal_to>)
+                        iterator_t<Rng>, range_value_t<Rng> const *, fermat::ranges::equal_to>)
             std::vector<split_value_t<Rng>> //
             operator()(Rng && rng, range_value_t<Rng> val) const
             {
@@ -76,7 +76,7 @@ namespace ranges
                     indirectly_comparable<
                         iterator_t<Rng>,
                         iterator_t<Pattern>,
-                        ranges::equal_to> AND
+                        fermat::ranges::equal_to> AND
                     (forward_range<Rng> || detail::tiny_range<Pattern>)) //
             std::vector<split_value_t<Rng>> operator()(Rng && rng, Pattern && pattern)
                 const
@@ -99,7 +99,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(split_fn, split)
     } // namespace actions
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

@@ -31,7 +31,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -128,7 +128,7 @@ namespace ranges
     template<typename Rng, typename T>
     CPP_concept span_compatible_range =
         sized_range<Rng> && contiguous_range<Rng> &&
-        CPP_concept_ref(ranges::span_compatible_range_, Rng, T);
+        CPP_concept_ref(fermat::ranges::span_compatible_range_, Rng, T);
 
     /// \concept span_dynamic_conversion
     /// \brief The \c span_dynamic_conversion concept
@@ -160,7 +160,7 @@ namespace ranges
         using pointer = T *;
         using reference = T &;
         using iterator = T *;
-        using reverse_iterator = ranges::reverse_iterator<iterator>;
+        using reverse_iterator = fermat::ranges::reverse_iterator<iterator>;
 
         static constexpr index_type extent = N;
 
@@ -179,17 +179,17 @@ namespace ranges
             requires (!same_as<span, uncvref_t<Rng>>) AND
                 span_compatible_range<Rng, T> AND
                 span_dynamic_conversion<Rng, N>)
-        constexpr span(Rng && rng) noexcept(noexcept(ranges::data(rng),
-                                                        ranges::size(rng)))
-          : span{ranges::data(rng), detail::narrow_cast<index_type>(ranges::size(rng))}
+        constexpr span(Rng && rng) noexcept(noexcept(fermat::ranges::data(rng),
+                                                        fermat::ranges::size(rng)))
+          : span{fermat::ranges::data(rng), detail::narrow_cast<index_type>(fermat::ranges::size(rng))}
         {}
 
         template(typename Rng)(
             requires (!same_as<span, uncvref_t<Rng>>) AND
                 span_compatible_range<Rng, T> AND
                 span_static_conversion<Rng, N>)
-        constexpr span(Rng && rng) noexcept(noexcept(ranges::data(rng)))
-          : span{ranges::data(rng), N}
+        constexpr span(Rng && rng) noexcept(noexcept(fermat::ranges::data(rng)))
+          : span{fermat::ranges::data(rng), N}
         {}
 
         template<index_type Count>
@@ -318,7 +318,7 @@ namespace ranges
         {
             RANGES_EXPECT(!size() || data());
             RANGES_EXPECT(!that.size() || that.data());
-            return ranges::equal(*this, that);
+            return fermat::ranges::equal(*this, that);
         }
         template(typename U, index_type M)(
             requires equality_comparable_with<T, U>)
@@ -333,7 +333,7 @@ namespace ranges
         {
             RANGES_EXPECT(!size() || data());
             RANGES_EXPECT(!that.size() || that.data());
-            return ranges::lexicographical_compare(*this, that);
+            return fermat::ranges::lexicographical_compare(*this, that);
         }
         template(typename U, index_type M)(
             requires totally_ordered_with<T, U>)
@@ -403,10 +403,10 @@ namespace ranges
         requires contiguous_range<Rng> AND
         (range_cardinality<Rng>::value < cardinality())) //
         constexpr span<detail::element_t<Rng>> make_span(Rng && rng) noexcept(
-            noexcept(ranges::data(rng), ranges::size(rng)))
+            noexcept(fermat::ranges::data(rng), fermat::ranges::size(rng)))
     {
-        return {ranges::data(rng),
-                detail::narrow_cast<detail::span_index_t>(ranges::size(rng))};
+        return {fermat::ranges::data(rng),
+                detail::narrow_cast<detail::span_index_t>(fermat::ranges::size(rng))};
     }
     template(typename Rng)(
         requires contiguous_range<Rng> AND
@@ -415,13 +415,13 @@ namespace ranges
             detail::element_t<Rng>,
             static_cast<detail::span_index_t>(
                 range_cardinality<Rng>::
-                    value)> make_span(Rng && rng) noexcept(noexcept(ranges::data(rng)))
+                    value)> make_span(Rng && rng) noexcept(noexcept(fermat::ranges::data(rng)))
     {
-        return {ranges::data(rng), range_cardinality<Rng>::value};
+        return {fermat::ranges::data(rng), range_cardinality<Rng>::value};
     }
 
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

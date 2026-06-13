@@ -36,7 +36,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-iterator-concepts
     /// @{
@@ -52,58 +52,58 @@ namespace ranges
         template(typename I, typename T, typename Seq)(
             requires same_as<I, __gnu_debug::_Safe_iterator<T *, Seq>>)
         auto iter_concept_(__gnu_debug::_Safe_iterator<T *, Seq>, priority_tag<3>)
-            -> ranges::contiguous_iterator_tag;
+            -> fermat::ranges::contiguous_iterator_tag;
 #endif
 #if defined(__GLIBCXX__)
         template(typename I, typename T, typename Seq)(
             requires same_as<I, __gnu_cxx::__normal_iterator<T *, Seq>>)
         auto iter_concept_(__gnu_cxx::__normal_iterator<T *, Seq>, priority_tag<3>)
-            -> ranges::contiguous_iterator_tag;
+            -> fermat::ranges::contiguous_iterator_tag;
 #endif
 #if defined(_LIBCPP_VERSION)
         template(typename I, typename T)(
             requires same_as<I, std::__wrap_iter<T *>>)
         auto iter_concept_(std::__wrap_iter<T *>, priority_tag<3>)
-            -> ranges::contiguous_iterator_tag;
+            -> fermat::ranges::contiguous_iterator_tag;
 #endif
 #if defined(_MSVC_STL_VERSION) || defined(_IS_WRS)
         template(typename I)(
             requires same_as<I, class I::_Array_iterator>)
         auto iter_concept_(I, priority_tag<3>)
-            -> ranges::contiguous_iterator_tag;
+            -> fermat::ranges::contiguous_iterator_tag;
         template(typename I)(
             requires same_as<I, class I::_Array_const_iterator>)
         auto iter_concept_(I, priority_tag<3>)
-            -> ranges::contiguous_iterator_tag;
+            -> fermat::ranges::contiguous_iterator_tag;
         template(typename I)(
             requires same_as<I, class I::_Vector_iterator>)
         auto iter_concept_(I, priority_tag<3>)
-            -> ranges::contiguous_iterator_tag;
+            -> fermat::ranges::contiguous_iterator_tag;
         template(typename I)(
             requires same_as<I, class I::_Vector_const_iterator>)
         auto iter_concept_(I, priority_tag<3>)
-            -> ranges::contiguous_iterator_tag;
+            -> fermat::ranges::contiguous_iterator_tag;
         template(typename I)(
             requires same_as<I, class I::_String_iterator>)
         auto iter_concept_(I, priority_tag<3>)
-            -> ranges::contiguous_iterator_tag;
+            -> fermat::ranges::contiguous_iterator_tag;
         template(typename I)(
             requires same_as<I, class I::_String_const_iterator>)
         auto iter_concept_(I, priority_tag<3>)
-            -> ranges::contiguous_iterator_tag;
+            -> fermat::ranges::contiguous_iterator_tag;
         template(typename I)(
             requires same_as<I, class I::_String_view_iterator>)
         auto iter_concept_(I, priority_tag<3>)
-            -> ranges::contiguous_iterator_tag;
+            -> fermat::ranges::contiguous_iterator_tag;
         template(typename I)(
             requires same_as<I, class I::_Span_iterator>)
         auto iter_concept_(I, priority_tag<3>)
-            -> ranges::contiguous_iterator_tag;
+            -> fermat::ranges::contiguous_iterator_tag;
 #endif
         template(typename I, typename T)(
             requires same_as<I, T *>)
         auto iter_concept_(T *, priority_tag<3>)
-            -> ranges::contiguous_iterator_tag;
+            -> fermat::ranges::contiguous_iterator_tag;
         template<typename I>
         auto iter_concept_(I, priority_tag<2>) ->
             typename iter_traits_t<I>::iterator_concept;
@@ -149,10 +149,10 @@ namespace ranges
     /// \brief The \c indirectly_readable concept
     template<typename I>
     CPP_concept indirectly_readable = //
-        CPP_concept_ref(ranges::readable_, uncvref_t<I>);
+        CPP_concept_ref(fermat::ranges::readable_, uncvref_t<I>);
 
     template<typename I>
-    RANGES_DEPRECATED("Please use ranges::indirectly_readable instead")
+    RANGES_DEPRECATED("Please use fermat::ranges::indirectly_readable instead")
     inline constexpr bool readable = //
         indirectly_readable<I>;
 
@@ -171,10 +171,10 @@ namespace ranges
     /// \brief The \c indirectly_writable concept
     template<typename O, typename T>
     CPP_concept indirectly_writable = //
-        CPP_requires_ref(ranges::writable_, O, T);
+        CPP_requires_ref(fermat::ranges::writable_, O, T);
 
     template<typename O, typename T>
-    RANGES_DEPRECATED("Please use ranges::indirectly_writable instead")
+    RANGES_DEPRECATED("Please use fermat::ranges::indirectly_writable instead")
     inline constexpr bool writable = //
         indirectly_writable<O, T>;
     // clang-format on
@@ -190,8 +190,8 @@ namespace ranges
         constexpr bool _is_integer_like_ = std::is_integral<D>::value;
 #endif
 
-        // gcc10 uses for std::ranges::range_difference_t<
-        // std::ranges::iota_view<size_t, size_t>> == __int128
+        // gcc10 uses for std::fermat::ranges::range_difference_t<
+        // std::fermat::ranges::iota_view<size_t, size_t>> == __int128
 #if __SIZEOF_INT128__
         __extension__ typedef __int128 int128_t;
 #if RANGES_CXX_INLINE_VARIABLES >= RANGES_CXX_INLINE_VARIABLES_17
@@ -271,8 +271,8 @@ namespace ranges
     template<typename I>
     CPP_concept weakly_incrementable =
         copyable<I> &&
-        CPP_requires_ref(ranges::weakly_incrementable_, I) &&
-        CPP_concept_ref(ranges::weakly_incrementable_, I);
+        CPP_requires_ref(fermat::ranges::weakly_incrementable_, I) &&
+        CPP_concept_ref(fermat::ranges::weakly_incrementable_, I);
 
     /// \concept incrementable_
     /// \brief The \c incrementable_ concept
@@ -288,7 +288,7 @@ namespace ranges
     CPP_concept incrementable =
         regular<I> &&
         weakly_incrementable<I> &&
-        CPP_requires_ref(ranges::incrementable_, I);
+        CPP_requires_ref(fermat::ranges::incrementable_, I);
 
     /// \concept input_or_output_iterator_
     /// \brief The \c input_or_output_iterator_ concept
@@ -302,7 +302,7 @@ namespace ranges
     template<typename I>
     CPP_concept input_or_output_iterator =
         weakly_incrementable<I> &&
-        CPP_concept_ref(ranges::input_or_output_iterator_, I);
+        CPP_concept_ref(fermat::ranges::input_or_output_iterator_, I);
 
     /// \concept sentinel_for
     /// \brief The \c sentinel_for concept
@@ -335,7 +335,7 @@ namespace ranges
     template<typename S, typename I>
     CPP_concept sized_sentinel_for =
         CPP_concept_ref(sized_sentinel_for_, S, I) &&
-        CPP_requires_ref(ranges::sized_sentinel_for_, S, I);
+        CPP_requires_ref(fermat::ranges::sized_sentinel_for_, S, I);
 
     /// \concept output_iterator_
     /// \brief The \c output_iterator_ concept
@@ -351,7 +351,7 @@ namespace ranges
     CPP_concept output_iterator =
         input_or_output_iterator<Out> &&
         indirectly_writable<Out, T> &&
-        CPP_requires_ref(ranges::output_iterator_, Out, T);
+        CPP_requires_ref(fermat::ranges::output_iterator_, Out, T);
 
     /// \concept with_category_
     /// \brief The \c with_category_ concept
@@ -366,7 +366,7 @@ namespace ranges
     CPP_concept input_iterator =
         input_or_output_iterator<I> &&
         indirectly_readable<I> &&
-        CPP_concept_ref(ranges::with_category_, I, std::input_iterator_tag);
+        CPP_concept_ref(fermat::ranges::with_category_, I, std::input_iterator_tag);
 
     /// \concept forward_iterator
     /// \brief The \c forward_iterator concept
@@ -375,7 +375,7 @@ namespace ranges
         input_iterator<I> &&
         incrementable<I> &&
         sentinel_for<I, I> &&
-        CPP_concept_ref(ranges::with_category_, I, std::forward_iterator_tag);
+        CPP_concept_ref(fermat::ranges::with_category_, I, std::forward_iterator_tag);
 
     /// \concept bidirectional_iterator_
     /// \brief The \c bidirectional_iterator_ concept
@@ -393,8 +393,8 @@ namespace ranges
     template<typename I>
     CPP_concept bidirectional_iterator =
         forward_iterator<I> &&
-        CPP_requires_ref(ranges::bidirectional_iterator_, I) &&
-        CPP_concept_ref(ranges::with_category_, I, std::bidirectional_iterator_tag);
+        CPP_requires_ref(fermat::ranges::bidirectional_iterator_, I) &&
+        CPP_concept_ref(fermat::ranges::with_category_, I, std::bidirectional_iterator_tag);
 
     /// \concept random_access_iterator_
     /// \brief The \c random_access_iterator_ concept
@@ -421,8 +421,8 @@ namespace ranges
         bidirectional_iterator<I> &&
         totally_ordered<I> &&
         sized_sentinel_for<I, I> &&
-        CPP_requires_ref(ranges::random_access_iterator_, I) &&
-        CPP_concept_ref(ranges::with_category_, I, std::random_access_iterator_tag);
+        CPP_requires_ref(fermat::ranges::random_access_iterator_, I) &&
+        CPP_concept_ref(fermat::ranges::with_category_, I, std::random_access_iterator_tag);
 
     /// \concept contiguous_iterator_
     /// \brief The \c contiguous_iterator_ concept
@@ -430,7 +430,7 @@ namespace ranges
     concept (contiguous_iterator_)(I),
         std::is_lvalue_reference<iter_reference_t<I>>::value AND
         same_as<iter_value_t<I>, uncvref_t<iter_reference_t<I>>> AND
-        derived_from<detail::iter_concept_t<I>, ranges::contiguous_iterator_tag>
+        derived_from<detail::iter_concept_t<I>, fermat::ranges::contiguous_iterator_tag>
     );
 
     /// \concept contiguous_iterator
@@ -438,7 +438,7 @@ namespace ranges
     template<typename I>
     CPP_concept contiguous_iterator =
         random_access_iterator<I> &&
-        CPP_concept_ref(ranges::contiguous_iterator_, I);
+        CPP_concept_ref(fermat::ranges::contiguous_iterator_, I);
     // clang-format on
 
     /////////////////////////////////////////////////////////////////////////////////////
@@ -449,7 +449,7 @@ namespace ranges
             input_iterator<Rng>,                         //
             meta::conditional_t<                           //
                 contiguous_iterator<Rng>,                //
-                ranges::contiguous_iterator_tag,         //
+                fermat::ranges::contiguous_iterator_tag,         //
                 meta::conditional_t<                       //
                     random_access_iterator<Rng>,         //
                     std::random_access_iterator_tag,     //
@@ -568,7 +568,7 @@ namespace ranges
     CPP_concept indirectly_regular_unary_invocable =
         indirectly_readable<I> &&
         copy_constructible<F> &&
-        CPP_concept_ref(ranges::indirectly_regular_unary_invocable_, F, I);
+        CPP_concept_ref(fermat::ranges::indirectly_regular_unary_invocable_, F, I);
 
     /// \cond
     // Non-standard indirect invocable concepts
@@ -594,7 +594,7 @@ namespace ranges
     CPP_concept indirectly_binary_invocable_ =
         indirectly_readable<I1> && indirectly_readable<I2> &&
         copy_constructible<F> &&
-        CPP_concept_ref(ranges::indirectly_binary_invocable_impl_, F, I1, I2);
+        CPP_concept_ref(fermat::ranges::indirectly_binary_invocable_impl_, F, I1, I2);
 
     /// \concept indirectly_regular_binary_invocable_impl_
     /// \brief The \c indirectly_regular_binary_invocable_impl_ concept
@@ -618,7 +618,7 @@ namespace ranges
     CPP_concept indirectly_regular_binary_invocable_ =
         indirectly_readable<I1> && indirectly_readable<I2> &&
         copy_constructible<F> &&
-        CPP_concept_ref(ranges::indirectly_regular_binary_invocable_impl_, F, I1, I2);
+        CPP_concept_ref(fermat::ranges::indirectly_regular_binary_invocable_impl_, F, I1, I2);
     /// \endcond
 
     /// \concept indirect_unary_predicate_
@@ -636,7 +636,7 @@ namespace ranges
     CPP_concept indirect_unary_predicate =
         indirectly_readable<I> &&
         copy_constructible<F> &&
-        CPP_concept_ref(ranges::indirect_unary_predicate_, F, I);
+        CPP_concept_ref(fermat::ranges::indirect_unary_predicate_, F, I);
 
     /// \concept indirect_binary_predicate_impl_
     /// \brief The \c indirect_binary_predicate_impl_ concept
@@ -655,7 +655,7 @@ namespace ranges
     CPP_concept indirect_binary_predicate_ =
         indirectly_readable<I1> && indirectly_readable<I2> &&
         copy_constructible<F> &&
-        CPP_concept_ref(ranges::indirect_binary_predicate_impl_, F, I1, I2);
+        CPP_concept_ref(fermat::ranges::indirect_binary_predicate_impl_, F, I1, I2);
 
     /// \concept indirect_relation_
     /// \brief The \c indirect_relation_ concept
@@ -674,7 +674,7 @@ namespace ranges
     CPP_concept indirect_relation =
         indirectly_readable<I1> && indirectly_readable<I2> &&
         copy_constructible<F> &&
-        CPP_concept_ref(ranges::indirect_relation_, F, I1, I2);
+        CPP_concept_ref(fermat::ranges::indirect_relation_, F, I1, I2);
 
     /// \concept indirect_strict_weak_order_
     /// \brief The \c indirect_strict_weak_order_ concept
@@ -693,7 +693,7 @@ namespace ranges
     CPP_concept indirect_strict_weak_order =
         indirectly_readable<I1> && indirectly_readable<I2> &&
         copy_constructible<F> &&
-        CPP_concept_ref(ranges::indirect_strict_weak_order_, F, I1, I2);
+        CPP_concept_ref(fermat::ranges::indirect_strict_weak_order_, F, I1, I2);
     // clang-format on
 
     //////////////////////////////////////////////////////////////////////////////////////
@@ -754,7 +754,7 @@ namespace ranges
     /// \brief The \c indirectly_movable concept
     template<typename I, typename O>
     CPP_concept indirectly_movable =
-        indirectly_readable<I> && CPP_concept_ref(ranges::indirectly_movable_, I, O);
+        indirectly_readable<I> && CPP_concept_ref(fermat::ranges::indirectly_movable_, I, O);
 
     /// \concept indirectly_movable_storable_
     /// \brief The \c indirectly_movable_storable_ concept
@@ -771,7 +771,7 @@ namespace ranges
     template<typename I, typename O>
     CPP_concept indirectly_movable_storable =
         indirectly_movable<I, O> &&
-        CPP_concept_ref(ranges::indirectly_movable_storable_, I, O);
+        CPP_concept_ref(fermat::ranges::indirectly_movable_storable_, I, O);
 
     /// \concept indirectly_copyable_
     /// \brief The \c indirectly_copyable_ concept
@@ -784,7 +784,7 @@ namespace ranges
     /// \brief The \c indirectly_copyable concept
     template<typename I, typename O>
     CPP_concept indirectly_copyable =
-        indirectly_readable<I> && CPP_concept_ref(ranges::indirectly_copyable_, I, O);
+        indirectly_readable<I> && CPP_concept_ref(fermat::ranges::indirectly_copyable_, I, O);
 
     /// \concept indirectly_copyable_storable_
     /// \brief The \c indirectly_copyable_storable_ concept
@@ -801,7 +801,7 @@ namespace ranges
     template<typename I, typename O>
     CPP_concept indirectly_copyable_storable =
         indirectly_copyable<I, O> &&
-        CPP_concept_ref(ranges::indirectly_copyable_storable_, I, O);
+        CPP_concept_ref(fermat::ranges::indirectly_copyable_storable_, I, O);
 
     /// \concept indirectly_swappable_
     /// \brief The \c indirectly_swappable_ concept
@@ -809,10 +809,10 @@ namespace ranges
     CPP_requires(indirectly_swappable_,
         requires(I1 const i1, I2 const i2) //
         (
-            ranges::iter_swap(i1, i2),
-            ranges::iter_swap(i1, i1),
-            ranges::iter_swap(i2, i2),
-            ranges::iter_swap(i2, i1)
+            fermat::ranges::iter_swap(i1, i2),
+            fermat::ranges::iter_swap(i1, i1),
+            fermat::ranges::iter_swap(i2, i2),
+            fermat::ranges::iter_swap(i2, i1)
         ));
     /// \concept indirectly_swappable
     /// \brief The \c indirectly_swappable concept
@@ -820,7 +820,7 @@ namespace ranges
     CPP_concept indirectly_swappable =
         indirectly_readable<I1> && //
         indirectly_readable<I2> && //
-        CPP_requires_ref(ranges::indirectly_swappable_, I1, I2);
+        CPP_requires_ref(fermat::ranges::indirectly_swappable_, I1, I2);
 
     /// \concept projected_indirect_relation_
     /// \brief The \c projected_indirect_relation_ concept
@@ -834,7 +834,7 @@ namespace ranges
     template<typename I1, typename I2, typename C, typename P1 = identity,
         typename P2 = identity>
     CPP_concept indirectly_comparable =
-        CPP_concept_ref(ranges::projected_indirect_relation_, C, I1, P1, I2, P2);
+        CPP_concept_ref(fermat::ranges::projected_indirect_relation_, C, I1, P1, I2, P2);
 
     //////////////////////////////////////////////////////////////////////////////////////
     // Composite concepts for use defining algorithms:
@@ -861,14 +861,14 @@ namespace ranges
         weakly_incrementable<Out> &&
         indirectly_copyable<I1, Out> &&
         indirectly_copyable<I2, Out> &&
-        CPP_concept_ref(ranges::projected_indirect_strict_weak_order_, C, I1, P1, I2, P2);
+        CPP_concept_ref(fermat::ranges::projected_indirect_strict_weak_order_, C, I1, P1, I2, P2);
 
     /// \concept sortable
     /// \brief The \c sortable concept
     template<typename I, typename C = less, typename P = identity>
     CPP_concept sortable =
         permutable<I> &&
-        CPP_concept_ref(ranges::projected_indirect_strict_weak_order_, C, I, P, I, P);
+        CPP_concept_ref(fermat::ranges::projected_indirect_strict_weak_order_, C, I, P, I, P);
     // clang-format on
 
     struct sentinel_tag
@@ -922,38 +922,38 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::bidirectional_iterator;
-        using ranges::contiguous_iterator;
-        using ranges::forward_iterator;
-        using ranges::incrementable;
-        using ranges::indirect_relation;
-        using ranges::indirect_result_t;
-        using ranges::indirect_strict_weak_order;
-        using ranges::indirect_unary_predicate;
-        using ranges::indirectly_comparable;
-        using ranges::indirectly_copyable;
-        using ranges::indirectly_copyable_storable;
-        using ranges::indirectly_movable;
-        using ranges::indirectly_movable_storable;
-        using ranges::indirectly_readable;
-        using ranges::indirectly_regular_unary_invocable;
-        using ranges::indirectly_swappable;
-        using ranges::indirectly_unary_invocable;
-        using ranges::indirectly_writable;
-        using ranges::input_iterator;
-        using ranges::input_or_output_iterator;
-        using ranges::mergeable;
-        using ranges::output_iterator;
-        using ranges::permutable;
-        using ranges::projected;
-        using ranges::random_access_iterator;
-        using ranges::sentinel_for;
-        using ranges::sized_sentinel_for;
-        using ranges::sortable;
-        using ranges::weakly_incrementable;
+        using fermat::ranges::bidirectional_iterator;
+        using fermat::ranges::contiguous_iterator;
+        using fermat::ranges::forward_iterator;
+        using fermat::ranges::incrementable;
+        using fermat::ranges::indirect_relation;
+        using fermat::ranges::indirect_result_t;
+        using fermat::ranges::indirect_strict_weak_order;
+        using fermat::ranges::indirect_unary_predicate;
+        using fermat::ranges::indirectly_comparable;
+        using fermat::ranges::indirectly_copyable;
+        using fermat::ranges::indirectly_copyable_storable;
+        using fermat::ranges::indirectly_movable;
+        using fermat::ranges::indirectly_movable_storable;
+        using fermat::ranges::indirectly_readable;
+        using fermat::ranges::indirectly_regular_unary_invocable;
+        using fermat::ranges::indirectly_swappable;
+        using fermat::ranges::indirectly_unary_invocable;
+        using fermat::ranges::indirectly_writable;
+        using fermat::ranges::input_iterator;
+        using fermat::ranges::input_or_output_iterator;
+        using fermat::ranges::mergeable;
+        using fermat::ranges::output_iterator;
+        using fermat::ranges::permutable;
+        using fermat::ranges::projected;
+        using fermat::ranges::random_access_iterator;
+        using fermat::ranges::sentinel_for;
+        using fermat::ranges::sized_sentinel_for;
+        using fermat::ranges::sortable;
+        using fermat::ranges::weakly_incrementable;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #ifdef _GLIBCXX_DEBUG
 // HACKHACK: workaround underconstrained operator- for libstdc++ debug iterator wrapper
@@ -962,12 +962,12 @@ namespace ranges
 namespace __gnu_debug
 {
     template(typename I1, typename I2, typename Seq)(
-        requires (!::ranges::sized_sentinel_for<I1, I2>)) //
+        requires (!::fermat::ranges::sized_sentinel_for<I1, I2>)) //
     void operator-(_Safe_iterator<I1, Seq> const &, _Safe_iterator<I2, Seq> const &) =
         delete;
 
     template(typename I1, typename Seq)(
-        requires (!::ranges::sized_sentinel_for<I1, I1>)) //
+        requires (!::fermat::ranges::sized_sentinel_for<I1, I1>)) //
     void operator-(_Safe_iterator<I1, Seq> const &, _Safe_iterator<I1, Seq> const &) =
         delete;
 } // namespace __gnu_debug
@@ -979,13 +979,13 @@ namespace __gnu_debug
 // underconstrained operator- for reverse_iterator by disabling sized_sentinel_for
 // when the base iterators do not model sized_sentinel_for.
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename S, typename I>
     /*inline*/ constexpr bool
         disable_sized_sentinel<std::reverse_iterator<S>, std::reverse_iterator<I>> =
             !static_cast<bool>(sized_sentinel_for<I, S>);
-} // namespace ranges
+} // namespace fermat::ranges
 
 #endif // defined(__GLIBCXX__) || (defined(_LIBCPP_VERSION) && _LIBCPP_VERSION <= 3900)
 

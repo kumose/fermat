@@ -3,7 +3,7 @@
 #include <fermat/algorithm/copy_n.h>
 
 constexpr bool test_constexpr() {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::array<int, 4> a{{1, 2, 3, 4}};
     std::array<int, 4> b{{0, 0, 0, 0}};
     const auto res = copy_n(begin(a), 2, begin(b));

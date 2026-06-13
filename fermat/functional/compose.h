@@ -24,7 +24,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-functional
     /// @{
@@ -97,7 +97,7 @@ namespace ranges
     /// \sa `compose_fn`
     RANGES_INLINE_VARIABLE(compose_fn, compose)
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

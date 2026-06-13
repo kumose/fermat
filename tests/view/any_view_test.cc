@@ -11,22 +11,22 @@
 #include <type_traits>
 #include <utility>                     /// std::as_const
 
-#include <fermat/algorithm/copy.h>     /// ranges::copy
-#include <fermat/range/access.h>       /// ranges::begin, ranges::end
-#include <fermat/view/any_view.h>      /// ranges::any_view
-#include <fermat/view/iota.h>          /// ranges::views::ints
-#include <fermat/view/map.h>           /// ranges::views::keys
-#include <fermat/view/reverse.h>       /// ranges::views::reverse
-#include <fermat/view/tail.h>          /// ranges::views::tail
-#include <fermat/view/take.h>          /// ranges::views::take
-#include <fermat/view/take_exactly.h>  /// ranges::views::take_exactly
+#include <fermat/algorithm/copy.h>     /// fermat::ranges::copy
+#include <fermat/range/access.h>       /// fermat::ranges::begin, fermat::ranges::end
+#include <fermat/view/any_view.h>      /// fermat::ranges::any_view
+#include <fermat/view/iota.h>          /// fermat::ranges::views::ints
+#include <fermat/view/map.h>           /// fermat::ranges::views::keys
+#include <fermat/view/reverse.h>       /// fermat::ranges::views::reverse
+#include <fermat/view/tail.h>          /// fermat::ranges::views::tail
+#include <fermat/view/take.h>          /// fermat::ranges::views::take
+#include <fermat/view/take_exactly.h>  /// fermat::ranges::views::take_exactly
 #include <fermat/meta/meta.h>        /// meta::void_
 
 /// ------------------------------------------------------------
 /// debug_input_view: minimal input view for testing
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T>>
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>>
 {
     struct data
     {
@@ -45,7 +45,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T>>
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T>> = true;
@@ -57,8 +57,8 @@ namespace ranges
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected)
 {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected)
     {
         EXPECT_NE(it, end);
@@ -76,7 +76,7 @@ struct can_convert_to : std::false_type
 {};
 
 template<typename S, typename T>
-struct can_convert_to<S, T, meta::void_<decltype(ranges::polymorphic_downcast<T>(std::declval<S>()))>>
+struct can_convert_to<S, T, meta::void_<decltype(fermat::ranges::polymorphic_downcast<T>(std::declval<S>()))>>
   : std::true_type
 {};
 
@@ -131,7 +131,7 @@ void test_polymorphic_downcast()
 
 TEST(AnyViewTest, InputAnyViewFromIota)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto const ten_ints = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
     any_view<int> ints = views::ints;
@@ -143,7 +143,7 @@ TEST(AnyViewTest, InputAnyViewFromIota)
 
 TEST(AnyViewTest, InputAnyViewFromTakeExactly)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     any_view<int> ints = views::ints | views::take_exactly(5);
     static_assert(input_range<decltype(ints)> && view_<decltype(ints)>, "");
@@ -155,7 +155,7 @@ TEST(AnyViewTest, InputAnyViewFromTakeExactly)
 
 TEST(AnyViewTest, RandomAccessSizedAnyView)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 #if RANGES_CXX_DEDUCTION_GUIDES >= RANGES_CXX_DEDUCTION_GUIDES_17
     any_view ints = views::ints | views::take_exactly(5);
 #else
@@ -169,7 +169,7 @@ TEST(AnyViewTest, RandomAccessSizedAnyView)
 
 TEST(AnyViewTest, ExplicitInputSizedAnyView)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     any_view<int, category::input | category::sized> ints = views::ints | views::take_exactly(10);
     static_assert(input_range<decltype(ints)> && view_<decltype(ints)>, "");
     static_assert(sized_range<decltype(ints)> && view_<decltype(ints)>, "");
@@ -179,7 +179,7 @@ TEST(AnyViewTest, ExplicitInputSizedAnyView)
 
 TEST(AnyViewTest, BidirectionalAnyView)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     any_view<int, category::bidirectional> ints = views::ints;
     static_assert(bidirectional_range<decltype(ints)> && view_<decltype(ints)>, "");
     static_assert(!(random_access_range<decltype(ints)> && view_<decltype(ints)>), "");
@@ -188,7 +188,7 @@ TEST(AnyViewTest, BidirectionalAnyView)
 
 TEST(AnyViewTest, TakeAndCopy)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto const ten_ints = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
     any_view<int> ints2 = views::ints | views::take(10);
@@ -198,7 +198,7 @@ TEST(AnyViewTest, TakeAndCopy)
 
 TEST(AnyViewTest, RandomAccessTakeAndReverse)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto const ten_ints = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     auto const reversed_ten_ints = {9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
 
@@ -209,7 +209,7 @@ TEST(AnyViewTest, RandomAccessTakeAndReverse)
 
     check_equal(ints3, ten_ints);
     check_equal(ints3, ten_ints);
-    // ranges::copy returns the output iterator; we need to collect into a container.
+    // fermat::ranges::copy returns the output iterator; we need to collect into a container.
     // For simplicity, just check the view again.
     check_equal(ints3, ten_ints);
     check_equal(ints3 | views::reverse, reversed_ten_ints);
@@ -217,7 +217,7 @@ TEST(AnyViewTest, RandomAccessTakeAndReverse)
 
 TEST(AnyViewTest, EmptyAnyView)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     any_view<int&> e;
     EXPECT_EQ(e.begin(), e.begin());
     EXPECT_EQ(e.begin(), e.end());
@@ -225,7 +225,7 @@ TEST(AnyViewTest, EmptyAnyView)
 
 TEST(AnyViewTest, EmptyAnyViewIteratorComparisons)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     iterator_t<any_view<int&, category::random_access>> i{}, j{};
     sentinel_t<any_view<int&, category::random_access>> k{};
     EXPECT_TRUE(i == j);
@@ -235,7 +235,7 @@ TEST(AnyViewTest, EmptyAnyViewIteratorComparisons)
 
 TEST(AnyViewTest, Regression446)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto const ten_ints = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     auto vec = std::vector<short>{begin(ten_ints), end(ten_ints)};
     check_equal(any_view<int>{vec}, ten_ints);
@@ -254,7 +254,7 @@ TEST(AnyViewTest, Regression446)
 
 TEST(AnyViewTest, DebugInputView)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto const ten_ints = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     auto v = any_view<int>{debug_input_view<int const>{
         ten_ints.begin(), static_cast<std::ptrdiff_t>(ten_ints.size())
@@ -264,7 +264,7 @@ TEST(AnyViewTest, DebugInputView)
 
 TEST(AnyViewTest, Regression880)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::map<int, int> mm{ {0, 1}, {2, 3} };
     any_view<int, category::forward | category::sized> as_any = mm | views::keys;
     (void)as_any;
@@ -272,7 +272,7 @@ TEST(AnyViewTest, Regression880)
 
 TEST(AnyViewTest, Regression1101)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::vector<int> v = { 1, 2, 3, 4, 5 };
 
     using SizedAnyView = any_view<int, category::random_access | category::sized>;

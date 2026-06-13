@@ -30,7 +30,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -63,7 +63,7 @@ namespace ranges
             requires input_iterator<I0> AND sentinel_for<S0, I0> AND
                 input_iterator<I1> AND indirectly_comparable<I0, I1, C, P0, P1>)
         RANGES_DEPRECATED(
-            "Use the variant of ranges::equal that takes an upper bound for "
+            "Use the variant of fermat::ranges::equal that takes an upper bound for "
             "both sequences")
         constexpr bool RANGES_FUNC(equal)(I0 begin0,
                                           S0 end0,
@@ -119,7 +119,7 @@ namespace ranges
             requires input_range<Rng0> AND input_iterator<uncvref_t<I1Ref>> AND
                 indirectly_comparable<iterator_t<Rng0>, uncvref_t<I1Ref>, C, P0, P1>)
         RANGES_DEPRECATED(
-            "Use the variant of ranges::equal that takes an upper bound for "
+            "Use the variant of fermat::ranges::equal that takes an upper bound for "
             "both sequences")
         constexpr bool RANGES_FUNC(equal)(Rng0 && rng0,
                                           I1Ref && begin1,
@@ -165,10 +165,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::equal;
+        using fermat::ranges::equal;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

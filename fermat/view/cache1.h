@@ -27,7 +27,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -134,16 +134,16 @@ namespace ranges
         cursor begin_cursor()
         {
             dirty_ = true;
-            return cursor{this, ranges::begin(rng_)};
+            return cursor{this, fermat::ranges::begin(rng_)};
         }
 
         cursor end_cursor_impl(std::true_type)
         {
-            return cursor{this, ranges::end(rng_)};
+            return cursor{this, fermat::ranges::end(rng_)};
         }
         sentinel end_cursor_impl(std::false_type)
         {
-            return sentinel{ranges::end(rng_)};
+            return sentinel{fermat::ranges::end(rng_)};
         }
         auto end_cursor()
         {
@@ -159,7 +159,7 @@ namespace ranges
         constexpr auto CPP_fun(size)()(
             requires sized_range<Rng>)
         {
-            return ranges::size(rng_);
+            return fermat::ranges::size(rng_);
         }
     };
 
@@ -193,10 +193,10 @@ namespace ranges
     } // namespace views
 
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::cache1_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::cache1_view)
 
 #endif

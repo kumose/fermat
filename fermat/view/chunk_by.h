@@ -38,7 +38,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
 
     /// \addtogroup group-views
@@ -82,7 +82,7 @@ namespace ranges
                 cur_ = next_cur_;
                 auto partition_cur = adjacent_find(cur_, last_, not_fn(fun_));
                 next_cur_ =
-                    partition_cur != last_ ? ranges::next(partition_cur) : partition_cur;
+                    partition_cur != last_ ? fermat::ranges::next(partition_cur) : partition_cur;
             }
 
             bool equal(default_sentinel_t) const
@@ -106,13 +106,13 @@ namespace ranges
         };
         cursor begin_cursor()
         {
-            auto first = ranges::begin(rng_);
-            auto last = ranges::end(rng_);
+            auto first = fermat::ranges::begin(rng_);
+            auto last = fermat::ranges::end(rng_);
             if(!second_)
             {
                 auto partition_cur = adjacent_find(first, last, not_fn(fun_));
                 second_ =
-                    partition_cur != last ? ranges::next(partition_cur) : partition_cur;
+                    partition_cur != last ? fermat::ranges::next(partition_cur) : partition_cur;
             }
             return {fun_, first, *second_, last};
         }
@@ -161,10 +161,10 @@ namespace ranges
         RANGES_INLINE_VARIABLE(chunk_by_fn, chunk_by)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::chunk_by_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::chunk_by_view)
 
 #endif

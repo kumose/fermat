@@ -10,7 +10,7 @@
 #include <fermat/action/slice.h>
 #include <fermat/range/conversion.h>
 
-using namespace ranges;
+using namespace fermat::ranges;
 
 TEST(ActionSliceTest, SliceFromCopy) {
     auto v = views::ints(0, 100) | to<std::vector>();

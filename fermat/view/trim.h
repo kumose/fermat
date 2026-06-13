@@ -35,7 +35,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -69,7 +69,7 @@ namespace ranges
             if(!end_)
             {
                 const auto first = begin();
-                auto last = ranges::end(rng_);
+                auto last = fermat::ranges::end(rng_);
                 while(last != first)
                     if(!invoke(pred_, *--last))
                     {
@@ -153,10 +153,10 @@ namespace ranges
         RANGES_INLINE_VARIABLE(trim_fn, trim)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::trim_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::trim_view)
 
 #endif // RANGES_V3_VIEW_TRIM_HPP

@@ -8,8 +8,8 @@
 #include <sstream>
 #include <vector>
 
-#include <fermat/range/access.h>                 /// ranges::begin, ranges::end, ranges::size, ranges::empty
-#include <fermat/range/primitives.h>             /// ranges::empty (additional)
+#include <fermat/range/access.h>                 /// fermat::ranges::begin, fermat::ranges::end, fermat::ranges::size, fermat::ranges::empty
+#include <fermat/range/primitives.h>             /// fermat::ranges::empty (additional)
 #include <fermat/view/tail.h>                    /// views::tail
 #include <fermat/view/empty.h>                   /// views::empty
 #include <fermat/view/single.h>                  /// views::single
@@ -20,8 +20,8 @@
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -35,7 +35,7 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected) {
 // ------------------------------------------------------------------
 
 TEST(TailTest, VectorNonEmpty) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v{0,1,2,3};
     auto rng = views::tail(v);
@@ -44,7 +44,7 @@ TEST(TailTest, VectorNonEmpty) {
 }
 
 TEST(TailTest, VectorEmpty) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v{};
     auto rng = views::tail(v);
@@ -53,7 +53,7 @@ TEST(TailTest, VectorEmpty) {
 }
 
 TEST(TailTest, IstreamNonEmpty) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::stringstream sin{"1 2 3 4"};
     istream_view<int> is(sin);
@@ -62,7 +62,7 @@ TEST(TailTest, IstreamNonEmpty) {
 }
 
 TEST(TailTest, IstreamEmpty) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::stringstream sin{""};
     istream_view<int> is(sin);
@@ -71,7 +71,7 @@ TEST(TailTest, IstreamEmpty) {
 }
 
 TEST(TailTest, EmptyView) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto rng = views::empty<int> | views::tail;
     static_assert(size(rng) == 0, "size must be 0");
@@ -80,14 +80,14 @@ TEST(TailTest, EmptyView) {
 }
 
 TEST(TailTest, ConstEmptyView) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     tail_view<empty_view<int>> const rng(views::empty<int>);
     static_assert(size(rng) == 0, "size must be 0");
 }
 
 TEST(TailTest, SingleView) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto const rng = views::single(1) | views::tail;
     static_assert(size(rng) == 0, "tail of single element must be empty");

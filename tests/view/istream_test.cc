@@ -12,7 +12,7 @@
 #include <fermat/view/subrange.h>
 
 TEST(IstreamTest, CharStream) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     static const char test[] = "abcd3210";
     std::istringstream ss{test};

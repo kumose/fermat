@@ -29,7 +29,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -62,11 +62,11 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::generate;
-        using ranges::generate_result;
+        using fermat::ranges::generate;
+        using fermat::ranges::generate_result;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

@@ -26,7 +26,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -43,7 +43,7 @@ namespace ranges
         RANGES_FUNC(swap_ranges)(I1 begin1, S1 end1, I2 begin2) //
         {
             for(; begin1 != end1; ++begin1, ++begin2)
-                ranges::iter_swap(begin1, begin2);
+                fermat::ranges::iter_swap(begin1, begin2);
             return {begin1, begin2};
         }
 
@@ -58,7 +58,7 @@ namespace ranges
                                                                       S2 end2) //
         {
             for(; begin1 != end1 && begin2 != end2; ++begin1, ++begin2)
-                ranges::iter_swap(begin1, begin2);
+                fermat::ranges::iter_swap(begin1, begin2);
             return {begin1, begin2};
         }
 
@@ -84,11 +84,11 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::swap_ranges;
-        using ranges::swap_ranges_result;
+        using fermat::ranges::swap_ranges;
+        using fermat::ranges::swap_ranges_result;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

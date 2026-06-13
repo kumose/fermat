@@ -11,8 +11,8 @@
 #include <iterator>
 #include <cstdint>
 
-#include <fermat/range/access.h>            /// ranges::begin, ranges::end
-#include <fermat/range/primitives.h>        /// ranges::size, ranges::empty
+#include <fermat/range/access.h>            /// fermat::ranges::begin, fermat::ranges::end
+#include <fermat/range/primitives.h>        /// fermat::ranges::size, fermat::ranges::empty
 #include <fermat/view/enumerate.h>          /// views::enumerate
 #include <fermat/view/iota.h>               /// views::iota
 #include <fermat/view/indices.h>            /// views::indices
@@ -24,11 +24,11 @@
 template<typename RangeT>
 void test_enumerate_with(RangeT&& range)
 {
-    auto enumerated_range = ranges::views::enumerate(range);
+    auto enumerated_range = fermat::ranges::views::enumerate(range);
     // borrowed_range check is compile-time only; omitted for runtime test.
 
     std::size_t idx_ref = 0;
-    auto it_ref = ranges::begin(range);
+    auto it_ref = fermat::ranges::begin(range);
 
     for (auto it = enumerated_range.begin(); it != enumerated_range.end(); ++it)
     {
@@ -80,26 +80,26 @@ TEST(EnumerateTest, InitializerList)
 
 TEST(EnumerateTest, IotaZeroLength)
 {
-    auto range = ranges::views::iota(0, 0);
+    auto range = fermat::ranges::views::iota(0, 0);
     test_enumerate_with(range);
 }
 
 TEST(EnumerateTest, IotaNegativeToPositive)
 {
-    auto range = ranges::views::iota(-10000, 10000);
+    auto range = fermat::ranges::views::iota(-10000, 10000);
     test_enumerate_with(range);
 }
 
 TEST(EnumerateTest, IotaUnsignedZeroLength)
 {
-    auto range = ranges::views::iota(static_cast<std::uintmax_t>(0),
+    auto range = fermat::ranges::views::iota(static_cast<std::uintmax_t>(0),
                                      static_cast<std::uintmax_t>(0));
     test_enumerate_with(range);
 }
 
 TEST(EnumerateTest, IotaSignedNegativeToPositive)
 {
-    auto range2 = ranges::views::iota(static_cast<std::intmax_t>(-10000),
+    auto range2 = fermat::ranges::views::iota(static_cast<std::intmax_t>(-10000),
                                       static_cast<std::intmax_t>(10000));
     test_enumerate_with(range2);
 }
@@ -107,7 +107,7 @@ TEST(EnumerateTest, IotaSignedNegativeToPositive)
 /// Regression test for issue #1141
 TEST(EnumerateTest, IndicesTransformEnumerate)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto x = views::indices(std::uintmax_t(100))
            | views::transform([](std::uintmax_t) { return ""; })
            | views::enumerate;

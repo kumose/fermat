@@ -15,7 +15,7 @@
 
 #include <fermat/detail/config.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \ingroup group-utility
     template<typename T>
@@ -30,6 +30,6 @@ namespace ranges
     template<typename T>
     constexpr T const static_const<T>::value;
 #endif
-} // namespace ranges
+} // namespace fermat::ranges
 
 #endif

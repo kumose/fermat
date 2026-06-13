@@ -10,16 +10,16 @@
 #include <vector>
 #include <utility>
 
-#include <fermat/range/access.h>                 /// ranges::begin, ranges::end, ranges::size
-#include <fermat/view/subrange.h>          /// ranges::subrange, ranges::borrowed_subrange_t, ranges::dangling
+#include <fermat/range/access.h>                 /// fermat::ranges::begin, fermat::ranges::end, fermat::ranges::size
+#include <fermat/view/subrange.h>          /// fermat::ranges::subrange, fermat::ranges::borrowed_subrange_t, fermat::ranges::dangling
 #include <fermat/view/all.h>               /// views::all
 #include <fermat/view/ref.h>               /// views::ref_view
-#include <fermat/iterator/unreachable_sentinel.h> /// ranges::unreachable_sentinel_t
+#include <fermat/iterator/unreachable_sentinel.h> /// fermat::ranges::unreachable_sentinel_t
 
 /// Helper function to test borrowed_subrange_t (same as original).
 template<typename Rng>
-ranges::borrowed_subrange_t<Rng> algorithm(Rng&& rng) {
-    return {ranges::begin(rng), ranges::end(rng)};
+fermat::ranges::borrowed_subrange_t<Rng> algorithm(Rng&& rng) {
+    return {fermat::ranges::begin(rng), fermat::ranges::end(rng)};
 }
 
 struct Base {};
@@ -30,7 +30,7 @@ struct Derived : Base {};
 // ------------------------------------------------------------------
 
 TEST(SubrangeTest, BorrowedSubrangeType) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     // lvalue arrays -> subrange<int*>
     static_assert(std::is_same<subrange<int*>,
@@ -54,7 +54,7 @@ TEST(SubrangeTest, BorrowedSubrangeType) {
 }
 
 TEST(SubrangeTest, SlicingConversionsNotAllowed) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     static_assert(std::is_constructible<subrange<Base*, Base*>, Base*, Base*>::value, "");
     static_assert(!std::is_constructible<subrange<Base*, Base*>, Derived*, Derived*>::value, "");
@@ -79,7 +79,7 @@ TEST(SubrangeTest, SlicingConversionsNotAllowed) {
 }
 
 TEST(SubrangeTest, BasicOperations) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> vi{1,2,3,4};
     subrange<std::vector<int>::iterator> r0{vi.begin(), vi.end()};
@@ -92,26 +92,26 @@ TEST(SubrangeTest, BasicOperations) {
     static_assert(sized_range<decltype(r0)>, "");
     EXPECT_EQ(r0.size(), 4u);
     EXPECT_EQ(r0.begin(), vi.begin());
-    EXPECT_EQ(ranges::get<0>(r0), vi.begin());
+    EXPECT_EQ(fermat::ranges::get<0>(r0), vi.begin());
     EXPECT_EQ(r0.end(), vi.end());
-    EXPECT_EQ(ranges::get<1>(r0), vi.end());
+    EXPECT_EQ(fermat::ranges::get<1>(r0), vi.end());
 
     r0 = r0.next();
     EXPECT_EQ(r0.size(), 3u);
 }
 
 TEST(SubrangeTest, SizeConstructor) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> vi{1,2,3,4};
-    subrange<std::vector<int>::iterator> rng{vi.begin(), vi.end(), ranges::size(vi)};
+    subrange<std::vector<int>::iterator> rng{vi.begin(), vi.end(), fermat::ranges::size(vi)};
     EXPECT_EQ(rng.size(), 4u);
     EXPECT_EQ(rng.begin(), vi.begin());
     EXPECT_EQ(rng.end(), vi.end());
 }
 
 TEST(SubrangeTest, ConversionToPair) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> vi{1,2,3,4};
     subrange<std::vector<int>::iterator> r0{vi.begin()+1, vi.end()};
@@ -121,7 +121,7 @@ TEST(SubrangeTest, ConversionToPair) {
 }
 
 TEST(SubrangeTest, UnreachableSentinel) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> vi{1,2,3,4};
     subrange<std::vector<int>::iterator> r0{vi.begin()+1, vi.end()};
@@ -144,7 +144,7 @@ TEST(SubrangeTest, UnreachableSentinel) {
 #if RANGES_CXX_DEDUCTION_GUIDES >= RANGES_CXX_DEDUCTION_GUIDES_17
 // Deduction guides tests – compile‑time only.
 TEST(SubrangeTest, DeductionGuides) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::vector<int> vi{1,2,3,4};
     std::list<int> li{1,2,3,4};
 
@@ -155,8 +155,8 @@ TEST(SubrangeTest, DeductionGuides) {
         static_assert(std::is_same<decltype(s1), subrange<std::list<int>::iterator>>::value, "");
     }
     {
-        subrange s0{vi.begin(), vi.end(), ranges::size(vi)};
-        subrange s1{li.begin(), li.end(), ranges::size(li)};
+        subrange s0{vi.begin(), vi.end(), fermat::ranges::size(vi)};
+        subrange s1{li.begin(), li.end(), fermat::ranges::size(li)};
         static_assert(std::is_same<decltype(s0), subrange<std::vector<int>::iterator, std::vector<int>::iterator, subrange_kind::sized>>::value, "");
         static_assert(std::is_same<decltype(s1), subrange<std::list<int>::iterator, std::list<int>::iterator, subrange_kind::sized>>::value, "");
     }
@@ -172,8 +172,8 @@ TEST(SubrangeTest, DeductionGuides) {
     }
     // Removed undefined 'r0' line that caused compilation error.
     {
-        subrange s0{vi, ranges::size(vi)};
-        subrange s1{li, ranges::size(li)};
+        subrange s0{vi, fermat::ranges::size(vi)};
+        subrange s1{li, fermat::ranges::size(li)};
         static_assert(std::is_same<decltype(s0), subrange<std::vector<int>::iterator, std::vector<int>::iterator, subrange_kind::sized>>::value, "");
         static_assert(std::is_same<decltype(s1), subrange<std::list<int>::iterator, std::list<int>::iterator, subrange_kind::sized>>::value, "");
     }

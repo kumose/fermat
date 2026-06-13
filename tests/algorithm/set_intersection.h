@@ -29,15 +29,15 @@ void test_set_intersection() {
 
     auto checker = [&](int* ce) {
         EXPECT_EQ(ce - ic, sr);
-        EXPECT_FALSE(ranges::lexicographical_compare(ic, ce, ir, ir + sr));
-        ranges::fill(ic, 0);
+        EXPECT_FALSE(fermat::ranges::lexicographical_compare(ic, ce, ir, ir + sr));
+        fermat::ranges::fill(ic, 0);
     };
 
     // All calls use int* as the concrete iterator type
-    checker(ranges::set_intersection(ia, ia + sa, ib, ib + sb, ic));
-    checker(ranges::set_intersection(ib, ib + sb, ia, ia + sa, ic));
-    checker(ranges::set_intersection(ia, ia + sa, ib, ib + sb, ic, std::less<int>()));
-    checker(ranges::set_intersection(ib, ib + sb, ia, ia + sa, ic, std::less<int>()));
+    checker(fermat::ranges::set_intersection(ia, ia + sa, ib, ib + sb, ic));
+    checker(fermat::ranges::set_intersection(ib, ib + sb, ia, ia + sa, ic));
+    checker(fermat::ranges::set_intersection(ia, ia + sa, ib, ib + sb, ic, std::less<int>()));
+    checker(fermat::ranges::set_intersection(ib, ib + sb, ia, ia + sa, ic, std::less<int>()));
 }
 
 // ------------------------------------------------------------
@@ -55,7 +55,7 @@ struct U {
 // Constexpr test (unchanged)
 // ------------------------------------------------------------
 constexpr bool test_constexpr() {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int ia[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     int ib[] = {2, 4, 4, 6};
     int ic[20] = {0};
@@ -240,10 +240,10 @@ TEST(SetIntersection, Projection) {
     int ir[] = {2, 4, 4};
     const int sr = sizeof(ir)/sizeof(ir[0]);
 
-    U* res = ranges::set_intersection(ranges::views::all(ia), ranges::views::all(ib), ic,
+    U* res = fermat::ranges::set_intersection(fermat::ranges::views::all(ia), fermat::ranges::views::all(ib), ic,
                                       std::less<int>(), &S::i, &T::j);
     EXPECT_EQ(res - ic, sr);
-    EXPECT_FALSE(ranges::lexicographical_compare(ic, res, ir, ir+sr, std::less<int>(), &U::k));
+    EXPECT_FALSE(fermat::ranges::lexicographical_compare(ic, res, ir, ir+sr, std::less<int>(), &U::k));
 }
 
 TEST(SetIntersection, Constexpr) {

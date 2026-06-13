@@ -5,7 +5,7 @@
 #include <fermat/iterator/operations.h>
 #include <fermat/view/subrange.h>
 
-using namespace ranges;
+using namespace fermat::ranges;
 
 namespace {
     int comparison_count = 0;

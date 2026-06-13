@@ -27,8 +27,8 @@ void test() {
     constexpr auto sc = array_size(ia);
 
     // Use Fermat's accumulate if available, otherwise std::accumulate
-    // Here we assume Fermat's ranges::accumulate works with pointers
-    using ranges::accumulate;
+    // Here we assume Fermat's fermat::ranges::accumulate works with pointers
+    using fermat::ranges::accumulate;
 
     EXPECT_EQ(accumulate(Iter(ia), Sent(ia), 0), 0);
     EXPECT_EQ(accumulate(Iter(ia), Sent(ia), 10), 10);
@@ -71,7 +71,7 @@ TEST(AccumulateTest, PointerWithSentinel) {
     int ia[] = {1, 2, 3, 4, 5, 6};
     const int* first = ia;
     SizedSentinel<const int> last(ia + array_size(ia));
-    int sum = ranges::accumulate(first, last, 0);
+    int sum = fermat::ranges::accumulate(first, last, 0);
     EXPECT_EQ(sum, 21);
 }
 

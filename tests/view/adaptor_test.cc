@@ -20,8 +20,8 @@
 /// Helper to compare a range with an initializer list
 template<typename Rng, typename T>
 void check_equal(Rng &&rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -35,14 +35,14 @@ void check_equal(Rng &&rng, std::initializer_list<T> expected) {
 // ------------------------------------------------------------------
 template<typename BidiRange>
 struct my_reverse_view
-        : ranges::view_adaptor<my_reverse_view<BidiRange>, BidiRange> {
+        : fermat::ranges::view_adaptor<my_reverse_view<BidiRange>, BidiRange> {
 private:
-    static_assert(ranges::bidirectional_range<BidiRange>, "BidiRange must be bidirectional");
-    static_assert(ranges::common_range<BidiRange>, "BidiRange must be common");
-    friend ranges::range_access;
-    using base_iterator_t = ranges::iterator_t<BidiRange>;
+    static_assert(fermat::ranges::bidirectional_range<BidiRange>, "BidiRange must be bidirectional");
+    static_assert(fermat::ranges::common_range<BidiRange>, "BidiRange must be common");
+    friend fermat::ranges::range_access;
+    using base_iterator_t = fermat::ranges::iterator_t<BidiRange>;
 
-    struct adaptor : ranges::adaptor_base {
+    struct adaptor : fermat::ranges::adaptor_base {
         template<class base_mixin>
         struct mixin : base_mixin {
             mixin() = default;
@@ -61,11 +61,11 @@ private:
 
         // Cross-wire begin and end.
         base_iterator_t begin(my_reverse_view const &rng) const {
-            return ranges::end(rng.base());
+            return fermat::ranges::end(rng.base());
         }
 
         base_iterator_t end(my_reverse_view const &rng) const {
-            return ranges::begin(rng.base());
+            return fermat::ranges::begin(rng.base());
         }
 
         void next(base_iterator_t &it) const {
@@ -76,20 +76,20 @@ private:
             ++it;
         }
 
-        ranges::range_reference_t<BidiRange> read(base_iterator_t it) const {
-            return *ranges::prev(it);
+        fermat::ranges::range_reference_t<BidiRange> read(base_iterator_t it) const {
+            return *fermat::ranges::prev(it);
         }
 
         // Conditionally provide advance and distance_to only when BidiRange is random_access
         template<typename R = BidiRange,
-            typename = std::enable_if_t<ranges::random_access_range<R> > >
-        void advance(base_iterator_t &it, ranges::range_difference_t<BidiRange> n) const {
+            typename = std::enable_if_t<fermat::ranges::random_access_range<R> > >
+        void advance(base_iterator_t &it, fermat::ranges::range_difference_t<BidiRange> n) const {
             it -= n;
         }
 
         template<typename R = BidiRange,
-            typename = std::enable_if_t<ranges::random_access_range<R> > >
-        ranges::range_difference_t<BidiRange>
+            typename = std::enable_if_t<fermat::ranges::random_access_range<R> > >
+        fermat::ranges::range_difference_t<BidiRange>
         distance_to(base_iterator_t const &here, base_iterator_t const &there) const {
             return here - there;
         }
@@ -106,12 +106,12 @@ public:
 // my_delimited_range: a view that wraps delimit_view and adds a mixin
 // ------------------------------------------------------------------
 struct my_delimited_range
-        : ranges::view_adaptor<
+        : fermat::ranges::view_adaptor<
             my_delimited_range,
-            ranges::delimit_view<ranges::istream_view<int>, int> > {
+            fermat::ranges::delimit_view<fermat::ranges::istream_view<int>, int> > {
     using view_adaptor::view_adaptor;
 
-    struct adaptor : ranges::adaptor_base {
+    struct adaptor : fermat::ranges::adaptor_base {
         template<class base_mixin>
         struct mixin : base_mixin {
             mixin() = default;
@@ -140,9 +140,9 @@ TEST(ViewAdaptorTest, ReverseViewWithVector) {
     std::vector<int> v{1, 2, 3, 4};
     my_reverse_view<std::vector<int> &> retro{v};
 
-    static_assert(ranges::common_range<decltype(retro)>, "");
-    static_assert(ranges::view_<decltype(retro)>, "");
-    static_assert(ranges::random_access_iterator<decltype(retro.begin())>, "");
+    static_assert(fermat::ranges::common_range<decltype(retro)>, "");
+    static_assert(fermat::ranges::view_<decltype(retro)>, "");
+    static_assert(fermat::ranges::random_access_iterator<decltype(retro.begin())>, "");
 
     check_equal(retro, {4, 3, 2, 1});
 
@@ -155,22 +155,22 @@ TEST(ViewAdaptorTest, ReverseViewWithList) {
     std::list<int> l{1, 2, 3, 4};
     my_reverse_view<std::list<int> &> retro2{l};
 
-    static_assert(ranges::common_range<decltype(retro2)>, "");
-    static_assert(ranges::view_<decltype(retro2)>, "");
-    static_assert(ranges::bidirectional_iterator<decltype(retro2.begin())>, "");
-    static_assert(!ranges::random_access_iterator<decltype(retro2.begin())>, "");
+    static_assert(fermat::ranges::common_range<decltype(retro2)>, "");
+    static_assert(fermat::ranges::view_<decltype(retro2)>, "");
+    static_assert(fermat::ranges::bidirectional_iterator<decltype(retro2.begin())>, "");
+    static_assert(!fermat::ranges::random_access_iterator<decltype(retro2.begin())>, "");
 
     check_equal(retro2, {4, 3, 2, 1});
 }
 
 TEST(ViewAdaptorTest, DelimitedRange) {
     std::stringstream sinx("1 2 3 4 5 6 7 8 9 1 2 3 4 5 6 7 8 9 1 2 3 4 42 6 7 8 9 ");
-    my_delimited_range r{ranges::views::delimit(ranges::istream<int>(sinx), 42)};
+    my_delimited_range r{fermat::ranges::views::delimit(fermat::ranges::istream<int>(sinx), 42)};
 
-    static_assert(ranges::view_<decltype(r)>, "");
-    static_assert(!ranges::common_range<decltype(r)>, "");
-    static_assert(ranges::input_iterator<decltype(r.begin())>, "");
-    static_assert(!ranges::forward_iterator<decltype(r.begin())>, "");
+    static_assert(fermat::ranges::view_<decltype(r)>, "");
+    static_assert(!fermat::ranges::common_range<decltype(r)>, "");
+    static_assert(fermat::ranges::input_iterator<decltype(r.begin())>, "");
+    static_assert(!fermat::ranges::forward_iterator<decltype(r.begin())>, "");
 
     check_equal(r, {
                     1, 2, 3, 4, 5, 6, 7, 8, 9,

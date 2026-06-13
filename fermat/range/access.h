@@ -40,7 +40,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
 #if defined(__cpp_lib_string_view) && __cpp_lib_string_view >= 201603L
     template<class CharT, class Traits>
@@ -207,7 +207,7 @@ namespace ranges
         CPP_requires(has_member_end_,
             requires(T & t) //
             (
-                _end_::_is_sentinel(t.end(), ranges::begin(t))
+                _end_::_is_sentinel(t.end(), fermat::ranges::begin(t))
             ));
         /// \concept has_member_end
         /// \brief The \c has_member_end concept
@@ -221,7 +221,7 @@ namespace ranges
         CPP_requires(has_non_member_end_,
             requires(T & t) //
             (
-                _end_::_is_sentinel(end(t), ranges::begin(t))
+                _end_::_is_sentinel(end(t), fermat::ranges::begin(t))
             ));
         /// \concept has_non_member_end
         /// \brief The \c has_non_member_end concept
@@ -322,9 +322,9 @@ namespace ranges
 
             template<typename R>
             constexpr _begin_::_t<detail::as_const_t<R>> operator()(R && r) const
-                noexcept(noexcept(ranges::begin(detail::as_const(r))))
+                noexcept(noexcept(fermat::ranges::begin(detail::as_const(r))))
             {
-                return ranges::begin(detail::as_const(r));
+                return fermat::ranges::begin(detail::as_const(r));
             }
         };
     } // namespace _cbegin_
@@ -332,7 +332,7 @@ namespace ranges
 
     /// \ingroup group-range
     /// \param r
-    /// \return The result of calling `ranges::begin` with a const-qualified
+    /// \return The result of calling `fermat::ranges::begin` with a const-qualified
     ///    reference to r.
     RANGES_INLINE_VARIABLE(_cbegin_::fn, cbegin)
 
@@ -346,9 +346,9 @@ namespace ranges
 
             template<typename R>
             constexpr _end_::_t<detail::as_const_t<R>> operator()(R && r) const
-                noexcept(noexcept(ranges::end(detail::as_const(r))))
+                noexcept(noexcept(fermat::ranges::end(detail::as_const(r))))
             {
-                return ranges::end(detail::as_const(r));
+                return fermat::ranges::end(detail::as_const(r));
             }
         };
     } // namespace _cend_
@@ -356,7 +356,7 @@ namespace ranges
 
     /// \ingroup group-range
     /// \param r
-    /// \return The result of calling `ranges::end` with a const-qualified
+    /// \return The result of calling `fermat::ranges::end` with a const-qualified
     ///    reference to r.
     RANGES_INLINE_VARIABLE(_cend_::fn, cend)
 
@@ -412,8 +412,8 @@ namespace ranges
             (
                 // make_reverse_iterator is constrained with
                 // bidirectional_iterator.
-                ranges::make_reverse_iterator(ranges::end(t)),
-                _rbegin_::_same_type(ranges::begin(t), ranges::end(t))
+                fermat::ranges::make_reverse_iterator(fermat::ranges::end(t)),
+                _rbegin_::_same_type(fermat::ranges::begin(t), fermat::ranges::end(t))
             ));
         /// \concept can_reverse_end
         /// \brief The \c can_reverse_end concept
@@ -439,7 +439,7 @@ namespace ranges
             {
                 template<typename R>
                 using invoke =
-                    decltype(ranges::make_reverse_iterator(ranges::end(declval(R &))));
+                    decltype(fermat::ranges::make_reverse_iterator(fermat::ranges::end(declval(R &))));
             };
             struct _other_result_
             {
@@ -484,9 +484,9 @@ namespace ranges
                 requires detail::_borrowed_range<R> AND (!has_member_rbegin<R>) AND
                     (!has_non_member_rbegin<R>) AND can_reverse_end<R>)
             constexpr auto operator()(R && r) const //
-                noexcept(noexcept(ranges::make_reverse_iterator(ranges::end(r))))
+                noexcept(noexcept(fermat::ranges::make_reverse_iterator(fermat::ranges::end(r))))
             {
-                return ranges::make_reverse_iterator(ranges::end(r));
+                return fermat::ranges::make_reverse_iterator(fermat::ranges::end(r));
             }
         };
 
@@ -497,10 +497,10 @@ namespace ranges
 
     /// \ingroup group-range
     /// \param r
-    /// \return `make_reverse_iterator(r + ranges::size(r))` if r is an array. Otherwise,
+    /// \return `make_reverse_iterator(r + fermat::ranges::size(r))` if r is an array. Otherwise,
     ///   `r.rbegin()` if that expression is well-formed and returns an
-    ///   input_or_output_iterator. Otherwise, `make_reverse_iterator(ranges::end(r))` if
-    ///   `ranges::begin(r)` and `ranges::end(r)` are both well-formed and have the same
+    ///   input_or_output_iterator. Otherwise, `make_reverse_iterator(fermat::ranges::end(r))` if
+    ///   `fermat::ranges::begin(r)` and `fermat::ranges::end(r)` are both well-formed and have the same
     ///   type that satisfies `bidirectional_iterator`.
     RANGES_DEFINE_CPO(_rbegin_::fn, rbegin)
 
@@ -523,7 +523,7 @@ namespace ranges
         CPP_requires(has_member_rend_,
             requires(T & t) //
             (
-                _end_::_is_sentinel(t.rend(), ranges::rbegin(t))
+                _end_::_is_sentinel(t.rend(), fermat::ranges::rbegin(t))
             ));
         /// \concept has_member_rend
         /// \brief The \c has_member_rend concept
@@ -537,7 +537,7 @@ namespace ranges
         CPP_requires(has_non_member_rend_,
             requires(T & t) //
             (
-                _end_::_is_sentinel(rend(t), ranges::rbegin(t))
+                _end_::_is_sentinel(rend(t), fermat::ranges::rbegin(t))
             ));
         /// \concept has_non_member_rend
         /// \brief The \c has_non_member_rend concept
@@ -553,8 +553,8 @@ namespace ranges
             (
                 // make_reverse_iterator is constrained with
                 // bidirectional_iterator.
-                ranges::make_reverse_iterator(ranges::begin(t)),
-                _rbegin_::_same_type(ranges::begin(t), ranges::end(t))
+                fermat::ranges::make_reverse_iterator(fermat::ranges::begin(t)),
+                _rbegin_::_same_type(fermat::ranges::begin(t), fermat::ranges::end(t))
             ));
         /// \concept can_reverse_begin
         /// \brief The \c can_reverse_begin concept
@@ -580,7 +580,7 @@ namespace ranges
             {
                 template<typename R>
                 using invoke =
-                    decltype(ranges::make_reverse_iterator(ranges::begin(declval(R &))));
+                    decltype(fermat::ranges::make_reverse_iterator(fermat::ranges::begin(declval(R &))));
             };
             struct _other_result_
             {
@@ -625,9 +625,9 @@ namespace ranges
                 requires detail::_borrowed_range<R> AND (!has_member_rend<R>) AND
                     (!has_non_member_rend<R>) AND can_reverse_begin<R>)
             constexpr auto operator()(R && r) const //
-                noexcept(noexcept(ranges::make_reverse_iterator(ranges::begin(r))))
+                noexcept(noexcept(fermat::ranges::make_reverse_iterator(fermat::ranges::begin(r))))
             {
-                return ranges::make_reverse_iterator(ranges::begin(r));
+                return fermat::ranges::make_reverse_iterator(fermat::ranges::begin(r));
             }
         };
 
@@ -640,9 +640,9 @@ namespace ranges
     /// \param r
     /// \return `make_reverse_iterator(r)` if `r` is an array. Otherwise,
     ///   `r.rend()` if that expression is well-formed and returns a type that
-    ///   satisfies `sentinel_for<S, I>` where `I` is the type of `ranges::rbegin(r)`.
-    ///   Otherwise, `make_reverse_iterator(ranges::begin(r))` if `ranges::begin(r)`
-    ///   and `ranges::end(r)` are both well-formed and have the same type that
+    ///   satisfies `sentinel_for<S, I>` where `I` is the type of `fermat::ranges::rbegin(r)`.
+    ///   Otherwise, `make_reverse_iterator(fermat::ranges::begin(r))` if `fermat::ranges::begin(r)`
+    ///   and `fermat::ranges::end(r)` are both well-formed and have the same type that
     ///   satisfies `bidirectional_iterator`.
     RANGES_DEFINE_CPO(_rend_::fn, rend)
 
@@ -656,9 +656,9 @@ namespace ranges
 
             template<typename R>
             constexpr _rbegin_::_t<detail::as_const_t<R>> operator()(R && r) const
-                noexcept(noexcept(ranges::rbegin(detail::as_const(r))))
+                noexcept(noexcept(fermat::ranges::rbegin(detail::as_const(r))))
             {
-                return ranges::rbegin(detail::as_const(r));
+                return fermat::ranges::rbegin(detail::as_const(r));
             }
         };
     } // namespace _crbegin_
@@ -666,7 +666,7 @@ namespace ranges
 
     /// \ingroup group-range
     /// \param r
-    /// \return The result of calling `ranges::rbegin` with a const-qualified
+    /// \return The result of calling `fermat::ranges::rbegin` with a const-qualified
     ///    reference to r.
     RANGES_INLINE_VARIABLE(_crbegin_::fn, crbegin)
 
@@ -680,9 +680,9 @@ namespace ranges
 
             template<typename R>
             constexpr _rend_::_t<detail::as_const_t<R>> operator()(R && r) const
-                noexcept(noexcept(ranges::rend(detail::as_const(r))))
+                noexcept(noexcept(fermat::ranges::rend(detail::as_const(r))))
             {
-                return ranges::rend(detail::as_const(r));
+                return fermat::ranges::rend(detail::as_const(r));
             }
         };
     } // namespace _crend_
@@ -690,7 +690,7 @@ namespace ranges
 
     /// \ingroup group-range
     /// \param r
-    /// \return The result of calling `ranges::rend` with a const-qualified
+    /// \return The result of calling `fermat::ranges::rend` with a const-qualified
     ///    reference to r.
     RANGES_INLINE_VARIABLE(_crend_::fn, crend)
 
@@ -702,21 +702,21 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::begin;
-        using ranges::cbegin;
-        using ranges::cend;
-        using ranges::crbegin;
-        using ranges::crend;
-        using ranges::end;
-        using ranges::rbegin;
-        using ranges::rend;
+        using fermat::ranges::begin;
+        using fermat::ranges::cbegin;
+        using fermat::ranges::cend;
+        using fermat::ranges::crbegin;
+        using fermat::ranges::crend;
+        using fermat::ranges::end;
+        using fermat::ranges::rbegin;
+        using fermat::ranges::rend;
 
-        using ranges::iterator_t;
-        using ranges::sentinel_t;
+        using fermat::ranges::iterator_t;
+        using fermat::ranges::sentinel_t;
 
-        using ranges::enable_borrowed_range;
+        using fermat::ranges::enable_borrowed_range;
     } // namespace cpp20
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

@@ -63,8 +63,8 @@ using ci_string = std::basic_string<char, ci_char_traits>;
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected)
 {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected)
     {
         EXPECT_NE(it, end);
@@ -78,8 +78,8 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected)
 template<typename Rng>
 void check_equal(Rng&& rng, std::initializer_list<std::string> expected)
 {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected)
     {
         EXPECT_NE(it, end);
@@ -96,7 +96,7 @@ void check_equal(Rng&& rng, std::initializer_list<std::string> expected)
 /// Basic test: unique on array of integers
 TEST(UniqueViewTest, UniqueOnArray)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {1, 1, 1, 2, 3, 4, 4};
     std::vector<int> out;
@@ -109,7 +109,7 @@ TEST(UniqueViewTest, UniqueOnArray)
     // CPP_assert(common_range<decltype(rng)>);
     // CPP_assert(!sized_range<decltype(rng)>);
     // CPP_assert(range<decltype(rng) const>);
-    copy(rng, ranges::back_inserter(out));
+    copy(rng, fermat::ranges::back_inserter(out));
     check_equal(out, {1, 2, 3, 4});
     check_equal(views::reverse(out), {4, 3, 2, 1});
 }
@@ -117,7 +117,7 @@ TEST(UniqueViewTest, UniqueOnArray)
 /// Test unique on vector of case‑insensitive strings
 TEST(UniqueViewTest, UniqueOnCIString)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<ci_string> rgs{"hello", "HELLO", "bye", "Bye", "BYE"};
     auto rng = rgs | views::unique;
@@ -141,7 +141,7 @@ TEST(UniqueViewTest, UniqueOnCIString)
 /// Test unique on a delimited (input) range composed with reverse
 TEST(UniqueViewTest, UniqueOnDelimitReverse)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int const rgi[] = {1, 1, 1, 2, 3, 4, 4, 42, 7};
     auto rng0 = views::delimit(rgi, 42) | views::reverse;
@@ -161,7 +161,7 @@ TEST(UniqueViewTest, UniqueOnDelimitReverse)
 /// Test unique with custom binary predicate (case‑insensitive string compare)
 TEST(UniqueViewTest, UniqueWithCustomPredicate)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto const caseInsensitiveCompare = [](const std::string& s1, const std::string& s2){
         if (s1.size() != s2.size())
@@ -188,7 +188,7 @@ TEST(UniqueViewTest, UniqueWithCustomPredicate)
 /// Test unique with predicate that considers absolute values, then transform
 TEST(UniqueViewTest, UniqueWithAbsPredicateAndTransform)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int const rgi[] = {-1, 1, -1, 2, 3, 4, -4, 42, 7};
     auto rng0 = views::delimit(rgi, 42) | views::reverse;

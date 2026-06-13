@@ -30,7 +30,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -93,10 +93,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::find_first_of;
+        using fermat::ranges::find_first_of;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

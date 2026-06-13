@@ -10,7 +10,7 @@
 #include <fermat/view/iota.h>
 #include <fermat/range/conversion.h>
 
-using namespace ranges;
+using namespace fermat::ranges;
 
 TEST(ActionSplitTest, SplitVectorByValue) {
     auto v = views::ints(1, 21) | to<std::vector>();

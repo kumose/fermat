@@ -49,7 +49,7 @@ namespace std {
     std::ostream& operator<<(std::ostream& os, std::tuple<Ts...> const& t) {
         os << '(';
         bool first = true;
-        ::ranges::tuple_for_each(t, ::printer{os, first});
+        ::fermat::ranges::tuple_for_each(t, ::printer{os, first});
         os << ')';
         return os;
     }
@@ -60,10 +60,10 @@ namespace std {
 /// ------------------------------------------------------------
 template<typename Rng1, typename Rng2>
 void check_equal(Rng1&& rng1, Rng2&& rng2) {
-    auto it1 = ranges::begin(rng1);
-    auto end1 = ranges::end(rng1);
-    auto it2 = ranges::begin(rng2);
-    auto end2 = ranges::end(rng2);
+    auto it1 = fermat::ranges::begin(rng1);
+    auto end1 = fermat::ranges::end(rng1);
+    auto it2 = fermat::ranges::begin(rng2);
+    auto end2 = fermat::ranges::end(rng2);
     while (it1 != end1 && it2 != end2) {
         EXPECT_EQ(*it1, *it2);
         ++it1; ++it2;
@@ -75,8 +75,8 @@ void check_equal(Rng1&& rng1, Rng2&& rng2) {
 /// Overload for initializer_list (single range vs initializer list)
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -87,9 +87,9 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected) {
 
 // Overload for initializer_list of tuples
 template<typename Rng, typename... Ts>
-void check_equal(Rng&& rng, std::initializer_list<ranges::common_tuple<Ts...>> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+void check_equal(Rng&& rng, std::initializer_list<fermat::ranges::common_tuple<Ts...>> expected) {
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -102,7 +102,7 @@ void check_equal(Rng&& rng, std::initializer_list<ranges::common_tuple<Ts...>> e
 /// test_empty_set (mapped to a test case)
 /// ------------------------------------------------------------
 TEST(CartesianProductTest, EmptySet) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto rng = views::cartesian_product();
     using Rng = decltype(rng);
 
@@ -136,7 +136,7 @@ TEST(CartesianProductTest, EmptySet) {
 /// test_empty_range
 /// ------------------------------------------------------------
 TEST(CartesianProductTest, EmptyRange) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int some_ints[] = {0,1,2,3};
     auto e = views::empty<char>;
     auto rng = views::cartesian_product(
@@ -175,7 +175,7 @@ TEST(CartesianProductTest, EmptyRange) {
 /// test_bug_820
 /// ------------------------------------------------------------
 TEST(CartesianProductTest, Bug820) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     using CT = common_tuple<int, int>;
     std::initializer_list<CT> control = {
         CT{0,0}, CT{0,1}, CT{0,2},
@@ -190,7 +190,7 @@ TEST(CartesianProductTest, Bug820) {
 /// test_bug_823
 /// ------------------------------------------------------------
 TEST(CartesianProductTest, Bug823) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto three = views::iota(0) | views::take_exactly(3);
     static_assert(random_access_range<decltype(three)>, "");
     static_assert(view_<decltype(three)>, "");
@@ -250,7 +250,7 @@ TEST(CartesianProductTest, Bug823) {
 /// test_bug_919
 /// ------------------------------------------------------------
 TEST(CartesianProductTest, Bug919) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int some_ints[] = {0,1,2,3};
     char const* some_strings[] = {"John", "Paul", "George", "Ringo"};
     auto rng = views::cartesian_product(
@@ -273,7 +273,7 @@ TEST(CartesianProductTest, Bug919) {
 /// test_bug_978
 /// ------------------------------------------------------------
 TEST(CartesianProductTest, Bug978) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int rgi[] = {1};
     auto rng = views::cartesian_product(
         rgi | views::filter([](int) { return true; }),
@@ -287,7 +287,7 @@ TEST(CartesianProductTest, Bug978) {
 /// test_bug_1269
 /// ------------------------------------------------------------
 TEST(CartesianProductTest, Bug1269) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int data0[2]{}, data1[3]{}, data2[5]{}, data3[7]{};
     constexpr std::size_t N = size(data0) * size(data1) * size(data2) * size(data3);
     static_assert(N < INT_MAX, "");
@@ -308,7 +308,7 @@ TEST(CartesianProductTest, Bug1269) {
 /// test_bug_1279
 /// ------------------------------------------------------------
 TEST(CartesianProductTest, Bug1279) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto const xs = views::indices(std::size_t{0}, std::size_t{10});
     auto const ys = views::indices(std::size_t{0}, std::size_t{10});
     for (auto r : views::cartesian_product(ys, xs)) {
@@ -321,7 +321,7 @@ TEST(CartesianProductTest, Bug1279) {
 /// test_bug_1296
 /// ------------------------------------------------------------
 TEST(CartesianProductTest, Bug1296) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto v = views::cartesian_product(views::single(42))
         | views::transform([](std::tuple<int> a) { return std::get<0>(a); });
     EXPECT_EQ(size(v), 1u);
@@ -332,7 +332,7 @@ TEST(CartesianProductTest, Bug1296) {
 /// test_1422
 /// ------------------------------------------------------------
 TEST(CartesianProductTest, Issue1422) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int v1[] = {1,2,3};
     auto e = v1 | views::enumerate;
     auto cp = views::cartesian_product(e, e);
@@ -344,7 +344,7 @@ TEST(CartesianProductTest, Issue1422) {
 /// Main test (original main body)
 /// ------------------------------------------------------------
 TEST(CartesianProductTest, MainTest) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int some_ints[] = {0,1,2,3};
     char const* some_strings[] = {"John", "Paul", "George", "Ringo"};
     auto rng = views::cartesian_product(

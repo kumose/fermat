@@ -24,7 +24,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -65,7 +65,7 @@ namespace ranges
             // Fixed-length
             template(typename Char, std::size_t N)(
                 requires detail::is_char_type<Char>::value) //
-            ranges::subrange<Char *> operator()(Char (&sz)[N]) const
+            fermat::ranges::subrange<Char *> operator()(Char (&sz)[N]) const
             {
                 return {&sz[0], &sz[N - 1]};
             }
@@ -73,13 +73,13 @@ namespace ranges
             // Null-terminated
             template(typename Char)(
                 requires detail::is_char_type<Char>::value) //
-            ranges::delimit_view<
-                ranges::subrange<Char *, ranges::unreachable_sentinel_t>,
+            fermat::ranges::delimit_view<
+                fermat::ranges::subrange<Char *, fermat::ranges::unreachable_sentinel_t>,
                 meta::_t<std::remove_cv<Char>>> //
             operator()(Char * sz) const volatile
             {
                 using ch_t = meta::_t<std::remove_cv<Char>>;
-                return ranges::views::delimit(sz, ch_t(0));
+                return fermat::ranges::views::delimit(sz, ch_t(0));
             }
         };
 
@@ -87,7 +87,7 @@ namespace ranges
         /// \ingroup group-views
         RANGES_INLINE_VARIABLE(c_str_fn, c_str)
     } // namespace views
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

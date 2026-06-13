@@ -36,7 +36,7 @@
 #define CPP_template_gcc_workaround template
 #endif
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -81,7 +81,7 @@ namespace ranges
         CPP_requires(_can_empty_,
             requires(Rng & rng) //
             (
-                ranges::empty(rng)
+                fermat::ranges::empty(rng)
             ));
         /// \concept can_empty_
         /// \brief The \c can_empty_ concept
@@ -104,8 +104,8 @@ namespace ranges
         Stream & print_rng_(Stream & sout, Rng & rng)
         {
             sout << '[';
-            auto it = ranges::begin(rng);
-            auto const e = ranges::end(rng);
+            auto it = fermat::ranges::begin(rng);
+            auto const e = fermat::ranges::end(rng);
             if(it != e)
             {
                 for(;;)
@@ -162,54 +162,54 @@ namespace ranges
             requires True AND (Cardinality < 0) AND (Cardinality != infinite) AND
                 (!forward_range<D<True>>) AND sized_range<D<True>>)
         constexpr bool empty() //
-            noexcept(noexcept(bool(ranges::size(std::declval<D<True> &>()) == 0)))
+            noexcept(noexcept(bool(fermat::ranges::size(std::declval<D<True> &>()) == 0)))
         {
-            return ranges::size(derived()) == 0;
+            return fermat::ranges::size(derived()) == 0;
         }
         /// \overload
         template(bool True = true)(
             requires True AND (Cardinality < 0) AND (Cardinality != infinite) AND
                 (!forward_range<D<True> const>) AND sized_range<D<True> const>)
         constexpr bool empty() const //
-            noexcept(noexcept(bool(ranges::size(std::declval<D<True> const &>()) == 0)))
+            noexcept(noexcept(bool(fermat::ranges::size(std::declval<D<True> const &>()) == 0)))
         {
-            return ranges::size(derived()) == 0;
+            return fermat::ranges::size(derived()) == 0;
         }
         /// \overload
         template(bool True = true)(
             requires True AND (!detail::has_fixed_size_<Cardinality>) AND
                 forward_range<D<True>>)
         constexpr bool empty() noexcept(
-            noexcept(bool(ranges::begin(std::declval<D<True> &>()) ==
-                          ranges::end(std::declval<D<True> &>()))))
+            noexcept(bool(fermat::ranges::begin(std::declval<D<True> &>()) ==
+                          fermat::ranges::end(std::declval<D<True> &>()))))
         {
-            return bool(ranges::begin(derived()) == ranges::end(derived()));
+            return bool(fermat::ranges::begin(derived()) == fermat::ranges::end(derived()));
         }
         /// \overload
         template(bool True = true)(
             requires True AND (!detail::has_fixed_size_<Cardinality>) AND
                 forward_range<D<True> const>)
         constexpr bool empty() const
-            noexcept(noexcept(bool(ranges::begin(std::declval<D<True> const &>()) ==
-                                   ranges::end(std::declval<D<True> const &>()))))
+            noexcept(noexcept(bool(fermat::ranges::begin(std::declval<D<True> const &>()) ==
+                                   fermat::ranges::end(std::declval<D<True> const &>()))))
         {
-            return bool(ranges::begin(derived()) == ranges::end(derived()));
+            return bool(fermat::ranges::begin(derived()) == fermat::ranges::end(derived()));
         }
         CPP_template_gcc_workaround(bool True = true)(
             requires True && detail::can_empty_<D<True>>) // clang-format off
         constexpr explicit operator bool()
-            noexcept(noexcept(ranges::empty(std::declval<D<True> &>())))
+            noexcept(noexcept(fermat::ranges::empty(std::declval<D<True> &>())))
         {
-            return !ranges::empty(derived());
+            return !fermat::ranges::empty(derived());
         }
         // clang-format on
         /// \overload
         CPP_template_gcc_workaround(bool True = true)(
             requires True && detail::can_empty_<D<True> const>) // clang-format off
         constexpr explicit operator bool() const
-            noexcept(noexcept(ranges::empty(std::declval<D<True> const &>())))
+            noexcept(noexcept(fermat::ranges::empty(std::declval<D<True> const &>())))
         {
-            return !ranges::empty(derived());
+            return !fermat::ranges::empty(derived());
         }
         // clang-format on
         /// If the size of the range is known at compile-time and finite,
@@ -293,14 +293,14 @@ namespace ranges
             requires True AND contiguous_iterator<iterator_t<D<True>>>)
         constexpr std::add_pointer_t<range_reference_t<D<True>>> data() //
         {
-            return std::addressof(*ranges::begin(derived()));
+            return std::addressof(*fermat::ranges::begin(derived()));
         }
         /// \overload
         template(bool True = true)(
             requires True AND contiguous_iterator<iterator_t<D<True> const>>)
         constexpr std::add_pointer_t<range_reference_t<D<True> const>> data() const //
         {
-            return std::addressof(*ranges::begin(derived()));
+            return std::addressof(*fermat::ranges::begin(derived()));
         }
         /// Returns a reference to the element at specified location pos, with bounds
         /// checking.
@@ -309,7 +309,7 @@ namespace ranges
         constexpr range_reference_t<D<True>> at(range_difference_t<D<True>> n)
         {
             using size_type = range_size_t<Derived>;
-            if(n < 0 || size_type(n) >= ranges::size(derived()))
+            if(n < 0 || size_type(n) >= fermat::ranges::size(derived()))
             {
                 throw std::out_of_range("view_interface::at");
             }
@@ -322,7 +322,7 @@ namespace ranges
         constexpr range_reference_t<D<True> const> at(range_difference_t<D<True>> n) const
         {
             using size_type = range_size_t<Derived const>;
-            if(n < 0 || size_type(n) >= ranges::size(derived()))
+            if(n < 0 || size_type(n) >= fermat::ranges::size(derived()))
             {
                 throw std::out_of_range("view_interface::at");
             }
@@ -505,10 +505,10 @@ namespace ranges
         template(typename Derived)(
             requires std::is_class<Derived>::value AND
                 same_as<Derived, meta::_t<std::remove_cv<Derived>>>)
-        using view_interface = ranges::view_interface<Derived, ranges::unknown>;
+        using view_interface = fermat::ranges::view_interface<Derived, fermat::ranges::unknown>;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

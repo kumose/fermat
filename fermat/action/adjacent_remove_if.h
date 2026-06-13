@@ -28,7 +28,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-actions
     /// @{
@@ -61,7 +61,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(adjacent_remove_if_fn, adjacent_remove_if)
     } // namespace actions
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

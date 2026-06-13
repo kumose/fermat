@@ -31,7 +31,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -43,7 +43,7 @@ namespace ranges
             indirect_relation<equal_to, projected<I, P>, T const *>)
         constexpr I RANGES_FUNC(remove)(I first, S last, T const & val, P proj = P{})
         {
-            first = find(std::move(first), last, val, ranges::ref(proj));
+            first = find(std::move(first), last, val, fermat::ranges::ref(proj));
             if(first != last)
             {
                 for(I i = next(first); i != last; ++i)
@@ -72,10 +72,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::remove;
+        using fermat::ranges::remove;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

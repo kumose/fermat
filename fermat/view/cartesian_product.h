@@ -36,7 +36,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -63,7 +63,7 @@ namespace ranges
             common_type_t<Size, range_size_t<Rng>> operator()(Size s, Rng && rng) const
             {
                 using S = common_type_t<Size, range_size_t<Rng>>;
-                return static_cast<S>(s) * static_cast<S>(ranges::size(rng));
+                return static_cast<S>(s) * static_cast<S>(fermat::ranges::size(rng));
             }
         };
 
@@ -97,7 +97,7 @@ namespace ranges
     template<typename IsConst, typename...Views>
     CPP_concept cartesian_produce_view_can_size =
         and_v<sized_range<meta::const_if<IsConst, Views>>...> &&
-        CPP_concept_ref(ranges::cartesian_produce_view_can_size_, IsConst, Views...);
+        CPP_concept_ref(fermat::ranges::cartesian_produce_view_can_size_, IsConst, Views...);
 
     /// \concept cartesian_produce_view_can_distance_
     /// \brief The \c cartesian_produce_view_can_distance_ concept
@@ -112,7 +112,7 @@ namespace ranges
     template<typename IsConst, typename...Views>
     CPP_concept cartesian_produce_view_can_distance =
         cartesian_produce_view_can_size<IsConst, Views...> &&
-        CPP_concept_ref(ranges::cartesian_produce_view_can_distance_, IsConst, Views...);
+        CPP_concept_ref(fermat::ranges::cartesian_produce_view_can_distance_, IsConst, Views...);
 
     /// \concept cartesian_produce_view_can_random_
     /// \brief The \c cartesian_produce_view_can_random_ concept
@@ -125,7 +125,7 @@ namespace ranges
     template<typename IsConst, typename...Views>
     CPP_concept cartesian_produce_view_can_random =
         cartesian_produce_view_can_distance<IsConst, Views...> &&
-        CPP_concept_ref(ranges::cartesian_produce_view_can_random_, IsConst, Views...);
+        CPP_concept_ref(fermat::ranges::cartesian_produce_view_can_random_, IsConst, Views...);
 
     /// \concept cartesian_produce_view_can_bidi_
     /// \brief The \c cartesian_produce_view_can_bidi_ concept
@@ -139,7 +139,7 @@ namespace ranges
     template<typename IsConst, typename...Views>
     CPP_concept cartesian_produce_view_can_bidi =
         cartesian_produce_view_can_random<IsConst, Views...> ||
-        CPP_concept_ref(ranges::cartesian_produce_view_can_bidi_, IsConst, Views...);
+        CPP_concept_ref(fermat::ranges::cartesian_produce_view_can_bidi_, IsConst, Views...);
     // clang-format on
 
     template<typename... Views>
@@ -175,7 +175,7 @@ namespace ranges
             {
                 auto & v = std::get<0>(view_->views_);
                 auto & i = std::get<0>(its_);
-                auto const last = ranges::end(v);
+                auto const last = fermat::ranges::end(v);
                 RANGES_EXPECT(i != last);
                 ++i;
             }
@@ -184,11 +184,11 @@ namespace ranges
             {
                 auto & v = std::get<N - 1>(view_->views_);
                 auto & i = std::get<N - 1>(its_);
-                auto const last = ranges::end(v);
+                auto const last = fermat::ranges::end(v);
                 RANGES_EXPECT(i != last);
                 if(++i == last)
                 {
-                    i = ranges::begin(v);
+                    i = fermat::ranges::begin(v);
                     next_(meta::size_t<N - 1>{});
                 }
             }
@@ -201,12 +201,12 @@ namespace ranges
             {
                 auto & v = std::get<N - 1>(view_->views_);
                 auto & i = std::get<N - 1>(its_);
-                if(i == ranges::begin(v))
+                if(i == fermat::ranges::begin(v))
                 {
                     CPP_assert(cartesian_produce_view_can_bidi<IsConst, Views...>);
                     // cartesian_produce_view_can_bidi<IsConst, Views...> implies this
                     // advance call is O(1)
-                    ranges::advance(i, ranges::end(v));
+                    fermat::ranges::advance(i, fermat::ranges::end(v));
                     prev_(meta::size_t<N - 1>{});
                 }
                 --i;
@@ -229,7 +229,7 @@ namespace ranges
             difference_type distance_(cursor const & that, meta::size_t<N>) const
             {
                 difference_type const d = distance_(that, meta::size_t<N - 1>{});
-                auto const scale = ranges::distance(std::get<N - 1>(view_->views_));
+                auto const scale = fermat::ranges::distance(std::get<N - 1>(view_->views_));
                 auto const increment = std::get<N - 1>(that.its_) - std::get<N - 1>(its_);
                 return difference_type{d * scale + increment};
             }
@@ -247,8 +247,8 @@ namespace ranges
 
                 auto & i = std::get<N - 1>(its_);
                 auto const my_size = static_cast<difference_type>(
-                    ranges::size(std::get<N - 1>(view_->views_)));
-                auto const first = ranges::begin(std::get<N - 1>(view_->views_));
+                    fermat::ranges::size(std::get<N - 1>(view_->views_)));
+                auto const first = fermat::ranges::begin(std::get<N - 1>(view_->views_));
 
                 auto const idx = static_cast<difference_type>(i - first);
                 RANGES_EXPECT(0 <= idx);
@@ -292,8 +292,8 @@ namespace ranges
             void check_at_end_(meta::size_t<1>, bool at_end = false)
             {
                 if(at_end)
-                    ranges::advance(std::get<0>(its_),
-                                    ranges::end(std::get<0>(view_->views_)));
+                    fermat::ranges::advance(std::get<0>(its_),
+                                    fermat::ranges::end(std::get<0>(view_->views_)));
             }
             template<std::size_t N>
             void check_at_end_(meta::size_t<N>, bool at_end = false)
@@ -301,7 +301,7 @@ namespace ranges
                 return check_at_end_(
                     meta::size_t<N - 1>{},
                     at_end || bool(std::get<N - 1>(its_) ==
-                                   ranges::end(std::get<N - 1>(view_->views_))));
+                                   fermat::ranges::end(std::get<N - 1>(view_->views_))));
             }
             cursor(end_tag, constify_if<cartesian_product_view> * view,
                    std::true_type) // common_with
@@ -309,7 +309,7 @@ namespace ranges
             {
                 CPP_assert(
                     common_range<meta::at_c<meta::list<constify_if<Views>...>, 0>>);
-                std::get<0>(its_) = ranges::end(std::get<0>(view->views_));
+                std::get<0>(its_) = fermat::ranges::end(std::get<0>(view->views_));
             }
             cursor(end_tag, constify_if<cartesian_product_view> * view,
                    std::false_type) // !common_with
@@ -318,7 +318,7 @@ namespace ranges
                 using View0 = meta::at_c<meta::list<constify_if<Views>...>, 0>;
                 CPP_assert(!common_range<View0> && random_access_range<View0> &&
                            sized_range<View0>);
-                std::get<0>(its_) += ranges::distance(std::get<0>(view->views_));
+                std::get<0>(its_) += fermat::ranges::distance(std::get<0>(view->views_));
             }
 
         public:
@@ -327,7 +327,7 @@ namespace ranges
             cursor() = default;
             explicit cursor(begin_tag, constify_if<cartesian_product_view> * view)
               : view_(view)
-              , its_(tuple_transform(view->views_, ranges::begin))
+              , its_(tuple_transform(view->views_, fermat::ranges::begin))
             {
                 // If any of the constituent views is empty, the cartesian_product is
                 // empty and this "begin" iterator needs to become an "end" iterator.
@@ -355,7 +355,7 @@ namespace ranges
             }
             bool equal(default_sentinel_t) const
             {
-                return std::get<0>(its_) == ranges::end(std::get<0>(view_->views_));
+                return std::get<0>(its_) == fermat::ranges::end(std::get<0>(view_->views_));
             }
             bool equal(cursor const & that) const
             {
@@ -501,7 +501,7 @@ namespace ranges
     } // namespace views
 
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

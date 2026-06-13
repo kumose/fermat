@@ -74,8 +74,8 @@ struct fortytwo_erator {
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng &&rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -96,7 +96,7 @@ void ignore_unused(T &&...) {
 // ------------------------------------------------------------------
 
 TEST(CountedTest, BasicCountedView) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     auto rng = views::counted(ForwardIterator<int *>{rgi}, 10);
@@ -113,7 +113,7 @@ TEST(CountedTest, BasicCountedView) {
 }
 
 TEST(CountedTest, IteratorArithmetic) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::list<int> l;
     counted_iterator<std::list<int>::iterator> a(l.begin(), 0);
@@ -135,7 +135,7 @@ TEST(CountedTest, IteratorArithmetic) {
 }
 
 TEST(CountedTest, VoidPostIncrement) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     static_assert(input_iterator<fortytwo_erator>, "");
     counted_iterator<fortytwo_erator> c{{}, 42};

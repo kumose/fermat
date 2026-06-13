@@ -31,7 +31,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-iterator
     /// @{
@@ -81,7 +81,7 @@ namespace ranges
             template<typename T, std::size_t N>
             void operator()(indexed_element<T, N> t) const
             {
-                ranges::emplace<N>(*data_, t.get());
+                fermat::ranges::emplace<N>(*data_, t.get());
             }
         };
         struct arrow_proxy_
@@ -150,7 +150,7 @@ namespace ranges
         iter_reference_t<I> operator*() //
             noexcept(noexcept(iter_reference_t<I>(*std::declval<I &>())))
         {
-            return *ranges::get<0>(data_);
+            return *fermat::ranges::get<0>(data_);
         }
         CPP_member
         auto operator*() const //
@@ -158,7 +158,7 @@ namespace ranges
             -> CPP_ret(iter_reference_t<I>)(
                 requires indirectly_readable<I const>)
         {
-            return *ranges::get<0>(data_);
+            return *fermat::ranges::get<0>(data_);
         }
         template(typename J = I)(
             requires indirectly_readable<J>)
@@ -167,11 +167,11 @@ namespace ranges
                 noexcept(common_iterator::operator_arrow_(std::declval<I const &>(), 42)))
             -> decltype(common_iterator::operator_arrow_(std::declval<J const &>(), 42))
         {
-            return common_iterator::operator_arrow_(ranges::get<0>(data_), 42);
+            return common_iterator::operator_arrow_(fermat::ranges::get<0>(data_), 42);
         }
         common_iterator & operator++()
         {
-            ++ranges::get<0>(data_);
+            ++fermat::ranges::get<0>(data_);
             return *this;
         }
 #ifdef RANGES_WORKAROUND_MSVC_677925
@@ -180,7 +180,7 @@ namespace ranges
         auto operator++(int) //
             -> decltype(std::declval<I2 &>()++)
         {
-            return ranges::get<0>(data_)++;
+            return fermat::ranges::get<0>(data_)++;
         }
 #else  // ^^^ workaround ^^^ / vvv no workaround vvv
         CPP_member
@@ -188,7 +188,7 @@ namespace ranges
             -> CPP_ret(decltype(std::declval<I &>()++))(
                 requires (!forward_iterator<I>))
         {
-            return ranges::get<0>(data_)++;
+            return fermat::ranges::get<0>(data_)++;
         }
 #endif // RANGES_WORKAROUND_MSVC_677925
         CPP_member
@@ -196,7 +196,7 @@ namespace ranges
             -> CPP_ret(common_iterator)(
                 requires forward_iterator<I>)
         {
-            return common_iterator(ranges::get<0>(data_)++);
+            return common_iterator(fermat::ranges::get<0>(data_)++);
         }
 
 #if !RANGES_BROKEN_CPO_LOOKUP
@@ -206,7 +206,7 @@ namespace ranges
             -> CPP_broken_friend_ret(iter_rvalue_reference_t<I>)(
                 requires input_iterator<I_>)
         {
-            return ranges::iter_move(ranges::get<0>(detail::cidata(i)));
+            return fermat::ranges::iter_move(fermat::ranges::get<0>(detail::cidata(i)));
         }
         template<typename I2, typename S2>
         friend auto iter_swap(
@@ -216,8 +216,8 @@ namespace ranges
             -> CPP_broken_friend_ret(void)(
                 requires indirectly_swappable<I2, I>)
         {
-            return ranges::iter_swap(ranges::get<0>(detail::cidata(x)),
-                                     ranges::get<0>(detail::cidata(y)));
+            return fermat::ranges::iter_swap(fermat::ranges::get<0>(detail::cidata(x)),
+                                     fermat::ranges::get<0>(detail::cidata(y)));
         }
 #endif
     };
@@ -232,7 +232,7 @@ namespace ranges
             -> CPP_broken_friend_ret(iter_rvalue_reference_t<I>)(
                 requires input_iterator<I>)
         {
-            return ranges::iter_move(ranges::get<0>(detail::cidata(i)));
+            return fermat::ranges::iter_move(fermat::ranges::get<0>(detail::cidata(i)));
         }
         template<typename I1, typename S1, typename I2, typename S2>
         auto iter_swap(common_iterator<I1, S1> const & x,
@@ -241,8 +241,8 @@ namespace ranges
                 -> CPP_broken_friend_ret(void)(
                     requires indirectly_swappable<I1, I2>)
         {
-            return ranges::iter_swap(ranges::get<0>(detail::cidata(x)),
-                                     ranges::get<0>(detail::cidata(y)));
+            return fermat::ranges::iter_swap(fermat::ranges::get<0>(detail::cidata(x)),
+                                     fermat::ranges::get<0>(detail::cidata(y)));
         }
     } // namespace _common_iterator_
 #endif
@@ -254,11 +254,11 @@ namespace ranges
     bool operator==(common_iterator<I1, S1> const & x, common_iterator<I2, S2> const & y)
     {
         return detail::cidata(x).index() == 1u ? (detail::cidata(y).index() == 1u ||
-                                                  ranges::get<0>(detail::cidata(y)) ==
-                                                      ranges::get<1>(detail::cidata(x)))
+                                                  fermat::ranges::get<0>(detail::cidata(y)) ==
+                                                      fermat::ranges::get<1>(detail::cidata(x)))
                                                : (detail::cidata(y).index() != 1u ||
-                                                  ranges::get<0>(detail::cidata(x)) ==
-                                                      ranges::get<1>(detail::cidata(y)));
+                                                  fermat::ranges::get<0>(detail::cidata(x)) ==
+                                                      fermat::ranges::get<1>(detail::cidata(y)));
     }
 
     template(typename I1, typename I2, typename S1, typename S2)(
@@ -268,13 +268,13 @@ namespace ranges
     {
         return detail::cidata(x).index() == 1u
                    ? (detail::cidata(y).index() == 1u ||
-                      ranges::get<0>(detail::cidata(y)) ==
-                          ranges::get<1>(detail::cidata(x)))
+                      fermat::ranges::get<0>(detail::cidata(y)) ==
+                          fermat::ranges::get<1>(detail::cidata(x)))
                    : (detail::cidata(y).index() == 1u
-                          ? ranges::get<0>(detail::cidata(x)) ==
-                                ranges::get<1>(detail::cidata(y))
-                          : ranges::get<0>(detail::cidata(x)) ==
-                                ranges::get<0>(detail::cidata(y)));
+                          ? fermat::ranges::get<0>(detail::cidata(x)) ==
+                                fermat::ranges::get<1>(detail::cidata(y))
+                          : fermat::ranges::get<0>(detail::cidata(x)) ==
+                                fermat::ranges::get<0>(detail::cidata(y)));
     }
 
     template(typename I1, typename I2, typename S1, typename S2)(
@@ -293,13 +293,13 @@ namespace ranges
         return detail::cidata(x).index() == 1u
                    ? (detail::cidata(y).index() == 1u
                           ? 0
-                          : ranges::get<1>(detail::cidata(x)) -
-                                ranges::get<0>(detail::cidata(y)))
+                          : fermat::ranges::get<1>(detail::cidata(x)) -
+                                fermat::ranges::get<0>(detail::cidata(y)))
                    : (detail::cidata(y).index() == 1u
-                          ? ranges::get<0>(detail::cidata(x)) -
-                                ranges::get<1>(detail::cidata(y))
-                          : ranges::get<0>(detail::cidata(x)) -
-                                ranges::get<0>(detail::cidata(y)));
+                          ? fermat::ranges::get<0>(detail::cidata(x)) -
+                                fermat::ranges::get<1>(detail::cidata(y))
+                          : fermat::ranges::get<0>(detail::cidata(x)) -
+                                fermat::ranges::get<0>(detail::cidata(y)));
     }
 
     template<typename I, typename S>
@@ -437,10 +437,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::common_iterator;
+        using fermat::ranges::common_iterator;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 /// \cond
 RANGES_DIAGNOSTIC_PUSH
@@ -449,8 +449,8 @@ RANGES_DIAGNOSTIC_IGNORE_MISMATCHED_TAGS
 namespace std
 {
     template<typename I, typename S>
-    struct iterator_traits<::ranges::common_iterator<I, S>>
-      : ::ranges::detail::common_iterator_std_traits<I>
+    struct iterator_traits<::fermat::ranges::common_iterator<I, S>>
+      : ::fermat::ranges::detail::common_iterator_std_traits<I>
     {};
 } // namespace std
 

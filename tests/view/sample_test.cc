@@ -22,7 +22,7 @@
 /// debug_input_view: minimal input view for testing
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T> > {
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T> > {
     struct data {
         const T *first_;
         std::ptrdiff_t size_;
@@ -41,7 +41,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T> > {
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges {
+namespace fermat::ranges {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T> > = true;
 }
@@ -49,8 +49,8 @@ namespace ranges {
 /// Helper: check_equal for ranges vs initializer_list (not used in these tests, but kept)
 template<typename Rng, typename T>
 void check_equal(Rng &&rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -64,7 +64,7 @@ void check_equal(Rng &&rng, std::initializer_list<T> expected) {
 // ------------------------------------------------------------------
 
 TEST(SampleTest, FromVector) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::mt19937 engine;
     std::vector<int> pop(100);
@@ -75,24 +75,24 @@ TEST(SampleTest, FromVector) {
 
     // First sample: copy to tmp
     auto rng = pop | views::sample(N, engine);
-    ranges::copy(rng, tmp.begin());
+    fermat::ranges::copy(rng, tmp.begin());
 
     // Second sample using the same engine (no reset) -> should be different
     rng = pop | views::sample(N, engine);
-    EXPECT_FALSE(ranges::equal(rng, tmp));
+    EXPECT_FALSE(fermat::ranges::equal(rng, tmp));
 
     // Reset engine -> should be equal to first sample again
     engine = std::mt19937{};
     rng = pop | views::sample(N, engine);
-    EXPECT_TRUE(ranges::equal(rng, tmp));
+    EXPECT_TRUE(fermat::ranges::equal(rng, tmp));
 }
 
 TEST(SampleTest, FromDebugInputView) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::mt19937 engine;
     int const some_ints[] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
     auto rng = debug_input_view<int const>{some_ints, 9} | views::sample(4, engine);
 
-    EXPECT_EQ(ranges::distance(rng), 4);
+    EXPECT_EQ(fermat::ranges::distance(rng), 4);
 }

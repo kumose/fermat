@@ -17,8 +17,8 @@
 #include <fermat/view/iota.h>             /// views::ints
 #include <fermat/view/take.h>             /// views::take
 #include <fermat/view/common.h>           /// views::common
-#include <fermat/functional/reference_wrapper.h>  /// ranges::ref
-#include <fermat/utility/copy.h>          /// ranges::copy
+#include <fermat/functional/reference_wrapper.h>  /// fermat::ranges::ref
+#include <fermat/utility/copy.h>          /// fermat::ranges::copy
 
 /// ------------------------------------------------------------
 /// Helper: has_type (static assertion on expression type)
@@ -32,7 +32,7 @@ void has_type(Actual&&) {
 /// debug_input_view: minimal input view for testing
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T>>
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>>
 {
     struct data
     {
@@ -51,7 +51,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T>>
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T>> = true;
@@ -62,8 +62,8 @@ namespace ranges
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -89,7 +89,7 @@ void check_equal(const std::vector<T>& actual, std::initializer_list<T> expected
 // ------------------------------------------------------------------
 
 TEST(ReplaceTest, IstreamReplace) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::string str{"1 2 3 4 5 6 7 8 9 1 2 3 4 5 6 7 8 9 1 2 3 4 5 6 7 8 9 "};
     std::stringstream sin{str};
@@ -105,7 +105,7 @@ TEST(ReplaceTest, IstreamReplace) {
 }
 
 TEST(ReplaceTest, VectorReplaceWithValue) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> rgi{1,2,3,4,5,6,7,8,9};
     auto rng2 = rgi | views::replace(5, 42);
@@ -113,7 +113,7 @@ TEST(ReplaceTest, VectorReplaceWithValue) {
 }
 
 TEST(ReplaceTest, VectorReplaceWithReferenceWrapper) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> rgi{1,2,3,4,5,6,7,8,9};
     int forty_two = 42;
@@ -124,14 +124,14 @@ TEST(ReplaceTest, VectorReplaceWithReferenceWrapper) {
 }
 
 TEST(ReplaceTest, InfiniteRangeTake) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto rng4 = views::ints | views::replace(5, 42) | views::take(10);
     check_equal(rng4, {0,1,2,3,4,42,6,7,8,9});
 }
 
 TEST(ReplaceTest, DebugInputView) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int const some_ints[] = {1,2,3,4,5,6,7,8,9,
                              1,2,3,4,5,6,7,8,9,

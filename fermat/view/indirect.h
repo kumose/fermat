@@ -31,27 +31,25 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
-{
+namespace fermat::ranges {
     /// \addtogroup group-views
     /// @{
     template<typename Rng>
-    struct indirect_view : view_adaptor<indirect_view<Rng>, Rng>
-    {
+    struct indirect_view : view_adaptor<indirect_view<Rng>, Rng> {
     private:
         friend range_access;
 
         template<bool IsConst>
-        struct adaptor : adaptor_base
-        {
+        struct adaptor : adaptor_base {
             friend adaptor<!IsConst>;
             using CRng = meta::const_if_c<IsConst, Rng>;
 
             adaptor() = default;
+
             template(bool Other)(
                 requires IsConst && CPP_NOT(Other)) //
-            constexpr adaptor(adaptor<Other>) noexcept
-            {}
+            constexpr adaptor(adaptor<Other>) noexcept {
+            }
 
             // clang-format off
             constexpr auto CPP_auto_fun(read)(iterator_t<CRng> const &it)(const)
@@ -60,7 +58,7 @@ namespace ranges
             )
             constexpr auto CPP_auto_fun(iter_move)(iterator_t<CRng> const &it)(const)
             (
-                return ranges::iter_move(*it)
+                return fermat::ranges::iter_move(*it)
             )
             // clang-format on
         };
@@ -68,76 +66,72 @@ namespace ranges
         CPP_member
         constexpr auto begin_adaptor() noexcept //
             -> CPP_ret(adaptor<false>)(
-                requires (!simple_view<Rng>()))
-        {
+                requires (!simple_view<Rng>())) {
             return {};
         }
+
         CPP_member
         constexpr auto begin_adaptor() const noexcept //
             -> CPP_ret(adaptor<true>)(
-                requires range<Rng const>)
-        {
+                requires range<Rng const>) {
             return {};
         }
 
         CPP_member
         constexpr auto end_adaptor() noexcept //
             -> CPP_ret(adaptor<false>)(
-                requires (!simple_view<Rng>()))
-        {
+                requires (!simple_view<Rng>())) {
             return {};
         }
+
         CPP_member
         constexpr auto end_adaptor() const noexcept //
             -> CPP_ret(adaptor<true>)(
-                requires range<Rng const>)
-        {
+                requires range<Rng const>) {
             return {};
         }
 
     public:
         indirect_view() = default;
+
         constexpr explicit indirect_view(Rng rng)
-          : indirect_view::view_adaptor{detail::move(rng)}
-        {}
+            : indirect_view::view_adaptor{detail::move(rng)} {
+        }
+
         CPP_auto_member
         constexpr auto CPP_fun(size)()(const //
-            requires sized_range<Rng const>)
-        {
-            return ranges::size(this->base());
+            requires sized_range<Rng const>) {
+            return fermat::ranges::size(this->base());
         }
+
         CPP_auto_member
         constexpr auto CPP_fun(size)()(
-            requires sized_range<Rng>)
-        {
-            return ranges::size(this->base());
+            requires sized_range<Rng>) {
+            return fermat::ranges::size(this->base());
         }
     };
 
     template<typename Rng>
-    inline constexpr bool enable_borrowed_range<indirect_view<Rng>> = //
-        enable_borrowed_range<Rng>;
+    inline constexpr bool enable_borrowed_range<indirect_view<Rng> > = //
+            enable_borrowed_range<Rng>;
 
 #if RANGES_CXX_DEDUCTION_GUIDES >= RANGES_CXX_DEDUCTION_GUIDES_17
     template<typename Rng>
     indirect_view(Rng &&) //
-        -> indirect_view<views::all_t<Rng>>;
+        -> indirect_view<views::all_t<Rng> >;
 #endif
 
-    namespace views
-    {
-        struct indirect_fn
-        {
+    namespace views {
+        struct indirect_fn {
             template(typename Rng)(
                 requires viewable_range<Rng> AND input_range<Rng> AND
                 // We shouldn't need to strip references to test if something
                 // is readable. https://github.com/ericniebler/stl2/issues/594
                 // indirectly_readable<range_reference_t<Rng>>)
                 ((bool)indirectly_readable<range_value_t<Rng>>)) // Cast to bool needed
-                                                                 // for GCC (???))
-            constexpr auto operator()(Rng && rng) const
-            {
-                return indirect_view<all_t<Rng>>{all(static_cast<Rng &&>(rng))};
+            // for GCC (???))
+            constexpr auto operator()(Rng &&rng) const {
+                return indirect_view<all_t<Rng> >{all(static_cast<Rng &&>(rng))};
             }
         };
 
@@ -146,11 +140,11 @@ namespace ranges
         RANGES_INLINE_VARIABLE(view_closure<indirect_fn>, indirect)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::indirect_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::indirect_view)
 
 #endif

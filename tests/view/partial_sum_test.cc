@@ -21,13 +21,13 @@
 #include <fermat/iterator/insert_iterators.h>
 #include <fermat/view/partial_sum.h>
 
-using namespace ranges;
+using namespace fermat::ranges;
 
 /// Helper: check_equal for ranges vs initializer_list
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -68,14 +68,14 @@ TEST(PartialSumTest, EmptyRange) {
     std::vector<int> empty;
     auto rng = empty | views::partial_sum;
     EXPECT_EQ(rng.begin(), rng.end());
-    EXPECT_EQ(ranges::distance(rng), 0);
+    EXPECT_EQ(fermat::ranges::distance(rng), 0);
 }
 
 TEST(PartialSumTest, ConstArray) {
     const int some_ints[] = {0, 1, 2, 3, 4};
     auto t1 = views::partial_sum(some_ints);
     auto t2 = some_ints | views::partial_sum;
-    EXPECT_TRUE(ranges::equal(t1, t2));
+    EXPECT_TRUE(fermat::ranges::equal(t1, t2));
     check_equal(t1, {0, 1, 3, 6, 10});
 }
 
@@ -90,7 +90,7 @@ TEST(PartialSumTest, InputRange) {
     auto rng = li | views::partial_sum;
     // Input ranges may or may not be forward; skip strict concept checks.
     std::vector<int> result;
-    ranges::copy(rng, ranges::back_inserter(result));
+    fermat::ranges::copy(rng, fermat::ranges::back_inserter(result));
     check_equal(result, {0, 1, 3, 6, 10});
 }
 
@@ -98,6 +98,6 @@ TEST(PartialSumTest, ForwardRange) {
     std::forward_list<int> fl{0, 1, 2, 3, 4};
     auto rng = fl | views::partial_sum;
     std::vector<int> result;
-    ranges::copy(rng, ranges::back_inserter(result));
+    fermat::ranges::copy(rng, fermat::ranges::back_inserter(result));
     check_equal(result, {0, 1, 3, 6, 10});
 }

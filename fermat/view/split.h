@@ -35,7 +35,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -66,7 +66,7 @@ namespace ranges
         /// \brief The \c tiny_range_ concept
         template(typename R)(
         concept (tiny_range_)(R),
-            ranges::type<
+            fermat::ranges::type<
                 std::integral_constant<decltype(R::size()), R::size()>> AND
             (R::size() <= 1)
         );
@@ -84,7 +84,7 @@ namespace ranges
 #if CPP_CXX_CONCEPTS
         requires input_range<V> && forward_range<Pattern> && view_<V> && view_<
             Pattern> && indirectly_comparable<iterator_t<V>, iterator_t<Pattern>,
-                                              ranges::equal_to> &&
+                                              fermat::ranges::equal_to> &&
         (forward_range<V> || detail::tiny_range<Pattern>)
 #endif
             struct split_view;
@@ -158,11 +158,11 @@ namespace ranges
             constexpr bool done_() const
             {
                 auto cur = current_();
-                auto last = ranges::end(i_.parent_->base_);
+                auto last = fermat::ranges::end(i_.parent_->base_);
                 if(cur == last)
                     return true;
-                auto pcur = ranges::begin(i_.parent_->pattern_);
-                auto pend = ranges::end(i_.parent_->pattern_);
+                auto pcur = fermat::ranges::begin(i_.parent_->pattern_);
+                auto pend = fermat::ranges::end(i_.parent_->pattern_);
                 if(pcur == pend)
                     return incremented_;
                 do
@@ -301,19 +301,19 @@ namespace ranges
 #endif // RANGES_WORKAROUND_MSVC_756601
             friend constexpr decltype(auto) iter_move(
                 split_inner_iterator const &
-                    i) noexcept(noexcept(ranges::iter_move(i.current_())))
+                    i) noexcept(noexcept(fermat::ranges::iter_move(i.current_())))
             {
-                return ranges::iter_move(i.current_());
+                return fermat::ranges::iter_move(i.current_());
             }
             CPP_broken_friend_member
             friend constexpr auto iter_swap(
                 split_inner_iterator const & x,
                 split_inner_iterator const &
-                    y) noexcept(noexcept(ranges::iter_swap(x.current_(), y.current_())))
+                    y) noexcept(noexcept(fermat::ranges::iter_swap(x.current_(), y.current_())))
                 -> CPP_broken_friend_ret(void)(
                     requires indirectly_swappable<iterator_t<Base>>)
             {
-                ranges::iter_swap(x.current_(), y.current_());
+                fermat::ranges::iter_swap(x.current_(), y.current_());
             }
         };
 
@@ -422,17 +422,17 @@ namespace ranges
             constexpr split_outer_iterator & operator++()
             {
                 auto & current = current_();
-                const auto last = ranges::end(base_());
+                const auto last = fermat::ranges::end(base_());
                 if(current == last)
                     return *this;
-                auto const pbegin = ranges::begin(parent_->pattern_);
-                auto const pend = ranges::end(parent_->pattern_);
+                auto const pbegin = fermat::ranges::begin(parent_->pattern_);
+                auto const pend = fermat::ranges::end(parent_->pattern_);
                 if(pbegin == pend)
                     ++current;
                 else
                     do
                     {
-                        const auto ret = ranges::mismatch(current, last, pbegin, pend);
+                        const auto ret = fermat::ranges::mismatch(current, last, pbegin, pend);
                         if(ret.in2 == pend)
                         {
                             current = ret.in1; // The pattern matched; skip it
@@ -480,7 +480,7 @@ namespace ranges
             friend constexpr bool operator==(split_outer_iterator const & x,
                                              default_sentinel_t)
             {
-                return x.current_() == ranges::end(x.base_());
+                return x.current_() == fermat::ranges::end(x.base_());
             }
 #ifdef RANGES_WORKAROUND_MSVC_756601
             template<typename = void>
@@ -488,7 +488,7 @@ namespace ranges
             friend constexpr bool operator==(default_sentinel_t,
                                              split_outer_iterator const & x)
             {
-                return x.current_() == ranges::end(x.base_());
+                return x.current_() == fermat::ranges::end(x.base_());
             }
 #ifdef RANGES_WORKAROUND_MSVC_756601
             template<typename = void>
@@ -496,7 +496,7 @@ namespace ranges
             friend constexpr bool operator!=(split_outer_iterator const & x,
                                              default_sentinel_t)
             {
-                return x.current_() != ranges::end(x.base_());
+                return x.current_() != fermat::ranges::end(x.base_());
             }
 #ifdef RANGES_WORKAROUND_MSVC_756601
             template<typename = void>
@@ -504,7 +504,7 @@ namespace ranges
             friend constexpr bool operator!=(default_sentinel_t,
                                              split_outer_iterator const & x)
             {
-                return x.current_() != ranges::end(x.base_());
+                return x.current_() != fermat::ranges::end(x.base_());
             }
         };
     } // namespace detail
@@ -514,7 +514,7 @@ namespace ranges
 #if CPP_CXX_CONCEPTS
         requires input_range<V> && forward_range<Pattern> && view_<V> && view_<
             Pattern> && indirectly_comparable<iterator_t<V>, iterator_t<Pattern>,
-                                              ranges::equal_to> &&
+                                              fermat::ranges::equal_to> &&
         (forward_range<V> || detail::tiny_range<Pattern>)
 #endif
     struct RANGES_EMPTY_BASES split_view
@@ -535,17 +535,17 @@ namespace ranges
 #if RANGES_CXX_IF_CONSTEXPR < RANGES_CXX_IF_CONSTEXPR_17
         outer_iterator<simple_view<V>()> begin_(std::true_type)
         {
-            return outer_iterator<simple_view<V>()>{this, ranges::begin(base_)};
+            return outer_iterator<simple_view<V>()>{this, fermat::ranges::begin(base_)};
         }
         outer_iterator<false> begin_(std::false_type)
         {
-            this->curr_ = ranges::begin(base_);
+            this->curr_ = fermat::ranges::begin(base_);
             return outer_iterator<false>{this};
         }
 
         outer_iterator<simple_view<V>()> end_(std::true_type) const
         {
-            return outer_iterator<true>{this, ranges::end(base_)};
+            return outer_iterator<true>{this, fermat::ranges::end(base_)};
         }
         default_sentinel_t end_(std::false_type) const
         {
@@ -577,10 +577,10 @@ namespace ranges
         {
 #if RANGES_CXX_IF_CONSTEXPR >= RANGES_CXX_IF_CONSTEXPR_17
             if constexpr(forward_range<V>)
-                return outer_iterator<simple_view<V>()>{this, ranges::begin(base_)};
+                return outer_iterator<simple_view<V>()>{this, fermat::ranges::begin(base_)};
             else
             {
-                this->curr_ = ranges::begin(base_);
+                this->curr_ = fermat::ranges::begin(base_);
                 return outer_iterator<false>{this};
             }
 #else
@@ -592,21 +592,21 @@ namespace ranges
             -> CPP_ret(outer_iterator<true>)(
                 requires forward_range<V> && forward_range<const V>)
         {
-            return {this, ranges::begin(base_)};
+            return {this, fermat::ranges::begin(base_)};
         }
         CPP_member
         constexpr auto end() //
             -> CPP_ret(outer_iterator<simple_view<V>()>)(
                 requires forward_range<V> && common_range<V>)
         {
-            return outer_iterator<simple_view<V>()>{this, ranges::end(base_)};
+            return outer_iterator<simple_view<V>()>{this, fermat::ranges::end(base_)};
         }
         constexpr auto end() const
         {
 #if RANGES_CXX_IF_CONSTEXPR >= RANGES_CXX_IF_CONSTEXPR_17
             if constexpr(forward_range<V> && forward_range<const V> &&
                          common_range<const V>)
-                return outer_iterator<true>{this, ranges::end(base_)};
+                return outer_iterator<true>{this, fermat::ranges::end(base_)};
             else
                 return default_sentinel;
 #else
@@ -620,7 +620,7 @@ namespace ranges
     template(typename R, typename P)(
         requires input_range<R> AND forward_range<P> AND viewable_range<R> AND
             viewable_range<P> AND
-            indirectly_comparable<iterator_t<R>, iterator_t<P>, ranges::equal_to> AND
+            indirectly_comparable<iterator_t<R>, iterator_t<P>, fermat::ranges::equal_to> AND
             (forward_range<R> || detail::tiny_range<P>)) //
     split_view(R &&, P &&)
             ->split_view<views::all_t<R>, views::all_t<P>>;
@@ -639,7 +639,7 @@ namespace ranges
                 requires viewable_range<Rng> AND input_range<Rng> AND
                     indirectly_comparable<iterator_t<Rng>,
                                           range_value_t<Rng> const *,
-                                          ranges::equal_to>)
+                                          fermat::ranges::equal_to>)
             constexpr split_view<all_t<Rng>, single_view<range_value_t<Rng>>> //
             operator()(Rng && rng, range_value_t<Rng> val) const
             {
@@ -652,7 +652,7 @@ namespace ranges
                     indirectly_comparable<
                         iterator_t<Rng>,
                         iterator_t<Pattern>,
-                        ranges::equal_to> AND
+                        fermat::ranges::equal_to> AND
                     (forward_range<Rng> || detail::tiny_range<Pattern>)) //
             constexpr split_view<all_t<Rng>, all_t<Pattern>> //
             operator()(Rng && rng, Pattern && pattern) const
@@ -681,7 +681,7 @@ namespace ranges
     {
         namespace views
         {
-            using ranges::views::split;
+            using fermat::ranges::views::split;
         }
         template(typename Rng, typename Pattern)(
             requires input_range<Rng> AND forward_range<Pattern> AND view_<Rng> AND
@@ -689,18 +689,18 @@ namespace ranges
                 indirectly_comparable<
                     iterator_t<Rng>,
                     iterator_t<Pattern>,
-                    ranges::equal_to> AND
-                (forward_range<Rng> || ranges::detail::tiny_range<Pattern>)) //
+                    fermat::ranges::equal_to> AND
+                (forward_range<Rng> || fermat::ranges::detail::tiny_range<Pattern>)) //
         using split_view =
-            ranges::split_view<Rng, Pattern>;
+            fermat::ranges::split_view<Rng, Pattern>;
     } // namespace cpp20
 
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::split_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::split_view)
 
 #endif

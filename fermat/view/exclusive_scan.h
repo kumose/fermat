@@ -26,7 +26,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     // clang-format off
     /// \concept exclusive_scan_constraints_
@@ -42,7 +42,7 @@ namespace ranges
     CPP_concept exclusive_scan_constraints =
         viewable_range<Rng> && input_range<Rng> &&
         copy_constructible<T> &&
-        CPP_concept_ref(ranges::exclusive_scan_constraints_, Rng, T, Fun);
+        CPP_concept_ref(fermat::ranges::exclusive_scan_constraints_, Rng, T, Fun);
     // clang-format on
 
     /// \addtogroup group-views
@@ -94,7 +94,7 @@ namespace ranges
             iterator_t<CRng> begin(exclusive_scan_view_t &)
             {
                 sum_ = move_or_copy_init(single_pass{});
-                return ranges::begin(rng_->base());
+                return fermat::ranges::begin(rng_->base());
             }
             T read(iterator_t<CRng> const &) const
             {
@@ -102,7 +102,7 @@ namespace ranges
             }
             void next(iterator_t<CRng> & it)
             {
-                RANGES_EXPECT(it != ranges::end(rng_->base()));
+                RANGES_EXPECT(it != fermat::ranges::end(rng_->base()));
                 sum_ = invoke(rng_->fun_, static_cast<T &&>(std::move(sum_)), *it);
                 ++it;
             }
@@ -143,13 +143,13 @@ namespace ranges
         auto CPP_fun(size)()(const
             requires sized_range<Rng const>)
         {
-            return ranges::size(this->base());
+            return fermat::ranges::size(this->base());
         }
         CPP_auto_member
         auto CPP_fun(size)()(
             requires sized_range<Rng>)
         {
-            return ranges::size(this->base());
+            return fermat::ranges::size(this->base());
         }
     };
 
@@ -190,7 +190,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(exclusive_scan_fn, exclusive_scan)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

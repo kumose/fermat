@@ -15,11 +15,11 @@ bool compare(my_int lhs, my_int rhs) {
 // Compile‑time test that this overload is callable (no runtime check)
 void not_totally_ordered() {
     std::vector<my_int> vec;
-    ranges::lower_bound(vec, my_int{10}, compare);
+    fermat::ranges::lower_bound(vec, my_int{10}, compare);
 }
 
 TEST(LowerBoundTest, Basic) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     constexpr std::pair<int, int> a[] = {{0,0},{0,1},{1,2},{1,3},{3,4},{3,5}};
     constexpr const std::pair<int, int> c[] = {{0,0},{0,1},{1,2},{1,3},{3,4},{3,5}};
 
@@ -45,7 +45,7 @@ TEST(LowerBoundTest, Basic) {
 }
 
 TEST(LowerBoundTest, Constexpr) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     constexpr std::pair<int,int> a[] = {{0,0},{0,1},{1,2},{1,3},{3,4},{3,5}};
     constexpr std::size_t N = sizeof(a)/sizeof(a[0]);
     // avoid unused variable warning

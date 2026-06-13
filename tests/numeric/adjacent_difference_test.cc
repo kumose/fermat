@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 #include <numeric>   // for std::adjacent_difference (fallback)
 #include <fermat/numeric/adjacent_difference.h>   // assume Fermat provides this
-#include <fermat/iterator/operations.h>           // for ranges::begin, ranges::end
+#include <fermat/iterator/operations.h>           // for fermat::ranges::begin, fermat::ranges::end
 
 struct S {
     int i;
@@ -20,7 +20,7 @@ constexpr std::size_t array_size(T (&)[N]) { return N; }
 // ------------------------------------------------------------------
 template<typename InIter, typename OutIter>
 void test_iterators() {
-    using ranges::adjacent_difference;
+    using fermat::ranges::adjacent_difference;
 
     int ia[] = {15, 10, 6, 3, 1};
     int ir[] = {15, -5, -4, -3, -2};
@@ -52,8 +52,8 @@ TEST(AdjacentDifferenceTest, RawPointer) {
 }
 
 TEST(AdjacentDifferenceTest, Projection) {
-    using ranges::adjacent_difference;
-    using ranges::begin;
+    using fermat::ranges::adjacent_difference;
+    using fermat::ranges::begin;
 
     S ia[] = {{15}, {10}, {6}, {3}, {1}};
     int ir[] = {15, -5, -4, -3, -2};
@@ -69,8 +69,8 @@ TEST(AdjacentDifferenceTest, Projection) {
 }
 
 TEST(AdjacentDifferenceTest, BinaryOpDirect) {
-    using ranges::adjacent_difference;
-    using ranges::begin;
+    using fermat::ranges::adjacent_difference;
+    using fermat::ranges::begin;
 
     int ia[] = {15, 10, 6, 3, 1};
     int ir[] = {15, 25, 16, 9, 4};
@@ -86,7 +86,7 @@ TEST(AdjacentDifferenceTest, BinaryOpDirect) {
 }
 
 TEST(AdjacentDifferenceTest, ArrayToArray) {
-    using ranges::adjacent_difference;
+    using fermat::ranges::adjacent_difference;
 
     int ia[] = {15, 10, 6, 3, 1};
     int ir[] = {15, 25, 16, 9, 4};

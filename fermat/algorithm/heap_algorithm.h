@@ -41,7 +41,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -128,7 +128,7 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::is_heap_until;
+        using fermat::ranges::is_heap_until;
     }
 
     RANGES_FUNC_BEGIN(is_heap)
@@ -159,7 +159,7 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::is_heap;
+        using fermat::ranges::is_heap;
     }
     /// @}
 
@@ -284,7 +284,7 @@ namespace ranges
         constexpr borrowed_iterator_t<Rng> //
         RANGES_FUNC(push_heap)(Rng && rng, C pred = C{}, P proj = P{}) //
         {
-            iterator_t<Rng> first = ranges::begin(rng);
+            iterator_t<Rng> first = fermat::ranges::begin(rng);
             auto n = distance(rng);
             detail::sift_up_n(first, n, std::move(pred), std::move(proj));
             return first + n;
@@ -294,7 +294,7 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::push_heap;
+        using fermat::ranges::push_heap;
     }
     /// @}
 
@@ -312,7 +312,7 @@ namespace ranges
             {
                 if(len > 1)
                 {
-                    ranges::iter_swap(first, first + (len - 1));
+                    fermat::ranges::iter_swap(first, first + (len - 1));
                     detail::sift_down_n(
                         first, len - 1, first, std::move(pred), std::move(proj));
                 }
@@ -344,7 +344,7 @@ namespace ranges
         constexpr borrowed_iterator_t<Rng> //
         RANGES_FUNC(pop_heap)(Rng && rng, C pred = C{}, P proj = P{})
         {
-            iterator_t<Rng> first = ranges::begin(rng);
+            iterator_t<Rng> first = fermat::ranges::begin(rng);
             auto n = distance(rng);
             detail::pop_heap_n(first, n, std::move(pred), std::move(proj));
             return first + n;
@@ -354,7 +354,7 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::pop_heap;
+        using fermat::ranges::pop_heap;
     }
 
     RANGES_FUNC_BEGIN(make_heap)
@@ -370,7 +370,7 @@ namespace ranges
                 // start from the first parent, there is no need to consider children
                 for(auto start = (n - 2) / 2; start >= 0; --start)
                     detail::sift_down_n(
-                        first, n, first + start, ranges::ref(pred), ranges::ref(proj));
+                        first, n, first + start, fermat::ranges::ref(pred), fermat::ranges::ref(proj));
             return first + n;
         }
 
@@ -380,13 +380,13 @@ namespace ranges
         constexpr borrowed_iterator_t<Rng> //
         RANGES_FUNC(make_heap)(Rng && rng, C pred = C{}, P proj = P{})
         {
-            iterator_t<Rng> first = ranges::begin(rng);
+            iterator_t<Rng> first = fermat::ranges::begin(rng);
             auto const n = distance(rng);
             if(n > 1)
                 // start from the first parent, there is no need to consider children
                 for(auto start = (n - 2) / 2; start >= 0; --start)
                     detail::sift_down_n(
-                        first, n, first + start, ranges::ref(pred), ranges::ref(proj));
+                        first, n, first + start, fermat::ranges::ref(pred), fermat::ranges::ref(proj));
             return first + n;
         }
 
@@ -394,7 +394,7 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::make_heap;
+        using fermat::ranges::make_heap;
     }
 
     RANGES_FUNC_BEGIN(sort_heap)
@@ -406,7 +406,7 @@ namespace ranges
         {
             iter_difference_t<I> const n = distance(first, last);
             for(auto i = n; i > 1; --i)
-                detail::pop_heap_n(first, i, ranges::ref(pred), ranges::ref(proj));
+                detail::pop_heap_n(first, i, fermat::ranges::ref(pred), fermat::ranges::ref(proj));
             return first + n;
         }
 
@@ -415,10 +415,10 @@ namespace ranges
         constexpr borrowed_iterator_t<Rng> //
         RANGES_FUNC(sort_heap)(Rng && rng, C pred = C{}, P proj = P{})
         {
-            iterator_t<Rng> first = ranges::begin(rng);
+            iterator_t<Rng> first = fermat::ranges::begin(rng);
             auto const n = distance(rng);
             for(auto i = n; i > 1; --i)
-                detail::pop_heap_n(first, i, ranges::ref(pred), ranges::ref(proj));
+                detail::pop_heap_n(first, i, fermat::ranges::ref(pred), fermat::ranges::ref(proj));
             return first + n;
         }
 
@@ -426,10 +426,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::sort_heap;
+        using fermat::ranges::sort_heap;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

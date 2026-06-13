@@ -230,7 +230,7 @@ namespace concepts
 
             // For rvalue pairs and tuples of swappable types, swap the
             // members. This permits code like:
-            //   ranges::swap(std::tie(a,b,c), std::tie(d,e,f));
+            //   fermat::ranges::swap(std::tie(a,b,c), std::tie(d,e,f));
             template<typename F0, typename S0, typename F1, typename S1>
             CPP_CXX14_CONSTEXPR
             meta::if_c<is_swappable_with<F0, F1>::value && is_swappable_with<S0, S1>::value>

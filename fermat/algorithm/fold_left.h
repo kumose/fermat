@@ -23,7 +23,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     // clang-format off
     /// \concept indirectly_binary_left_foldable_impl
@@ -118,7 +118,7 @@ namespace ranges
 
     RANGES_FUNC_END(fold_left_first)
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

@@ -40,7 +40,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -321,25 +321,25 @@ namespace ranges
 
         cursor<false> begin_cursor()
         {
-            return {fun_, tuple_transform(rngs_, ranges::begin)};
+            return {fun_, tuple_transform(rngs_, fermat::ranges::begin)};
         }
         end_cursor_t<false> end_cursor()
         {
-            return {fun_, tuple_transform(rngs_, ranges::end)};
+            return {fun_, tuple_transform(rngs_, fermat::ranges::end)};
         }
         template(bool Const = true)(
             requires Const AND and_v<range<Rngs const>...> AND
                 views::zippable_with<Fun, meta::if_c<Const, Rngs const>...>)
         cursor<Const> begin_cursor() const
         {
-            return {fun_, tuple_transform(rngs_, ranges::begin)};
+            return {fun_, tuple_transform(rngs_, fermat::ranges::begin)};
         }
         template(bool Const = true)(
             requires Const AND and_v<range<Rngs const>...> AND
                 views::zippable_with<Fun, meta::if_c<Const, Rngs const>...>)
         end_cursor_t<Const> end_cursor() const
         {
-            return {fun_, tuple_transform(rngs_, ranges::end)};
+            return {fun_, tuple_transform(rngs_, fermat::ranges::end)};
         }
 
     public:
@@ -362,7 +362,7 @@ namespace ranges
                              std::size_t)range_cardinality<iter_zip_with_view>::value}
                        : tuple_foldl(tuple_transform(rngs_,
                                                      [](auto && r) -> size_type {
-                                                         return ranges::size(r);
+                                                         return fermat::ranges::size(r);
                                                      }),
                                      (std::numeric_limits<size_type>::max)(),
                                      detail::min_);
@@ -445,12 +445,12 @@ namespace ranges
         RANGES_INLINE_VARIABLE(zip_with_fn, zip_with)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::iter_zip_with_view)
-RANGES_SATISFY_BOOST_RANGE(::ranges::zip_with_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::iter_zip_with_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::zip_with_view)
 
 #endif

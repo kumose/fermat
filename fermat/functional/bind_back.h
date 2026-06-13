@@ -25,11 +25,11 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     // bind_back like std::bind_front has no special treatment for nested
     // bind-expressions or reference_wrappers; there is no need to wrap
-    // Callables with ranges::protect.
+    // Callables with fermat::ranges::protect.
     namespace detail
     {
         template<typename Fn, typename... Args>
@@ -185,7 +185,7 @@ namespace ranges
     /// \sa `bind_back_fn`
     RANGES_INLINE_VARIABLE(bind_back_fn, bind_back)
 
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

@@ -26,7 +26,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \ingroup group-range
     /// A placeholder for an iterator or a sentinel into a range that may
@@ -56,7 +56,7 @@ namespace ranges
 
     template<typename Rng>
     using safe_iterator_t RANGES_DEPRECATED(
-        "Please use ranges::borrowed_iterator_t instead.") = borrowed_iterator_t<Rng>;
+        "Please use fermat::ranges::borrowed_iterator_t instead.") = borrowed_iterator_t<Rng>;
 
     /// \cond
     struct _sanitize_fn
@@ -80,14 +80,14 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::dangling;
-        using ranges::borrowed_iterator_t;
+        using fermat::ranges::dangling;
+        using fermat::ranges::borrowed_iterator_t;
 
         template<typename Rng>
         using safe_iterator_t RANGES_DEPRECATED(
-            "Please use ranges::borrowed_iterator_t instead.") = borrowed_iterator_t<Rng>;
+            "Please use fermat::ranges::borrowed_iterator_t instead.") = borrowed_iterator_t<Rng>;
     } // namespace cpp20
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

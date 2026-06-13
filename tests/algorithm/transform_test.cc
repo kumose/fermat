@@ -34,9 +34,9 @@ void test_unary() {
 
     {
         int ia[] = {0, 1, 2, 3, 4};
-        constexpr auto sa = ranges::size(ia);
+        constexpr auto sa = fermat::ranges::size(ia);
         int ib[sa] = {0};
-        auto res = ranges::transform(ia, ia + sa, ib, plus_one);
+        auto res = fermat::ranges::transform(ia, ia + sa, ib, plus_one);
         EXPECT_EQ(res.in, ia + sa);
         EXPECT_EQ(res.out, ib + sa);
         EXPECT_EQ(ib[0], 1);
@@ -47,10 +47,10 @@ void test_unary() {
     }
     {
         int ia[] = {0, 1, 2, 3, 4};
-        constexpr auto sa = ranges::size(ia);
+        constexpr auto sa = fermat::ranges::size(ia);
         int ib[sa] = {0};
-        auto rng = ranges::make_subrange(ia, ia + sa);
-        auto res = ranges::transform(rng, ib, plus_one);
+        auto rng = fermat::ranges::make_subrange(ia, ia + sa);
+        auto res = fermat::ranges::transform(rng, ib, plus_one);
         EXPECT_EQ(res.in, ia + sa);
         EXPECT_EQ(res.out, ib + sa);
         EXPECT_EQ(ib[0], 1);
@@ -61,10 +61,10 @@ void test_unary() {
     }
     {
         int ia[] = {0, 1, 2, 3, 4};
-        constexpr auto sa = ranges::size(ia);
+        constexpr auto sa = fermat::ranges::size(ia);
         int ib[sa] = {0};
-        auto rng = ranges::make_subrange(ia, ia + sa);
-        auto res = ranges::transform(std::move(rng), ib, plus_one);
+        auto rng = fermat::ranges::make_subrange(ia, ia + sa);
+        auto res = fermat::ranges::transform(std::move(rng), ib, plus_one);
         EXPECT_EQ(res.in, ia + sa);
         EXPECT_EQ(res.out, ib + sa);
         EXPECT_EQ(ib[0], 1);
@@ -79,9 +79,9 @@ void test_binary() {
     // Use the recommended overload with two sentinels
     {
         int ia[] = {0, 1, 2, 3, 4};
-        constexpr auto sa = ranges::size(ia);
+        constexpr auto sa = fermat::ranges::size(ia);
         int ib[sa] = {1, 2, 3, 4, 5};
-        auto res = ranges::transform(ib, ib + sa, ia, ia + sa, ib, std::minus<int>());
+        auto res = fermat::ranges::transform(ib, ib + sa, ia, ia + sa, ib, std::minus<int>());
         EXPECT_EQ(res.in1, ib + sa);
         EXPECT_EQ(res.in2, ia + sa);
         EXPECT_EQ(res.out, ib + sa);
@@ -90,10 +90,10 @@ void test_binary() {
     // Range + single iterator (still valid)
     {
         int ia[] = {0, 1, 2, 3, 4};
-        constexpr auto sa = ranges::size(ia);
+        constexpr auto sa = fermat::ranges::size(ia);
         int ib[sa] = {1, 2, 3, 4, 5};
-        auto rng0 = ranges::make_subrange(ib, ib + sa);
-        auto res = ranges::transform(rng0, ia, ib, std::minus<int>());
+        auto rng0 = fermat::ranges::make_subrange(ib, ib + sa);
+        auto res = fermat::ranges::transform(rng0, ia, ib, std::minus<int>());
         EXPECT_EQ(res.in1, ib + sa);
         EXPECT_EQ(res.in2, ia + sa);
         EXPECT_EQ(res.out, ib + sa);
@@ -102,10 +102,10 @@ void test_binary() {
     // Rvalue range + single iterator
     {
         int ia[] = {0, 1, 2, 3, 4};
-        constexpr auto sa = ranges::size(ia);
+        constexpr auto sa = fermat::ranges::size(ia);
         int ib[sa] = {1, 2, 3, 4, 5};
-        auto rng0 = ranges::make_subrange(ib, ib + sa);
-        auto res = ranges::transform(std::move(rng0), ia, ib, std::minus<int>());
+        auto rng0 = fermat::ranges::make_subrange(ib, ib + sa);
+        auto res = fermat::ranges::transform(std::move(rng0), ia, ib, std::minus<int>());
         EXPECT_EQ(res.in1, ib + sa);
         EXPECT_EQ(res.in2, ia + sa);
         EXPECT_EQ(res.out, ib + sa);
@@ -114,11 +114,11 @@ void test_binary() {
     // Two ranges
     {
         int ia[] = {0, 1, 2, 3, 4};
-        constexpr auto sa = ranges::size(ia);
+        constexpr auto sa = fermat::ranges::size(ia);
         int ib[sa] = {1, 2, 3, 4, 5};
-        auto rng0 = ranges::make_subrange(ib, ib + sa);
-        auto rng1 = ranges::make_subrange(ia, ia + sa);
-        auto res = ranges::transform(rng0, rng1, ib, std::minus<int>());
+        auto rng0 = fermat::ranges::make_subrange(ib, ib + sa);
+        auto rng1 = fermat::ranges::make_subrange(ia, ia + sa);
+        auto res = fermat::ranges::transform(rng0, rng1, ib, std::minus<int>());
         EXPECT_EQ(res.in1, ib + sa);
         EXPECT_EQ(res.in2, ia + sa);
         EXPECT_EQ(res.out, ib + sa);
@@ -127,11 +127,11 @@ void test_binary() {
     // Two ranges, both rvalue
     {
         int ia[] = {0, 1, 2, 3, 4};
-        constexpr auto sa = ranges::size(ia);
+        constexpr auto sa = fermat::ranges::size(ia);
         int ib[sa] = {1, 2, 3, 4, 5};
-        auto rng0 = ranges::make_subrange(ib, ib + sa);
-        auto rng1 = ranges::make_subrange(ia, ia + sa);
-        auto res = ranges::transform(std::move(rng0), std::move(rng1), ib, std::minus<int>());
+        auto rng0 = fermat::ranges::make_subrange(ib, ib + sa);
+        auto rng1 = fermat::ranges::make_subrange(ia, ia + sa);
+        auto res = fermat::ranges::transform(std::move(rng0), std::move(rng1), ib, std::minus<int>());
         EXPECT_EQ(res.in1, ib + sa);
         EXPECT_EQ(res.in2, ia + sa);
         EXPECT_EQ(res.out, ib + sa);
@@ -143,9 +143,9 @@ struct S { int i; };
 
 constexpr int plus_one(int i) { return i + 1; }
 constexpr bool test_constexpr() {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int ia[] = {0, 1, 2, 3, 4};
-    constexpr auto sa = ranges::size(ia);
+    constexpr auto sa = fermat::ranges::size(ia);
     int ib[sa] = {0};
     auto r = transform(ia, ib, plus_one);
     if (r.in != ia + sa) return false;
@@ -172,14 +172,14 @@ TEST(TransformTest, ProjectionAndConstexpr) {
     auto binary = [](int i, int j){ return i + j; };
     S const s[] = {S{1}, S{2}, S{3}, S{4}};
     int const i[] = {1, 2, 3, 4};
-    static_assert(std::is_same<ranges::unary_transform_result<S const*, int*>,
-                               decltype(ranges::transform(s, p, unary, &S::i))>::value,
+    static_assert(std::is_same<fermat::ranges::unary_transform_result<S const*, int*>,
+                               decltype(fermat::ranges::transform(s, p, unary, &S::i))>::value,
                   "unary_transform_result type mismatch");
-    static_assert(std::is_same<ranges::binary_transform_result<S const*, int const*, int*>,
-                               decltype(ranges::transform(s, i, p, binary, &S::i))>::value,
+    static_assert(std::is_same<fermat::ranges::binary_transform_result<S const*, int const*, int*>,
+                               decltype(fermat::ranges::transform(s, i, p, binary, &S::i))>::value,
                   "binary_transform_result type mismatch");
-    static_assert(std::is_same<ranges::binary_transform_result<S const*, S const*, int*>,
-                               decltype(ranges::transform(s, s, p, binary, &S::i, &S::i))>::value,
+    static_assert(std::is_same<fermat::ranges::binary_transform_result<S const*, S const*, int*>,
+                               decltype(fermat::ranges::transform(s, s, p, binary, &S::i, &S::i))>::value,
                   "binary_transform_result type mismatch");
 
     static_assert(test_constexpr(), "transform constexpr test failed");

@@ -31,7 +31,7 @@
 /// debug_input_view: minimal input view for testing (borrowed range)
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T>>
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>>
 {
     struct data
     {
@@ -50,7 +50,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T>>
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T>> = true;
@@ -62,8 +62,8 @@ namespace ranges
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected)
 {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected)
     {
         EXPECT_NE(it, end);
@@ -86,7 +86,7 @@ constexpr const T& as_const(T& t) { return t; }
 /// Test views::take on a raw array (random-access, sized, common)
 TEST(CommonViewTest, TakeOnArray)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
@@ -111,7 +111,7 @@ TEST(CommonViewTest, TakeOnArray)
 /// Test views::take followed by views::reverse on array
 TEST(CommonViewTest, TakeReverseOnArray)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     auto rng0 = rgi | views::take(6);
@@ -128,7 +128,7 @@ TEST(CommonViewTest, TakeReverseOnArray)
 /// Test views::take and reverse on std::vector
 TEST(CommonViewTest, TakeReverseOnVector)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     auto rng2 = v | views::take(6) | views::reverse;
@@ -139,7 +139,7 @@ TEST(CommonViewTest, TakeReverseOnVector)
 /// Test views::take on std::list (bidirectional, not random-access)
 TEST(CommonViewTest, TakeOnList)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::list<int> l{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
@@ -162,14 +162,14 @@ TEST(CommonViewTest, TakeOnList)
 /// Test views::take on infinite iota range (sized)
 TEST(CommonViewTest, TakeOnIota)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto rng4 = views::iota(10) | views::take(10);
     // CPP_assert(view_<decltype(rng4)>);
     // CPP_assert(!common_range<decltype(rng4)>);
     // CPP_assert(sized_range<decltype(rng4)>);
     // CPP_assert(range<decltype(detail::as_const(rng4))>);
-    // static_assert(!ranges::is_infinite<decltype(rng4)>::value, "");
+    // static_assert(!fermat::ranges::is_infinite<decltype(rng4)>::value, "");
     check_equal(rng4, {10, 11, 12, 13, 14, 15, 16, 17, 18, 19});
     EXPECT_EQ(size(rng4), 10u);
 }
@@ -177,14 +177,14 @@ TEST(CommonViewTest, TakeOnIota)
 /// Test views::take on iota followed by reverse
 TEST(CommonViewTest, TakeReverseOnIota)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto rng5 = views::iota(10) | views::take(10) | views::reverse;
     // CPP_assert(view_<decltype(rng5)>);
     // CPP_assert(common_range<decltype(rng5)>);
     // CPP_assert(sized_range<decltype(rng5)>);
     // CPP_assert(!range<decltype(detail::as_const(rng5))>);
-    // static_assert(!ranges::is_infinite<decltype(rng5)>::value, "");
+    // static_assert(!fermat::ranges::is_infinite<decltype(rng5)>::value, "");
     check_equal(rng5, {19, 18, 17, 16, 15, 14, 13, 12, 11, 10});
     EXPECT_EQ(size(rng5), 10u);
 }
@@ -192,7 +192,7 @@ TEST(CommonViewTest, TakeReverseOnIota)
 /// Test views::take on a delimited C-string (random-access, not sized)
 TEST(CommonViewTest, TakeOnDelimitString)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto c_str = views::delimit("hello world", '\0');
     // CPP_assert(random_access_range<decltype(c_str)>);
@@ -213,7 +213,7 @@ TEST(CommonViewTest, TakeOnDelimitString)
 /// Test views::take on a subrange of list iterators (bidirectional, common, not sized)
 TEST(CommonViewTest, TakeOnSubrange)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::list<int> l{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     subrange<std::list<int>::iterator> rl{l.begin(), l.end()};
@@ -238,7 +238,7 @@ TEST(CommonViewTest, TakeOnSubrange)
 /// Test views::take on a debug_input_view (input range, not forward)
 TEST(CommonViewTest, TakeOnDebugInputView)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {0, 1, 2, 3, 4, 5};
     auto rng = debug_input_view<int const>{rgi, 6} | views::take(6);
@@ -249,7 +249,7 @@ TEST(CommonViewTest, TakeOnDebugInputView)
 /// Additional test: common_view with istream and delimit (original test from reference)
 TEST(CommonViewTest, IstreamDelimitCommon)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::stringstream sinx("1 2 3 4 5 6 7 8 9 1 2 3 4 5 6 7 8 9 1 2 3 4 42 6 7 8 9 ");
     auto rng1 = istream<int>(sinx) | views::delimit(42);
@@ -260,7 +260,7 @@ TEST(CommonViewTest, IstreamDelimitCommon)
 /// Additional test: counted on list, common view
 TEST(CommonViewTest, CountedListCommon)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::list<int> l{1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0};
     auto rng3 = views::counted(l.begin(), 10) | views::common;
@@ -277,7 +277,7 @@ TEST(CommonViewTest, CountedListCommon)
 /// Additional test: counted on vector, common view
 TEST(CommonViewTest, CountedVectorCommon)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v{1,2,3,4,5,6,7,8,9,0,42,64};
     auto rng4 = views::counted(begin(v), 8) | views::common;
@@ -287,7 +287,7 @@ TEST(CommonViewTest, CountedVectorCommon)
 /// Additional test: repeat_n and common (regression #504)
 TEST(CommonViewTest, RepeatNCommon)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto rng1 = views::repeat_n(0, 10);
     const auto& crng1 = rng1;
@@ -300,7 +300,7 @@ TEST(CommonViewTest, RepeatNCommon)
 /// Additional test: debug_input_view with common
 TEST(CommonViewTest, DebugInputViewCommon)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int const rgi[] = {1,2,3,4};
     auto rng = debug_input_view<int const>{rgi, 4} | views::common;

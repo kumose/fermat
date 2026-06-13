@@ -35,7 +35,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -56,11 +56,11 @@ namespace ranges
             requires Const AND random_access_range<meta::const_if_c<Const, Rng>>)
         iterator_t<meta::const_if_c<Const, Rng>> get_begin_(std::true_type) const
         {
-            return next(ranges::begin(rng_), n_);
+            return next(fermat::ranges::begin(rng_), n_);
         }
         iterator_t<Rng> get_begin_(std::true_type)
         {
-            return next(ranges::begin(rng_), n_);
+            return next(fermat::ranges::begin(rng_), n_);
         }
         // random_access_range == false
         iterator_t<Rng> get_begin_(std::false_type)
@@ -69,7 +69,7 @@ namespace ranges
                 detail::non_propagating_cache<iterator_t<Rng>, drop_exactly_view<Rng>>;
             auto & begin_ = static_cast<cache_t &>(*this);
             if(!begin_)
-                begin_ = next(ranges::begin(rng_), n_);
+                begin_ = next(fermat::ranges::begin(rng_), n_);
             return *begin_;
         }
 
@@ -87,7 +87,7 @@ namespace ranges
         }
         sentinel_t<Rng> end()
         {
-            return ranges::end(rng_);
+            return fermat::ranges::end(rng_);
         }
         template(bool Const = true)(
             requires Const AND random_access_range<meta::const_if_c<Const, Rng>>)
@@ -99,19 +99,19 @@ namespace ranges
             requires Const AND random_access_range<meta::const_if_c<Const, Rng>>)
         sentinel_t<meta::const_if_c<Const, Rng>> end() const
         {
-            return ranges::end(rng_);
+            return fermat::ranges::end(rng_);
         }
         CPP_auto_member
         auto CPP_fun(size)()(const
             requires sized_range<Rng const>)
         {
-            return ranges::size(rng_) - static_cast<range_size_t<Rng const>>(n_);
+            return fermat::ranges::size(rng_) - static_cast<range_size_t<Rng const>>(n_);
         }
         CPP_auto_member
         auto CPP_fun(size)()(
             requires sized_range<Rng>)
         {
-            return ranges::size(rng_) - static_cast<range_size_t<Rng>>(n_);
+            return fermat::ranges::size(rng_) - static_cast<range_size_t<Rng>>(n_);
         }
         Rng base() const
         {
@@ -175,10 +175,10 @@ namespace ranges
         RANGES_INLINE_VARIABLE(drop_exactly_fn, drop_exactly)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::drop_exactly_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::drop_exactly_view)
 
 #endif

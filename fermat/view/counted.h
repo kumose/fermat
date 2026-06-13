@@ -27,7 +27,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -114,14 +114,14 @@ namespace ranges
     {
         namespace views
         {
-            RANGES_INLINE_VARIABLE(ranges::views::cpp20_counted_fn, counted)
+            RANGES_INLINE_VARIABLE(fermat::ranges::views::cpp20_counted_fn, counted)
         }
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::counted_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::counted_view)
 
 #endif

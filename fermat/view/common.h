@@ -30,7 +30,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -67,23 +67,23 @@ namespace ranges
 
         sentinel_t<Rng> end_(std::false_type)
         {
-            return ranges::end(rng_);
+            return fermat::ranges::end(rng_);
         }
         iterator_t<Rng> end_(std::true_type)
         {
-            return ranges::begin(rng_) + ranges::distance(rng_);
+            return fermat::ranges::begin(rng_) + fermat::ranges::distance(rng_);
         }
         template(bool Const = true)(
             requires Const AND range<meta::const_if_c<Const, Rng>>)
         sentinel_t<meta::const_if_c<Const, Rng>> end_(std::false_type) const
         {
-            return ranges::end(rng_);
+            return fermat::ranges::end(rng_);
         }
         template(bool Const = true)(
             requires Const AND range<meta::const_if_c<Const, Rng>>)
         iterator_t<meta::const_if_c<Const, Rng>> end_(std::true_type) const
         {
-            return ranges::begin(rng_) + ranges::distance(rng_);
+            return fermat::ranges::begin(rng_) + fermat::ranges::distance(rng_);
         }
 
     public:
@@ -98,7 +98,7 @@ namespace ranges
 
         detail::common_view_iterator_t<Rng> begin()
         {
-            return detail::common_view_iterator_t<Rng>{ranges::begin(rng_)};
+            return detail::common_view_iterator_t<Rng>{fermat::ranges::begin(rng_)};
         }
         detail::common_view_iterator_t<Rng> end()
         {
@@ -109,7 +109,7 @@ namespace ranges
         auto CPP_fun(size)()(
             requires sized_range<Rng>)
         {
-            return ranges::size(rng_);
+            return fermat::ranges::size(rng_);
         }
 
         template(bool Const = true)(
@@ -118,7 +118,7 @@ namespace ranges
             -> detail::common_view_iterator_t<meta::const_if_c<Const, Rng>>
         {
             return detail::common_view_iterator_t<meta::const_if_c<Const, Rng>>{
-                ranges::begin(rng_)};
+                fermat::ranges::begin(rng_)};
         }
         template(bool Const = true)(
             requires range<meta::const_if_c<Const, Rng>>)
@@ -133,7 +133,7 @@ namespace ranges
         auto CPP_fun(size)()(const
             requires sized_range<Rng const>)
         {
-            return ranges::size(rng_);
+            return fermat::ranges::size(rng_);
         }
     };
 
@@ -219,17 +219,17 @@ namespace ranges
         namespace views
         {
             RANGES_INLINE_VARIABLE(
-                ranges::views::view_closure<ranges::views::cpp20_common_fn>, common)
+                fermat::ranges::views::view_closure<fermat::ranges::views::cpp20_common_fn>, common)
         }
         template(typename Rng)(
             requires view_<Rng> && (!common_range<Rng>)) //
-            using common_view = ranges::common_view<Rng>;
+            using common_view = fermat::ranges::common_view<Rng>;
     } // namespace cpp20
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::common_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::common_view)
 
 #endif

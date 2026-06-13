@@ -29,7 +29,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges {
+namespace fermat::ranges {
     /// \cond
     namespace compressed_tuple_detail {
         // tagging individual elements with the complete type list disambiguates
@@ -89,7 +89,7 @@ namespace ranges {
 
         template<typename... Ts>
         using compressed_tuple RANGES_DEPRECATED(
-            "ranges::compressed_tuple is deprecated.") =
+            "fermat::ranges::compressed_tuple is deprecated.") =
         compressed_tuple_<meta::list<Ts...>,
             meta::make_index_sequence<sizeof...(Ts)> >;
     } // namespace compressed_tuple_detail
@@ -177,35 +177,35 @@ namespace ranges {
     /// \ingroup group-utility
     /// \sa `make_compressed_pair_fn`
     RANGES_INLINE_VARIABLE(make_compressed_pair_fn, make_compressed_pair)
-} // namespace ranges
+} // namespace fermat::ranges
 
 RANGES_DIAGNOSTIC_PUSH
 RANGES_DIAGNOSTIC_IGNORE_MISMATCHED_TAGS
 namespace std {
     template<typename... Ts, size_t... Is>
-    struct tuple_size<::ranges::compressed_tuple_detail::compressed_tuple_<
+    struct tuple_size<::fermat::ranges::compressed_tuple_detail::compressed_tuple_<
                 ::meta::list<Ts...>, ::meta::index_sequence<Is...> > >
             : integral_constant<size_t, sizeof...(Ts)> {
     };
 
     template<size_t I, typename... Ts, size_t... Is>
-    struct tuple_element<I, ::ranges::compressed_tuple_detail::compressed_tuple_<
+    struct tuple_element<I, ::fermat::ranges::compressed_tuple_detail::compressed_tuple_<
                 ::meta::list<Ts...>, ::meta::index_sequence<Is...> > > {
         using type = ::meta::at_c<::meta::list<Ts...>, I>;
     };
 
     template<typename First, typename Second>
-    struct tuple_size<::ranges::compressed_pair<First, Second> >
+    struct tuple_size<::fermat::ranges::compressed_pair<First, Second> >
             : integral_constant<size_t, 2> {
     };
 
     template<typename First, typename Second>
-    struct tuple_element<0, ::ranges::compressed_pair<First, Second> > {
+    struct tuple_element<0, ::fermat::ranges::compressed_pair<First, Second> > {
         using type = First;
     };
 
     template<typename First, typename Second>
-    struct tuple_element<1, ::ranges::compressed_pair<First, Second> > {
+    struct tuple_element<1, ::fermat::ranges::compressed_pair<First, Second> > {
         using type = Second;
     };
 } // namespace std

@@ -23,7 +23,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace adl_erase_detail
@@ -55,7 +55,7 @@ namespace ranges
 
     namespace actions
     {
-        using ranges::erase;
+        using fermat::ranges::erase;
     }
 
     /// \addtogroup group-range
@@ -67,17 +67,17 @@ namespace ranges
     CPP_requires(erasable_range_,
         requires(Rng && rng, I first, S last)
         (
-            ranges::erase((Rng &&) rng, first, last)
+            fermat::ranges::erase((Rng &&) rng, first, last)
         )
     );
     /// \concept erasable_range
     /// \brief The \c erasable_range concept
     template<typename Rng, typename I, typename S>
     CPP_concept erasable_range =
-        range<Rng> && CPP_requires_ref(ranges::erasable_range_, Rng, I, S);
+        range<Rng> && CPP_requires_ref(fermat::ranges::erasable_range_, Rng, I, S);
     // clang-format on
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

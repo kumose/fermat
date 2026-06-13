@@ -17,7 +17,7 @@ void test_remove_if_iter() {
     constexpr std::size_t sa = sizeof(ia) / sizeof(ia[0]);
 
     auto pred = [](int i) { return i == 2; };
-    int* r = ranges::remove_if(ia, ia + sa, pred);
+    int* r = fermat::ranges::remove_if(ia, ia + sa, pred);
     EXPECT_EQ(r, ia + sa - 3);
     EXPECT_EQ(ia[0], 0);
     EXPECT_EQ(ia[1], 1);
@@ -33,7 +33,7 @@ void test_remove_if_range() {
     constexpr std::size_t sa = sizeof(ia) / sizeof(ia[0]);
 
     auto pred = [](int i) { return i == 2; };
-    auto r = ranges::remove_if(ranges::make_subrange(ia, ia + sa), pred);
+    auto r = fermat::ranges::remove_if(fermat::ranges::make_subrange(ia, ia + sa), pred);
     EXPECT_EQ(r, ia + sa - 3);
     EXPECT_EQ(ia[0], 0);
     EXPECT_EQ(ia[1], 1);
@@ -58,7 +58,7 @@ void test_remove_if_move_only() {
     ia[8] = std::make_unique<int>(2);
 
     auto pred = [](const std::unique_ptr<int>& p) { return *p == 2; };
-    auto r = ranges::remove_if(ia, ia + sa, pred);
+    auto r = fermat::ranges::remove_if(ia, ia + sa, pred);
     EXPECT_EQ(r, ia + sa - 3);
     EXPECT_EQ(*ia[0], 0);
     EXPECT_EQ(*ia[1], 1);
@@ -88,7 +88,7 @@ TEST(RemoveIfTest, Projection) {
     constexpr std::size_t sa = sizeof(arr) / sizeof(arr[0]);
 
     auto pred = [](int i) { return i == 2; };
-    S* r = ranges::remove_if(arr, pred, &S::i);
+    S* r = fermat::ranges::remove_if(arr, pred, &S::i);
     EXPECT_EQ(r, arr + sa - 3);
     EXPECT_EQ(arr[0].i, 0);
     EXPECT_EQ(arr[1].i, 1);
@@ -101,7 +101,7 @@ TEST(RemoveIfTest, Projection) {
 TEST(RemoveIfTest, RvalueRange) {
     S arr[] = {S{0}, S{1}, S{2}, S{3}, S{4}, S{2}, S{3}, S{4}, S{2}};
     auto pred = [](int i) { return i == 2; };
-    auto r = ranges::remove_if(std::move(arr), pred, &S::i);
+    auto r = fermat::ranges::remove_if(std::move(arr), pred, &S::i);
     // r is a dangling iterator; we only verify that the array content is correct.
     (void)r;
     EXPECT_EQ(arr[0].i, 0);
@@ -112,7 +112,7 @@ TEST(RemoveIfTest, RvalueRange) {
     EXPECT_EQ(arr[5].i, 4);
 
     std::vector<S> vec{S{0}, S{1}, S{2}, S{3}, S{4}, S{2}, S{3}, S{4}, S{2}};
-    auto r2 = ranges::remove_if(std::move(vec), pred, &S::i);
+    auto r2 = fermat::ranges::remove_if(std::move(vec), pred, &S::i);
     (void)r2;
     EXPECT_EQ(vec[0].i, 0);
     EXPECT_EQ(vec[1].i, 1);
@@ -128,7 +128,7 @@ TEST(RemoveIfTest, Constexpr) {
         int arr[] = {0, 1, 2, 3, 4, 2, 3, 4, 2};
         constexpr std::size_t sa = sizeof(arr) / sizeof(arr[0]);
         auto pred = [](int i) { return i == 2; };
-        int* r = ranges::remove_if(arr, pred);
+        int* r = fermat::ranges::remove_if(arr, pred);
         bool ok = (r == arr + sa - 3) &&
                   (arr[0] == 0) && (arr[1] == 1) &&
                   (arr[2] == 3) && (arr[3] == 4) &&

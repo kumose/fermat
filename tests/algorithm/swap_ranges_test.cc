@@ -18,7 +18,7 @@ template <typename T>
 T* base(T* p) { return p; }
 
 // Placeholder for is_dangling (C++17 compatible)
-namespace ranges {
+namespace fermat::ranges {
     template<typename T>
     bool is_dangling(T&&) { return false; }
 }
@@ -30,7 +30,7 @@ T& as_lvalue(T&& t) { return t; }
 // Helper to make subrange (simplified)
 template <typename Iter, typename Sent>
 auto make_subrange(Iter begin, Sent end) {
-    return ranges::subrange<Iter, Sent>(begin, end);
+    return fermat::ranges::subrange<Iter, Sent>(begin, end);
 }
 
 // ------------------------------------------------------------
@@ -41,7 +41,7 @@ template<class Iter1, class Iter2>
 void test_iter_3() {
     int i[3] = {1, 2, 3};
     int j[3] = {4, 5, 6};
-    auto r = ranges::swap_ranges(i, i + 3, j);
+    auto r = fermat::ranges::swap_ranges(i, i + 3, j);
     EXPECT_EQ(r.in1, i + 3);
     EXPECT_EQ(r.in2, j + 3);
     EXPECT_EQ(i[0], 4);
@@ -52,7 +52,7 @@ void test_iter_3() {
     EXPECT_EQ(j[2], 3);
 
     // Reverse order
-    r = ranges::swap_ranges(j, j + 3, i);
+    r = fermat::ranges::swap_ranges(j, j + 3, i);
     EXPECT_EQ(r.in1, j + 3);
     EXPECT_EQ(r.in2, i + 3);
     EXPECT_EQ(i[0], 1);
@@ -67,7 +67,7 @@ template<class Iter1, class Iter2>
 void test_iter_4() {
     int i[3] = {1, 2, 3};
     int j[4] = {4, 5, 6, 7};
-    auto r = ranges::swap_ranges(i, i + 3, j, j + 4);
+    auto r = fermat::ranges::swap_ranges(i, i + 3, j, j + 4);
     EXPECT_EQ(r.in1, i + 3);
     EXPECT_EQ(r.in2, j + 3);
     EXPECT_EQ(i[0], 4);
@@ -79,7 +79,7 @@ void test_iter_4() {
     EXPECT_EQ(j[3], 7);
 
     // Reverse order
-    r = ranges::swap_ranges(j, j + 4, i, i + 3);
+    r = fermat::ranges::swap_ranges(j, j + 4, i, i + 3);
     EXPECT_EQ(r.in1, j + 3);
     EXPECT_EQ(r.in2, i + 3);
     EXPECT_EQ(i[0], 1);
@@ -95,7 +95,7 @@ template<class Iter1, class Iter2>
 void test_rng_3() {
     int i[3] = {1, 2, 3};
     int j[3] = {4, 5, 6};
-    auto r = ranges::swap_ranges(as_lvalue(make_subrange(i, i + 3)), j);
+    auto r = fermat::ranges::swap_ranges(as_lvalue(make_subrange(i, i + 3)), j);
     EXPECT_EQ(r.in1, i + 3);
     EXPECT_EQ(r.in2, j + 3);
     EXPECT_EQ(i[0], 4);
@@ -105,7 +105,7 @@ void test_rng_3() {
     EXPECT_EQ(j[1], 2);
     EXPECT_EQ(j[2], 3);
 
-    r = ranges::swap_ranges(as_lvalue(make_subrange(j, j + 3)), i);
+    r = fermat::ranges::swap_ranges(as_lvalue(make_subrange(j, j + 3)), i);
     EXPECT_EQ(r.in1, j + 3);
     EXPECT_EQ(r.in2, i + 3);
     EXPECT_EQ(i[0], 1);
@@ -120,7 +120,7 @@ template<class Iter1, class Iter2>
 void test_rng_4() {
     int i[3] = {1, 2, 3};
     int j[4] = {4, 5, 6, 7};
-    auto r = ranges::swap_ranges(as_lvalue(make_subrange(i, i + 3)),
+    auto r = fermat::ranges::swap_ranges(as_lvalue(make_subrange(i, i + 3)),
                                  as_lvalue(make_subrange(j, j + 4)));
     EXPECT_EQ(r.in1, i + 3);
     EXPECT_EQ(r.in2, j + 3);
@@ -132,7 +132,7 @@ void test_rng_4() {
     EXPECT_EQ(j[2], 3);
     EXPECT_EQ(j[3], 7);
 
-    r = ranges::swap_ranges(as_lvalue(make_subrange(j, j + 4)),
+    r = fermat::ranges::swap_ranges(as_lvalue(make_subrange(j, j + 4)),
                             as_lvalue(make_subrange(i, i + 3)));
     EXPECT_EQ(r.in1, j + 3);
     EXPECT_EQ(r.in2, i + 3);
@@ -145,7 +145,7 @@ void test_rng_4() {
     EXPECT_EQ(j[3], 7);
 
     // Also test with temporary subranges (no as_lvalue)
-    auto r2 = ranges::swap_ranges(make_subrange(j, j + 4), make_subrange(i, i + 3));
+    auto r2 = fermat::ranges::swap_ranges(make_subrange(j, j + 4), make_subrange(i, i + 3));
     EXPECT_EQ(base(r2.in1), j + 3);
     EXPECT_EQ(base(r2.in2), i + 3);
     EXPECT_EQ(i[0], 4);
@@ -165,7 +165,7 @@ void test_move_only() {
     std::unique_ptr<int> j[3];
     for (int k = 0; k < 3; ++k)
         j[k].reset(new int(k+4));
-    auto r = ranges::swap_ranges(i, i + 3, j);
+    auto r = fermat::ranges::swap_ranges(i, i + 3, j);
     EXPECT_EQ(r.in1, i + 3);
     EXPECT_EQ(r.in2, j + 3);
     EXPECT_EQ(*i[0], 4);
@@ -201,7 +201,7 @@ TEST(SwapRangesTest, MoveOnly) {
 TEST(SwapRangesTest, SimpleArrays) {
     int a[4] = {1, 2, 3, 4};
     int b[4] = {5, 6, 7, 8};
-    ranges::swap_ranges(a, a + 4, b);
+    fermat::ranges::swap_ranges(a, a + 4, b);
     EXPECT_EQ(a[0], 5);
     EXPECT_EQ(a[1], 6);
     EXPECT_EQ(a[2], 7);
@@ -211,7 +211,7 @@ TEST(SwapRangesTest, SimpleArrays) {
     EXPECT_EQ(b[2], 3);
     EXPECT_EQ(b[3], 4);
 
-    ranges::swap_ranges(std::array<int, 2>{{3,4}}, a + 2);
+    fermat::ranges::swap_ranges(std::array<int, 2>{{3,4}}, a + 2);
     EXPECT_EQ(a[0], 5);
     EXPECT_EQ(a[1], 6);
     EXPECT_EQ(a[2], 3);
@@ -222,7 +222,7 @@ TEST(SwapRangesTest, Constexpr) {
     constexpr auto test = []() constexpr -> bool {
         int i[3] = {1, 2, 3};
         int j[3] = {4, 5, 6};
-        const auto r = ranges::swap_ranges(i, j);
+        const auto r = fermat::ranges::swap_ranges(i, j);
         if (r.in1 != i + 3) return false;
         if (r.in2 != j + 3) return false;
         if (i[0] != 4 || i[1] != 5 || i[2] != 6) return false;

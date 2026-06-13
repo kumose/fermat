@@ -31,7 +31,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -52,7 +52,7 @@ namespace ranges
             I first, S last, V const & val, C pred = C{}, P proj = P{})
         {
             first =
-                lower_bound(std::move(first), last, val, ranges::ref(pred), ranges::ref(proj));
+                lower_bound(std::move(first), last, val, fermat::ranges::ref(pred), fermat::ranges::ref(proj));
             return first != last && !invoke(pred, val, invoke(proj, *first));
         }
 
@@ -71,10 +71,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::binary_search;
+        using fermat::ranges::binary_search;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

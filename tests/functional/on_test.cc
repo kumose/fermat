@@ -10,6 +10,6 @@
 int square(int i) { return i * i; }
 
 TEST(OnTest, Basic) {
-    auto fn = ranges::on(std::multiplies<>{}, square);
+    auto fn = fermat::ranges::on(std::multiplies<>{}, square);
     EXPECT_EQ(fn(2, 4), 64);
 }

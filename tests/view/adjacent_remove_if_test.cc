@@ -48,8 +48,8 @@ public:
 /// Helper to compare a range with an initializer list.
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -69,7 +69,7 @@ void has_type(U&&) {
 // ------------------------------------------------------------------
 
 TEST(AdjacentRemoveIfTest, RawArrayWithEqualTo) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int const rgi[] = {1, 1, 1, 2, 3, 4, 4};
     std::vector<int> out;
@@ -81,15 +81,15 @@ TEST(AdjacentRemoveIfTest, RawArrayWithEqualTo) {
     static_assert(!sized_range<decltype(rng)>, "");
     static_assert(bidirectional_iterator<decltype(begin(rng))>, "");
     static_assert(!random_access_iterator<decltype(begin(rng))>, "");
-    static_assert(output_iterator<decltype(ranges::back_inserter(out)), int>, "");
-    static_assert(!equality_comparable<decltype(ranges::back_inserter(out))>, "");
+    static_assert(output_iterator<decltype(fermat::ranges::back_inserter(out)), int>, "");
+    static_assert(!equality_comparable<decltype(fermat::ranges::back_inserter(out))>, "");
 
-    copy(rng, ranges::back_inserter(out));
+    copy(rng, fermat::ranges::back_inserter(out));
     check_equal(out, {1, 2, 3, 4});
 }
 
 TEST(AdjacentRemoveIfTest, CountedViewWithLambda) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int const rgi[] = {1, 1, 1, 2, 3, 4, 4};
     auto rng2 = views::counted(rgi, 7)
@@ -105,7 +105,7 @@ TEST(AdjacentRemoveIfTest, CountedViewWithLambda) {
 }
 
 TEST(AdjacentRemoveIfTest, ForwardIteratorWithEqualTo) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int const rgi[] = {1, 1, 1, 2, 3, 4, 4};
     auto rng3 = views::counted(ForwardIterator<int const>(rgi), 7)
@@ -121,7 +121,7 @@ TEST(AdjacentRemoveIfTest, ForwardIteratorWithEqualTo) {
 }
 
 TEST(AdjacentRemoveIfTest, ForwardIteratorAlwaysTrue) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int const rgi[] = {1, 1, 1, 2, 3, 4, 4};
     auto rng4 = views::counted(ForwardIterator<int const>(rgi), 7)
@@ -138,7 +138,7 @@ TEST(AdjacentRemoveIfTest, ForwardIteratorAlwaysTrue) {
 }
 
 TEST(AdjacentRemoveIfTest, IotaWithCustomPredicate) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto is_odd_then_even = [](int i, int j) { return 1 == i%2 && 0 == j%2; };
     auto rng5 = views::iota(0, 11) | views::adjacent_remove_if(is_odd_then_even);
@@ -153,7 +153,7 @@ TEST(AdjacentRemoveIfTest, IotaWithCustomPredicate) {
 }
 
 TEST(AdjacentRemoveIfTest, BidirectionalTraversalConsistency) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int const rgi[] = {1, 1, 1, 2, 3, 4, 4};
     auto rng = views::adjacent_remove_if(rgi, std::equal_to<int>{});
@@ -161,12 +161,12 @@ TEST(AdjacentRemoveIfTest, BidirectionalTraversalConsistency) {
     for (auto& i : rng)
         pointers.push_back(&i);
 
-    auto pos = ranges::end(rng);
+    auto pos = fermat::ranges::end(rng);
     for (auto i = pointers.size(); i != 0; ) {
-        EXPECT_NE(pos, ranges::begin(rng));
+        EXPECT_NE(pos, fermat::ranges::begin(rng));
         EXPECT_EQ(&*--pos, pointers[--i]);
     }
-    EXPECT_EQ(pos, ranges::begin(rng));
+    EXPECT_EQ(pos, fermat::ranges::begin(rng));
 }
 
 int main(int argc, char** argv) {

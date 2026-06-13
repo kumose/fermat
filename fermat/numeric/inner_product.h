@@ -30,7 +30,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-numerics
     /// @{
@@ -70,7 +70,7 @@ namespace ranges
     CPP_concept inner_product_constraints =
         input_iterator<I1> &&
         input_iterator<I2> &&
-        CPP_concept_ref(ranges::inner_product_constraints_, I1, I2, T, BOp1, BOp2, P1, P2);
+        CPP_concept_ref(fermat::ranges::inner_product_constraints_, I1, I2, T, BOp1, BOp2, P1, P2);
     // clang-format on
 
     struct inner_product_fn
@@ -153,7 +153,7 @@ namespace ranges
 
     RANGES_INLINE_VARIABLE(inner_product_fn, inner_product)
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

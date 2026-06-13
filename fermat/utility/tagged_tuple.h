@@ -24,19 +24,19 @@
 RANGES_DIAGNOSTIC_PUSH
 RANGES_DIAGNOSTIC_IGNORE_DEPRECATED_DECLARATIONS
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename... Ts>
-    using tagged_tuple RANGES_DEPRECATED("ranges::tagged_tuple is deprecated.") =
+    using tagged_tuple RANGES_DEPRECATED("fermat::ranges::tagged_tuple is deprecated.") =
         tagged<std::tuple<detail::tag_elem<Ts>...>, detail::tag_spec<Ts>...>;
 
     template<typename... Tags, typename... Ts>
-    RANGES_DEPRECATED("ranges::make_tagged_tuple is deprecated.")
+    RANGES_DEPRECATED("fermat::ranges::make_tagged_tuple is deprecated.")
     constexpr tagged_tuple<Tags(bind_element_t<Ts>)...> make_tagged_tuple(Ts &&... ts)
     {
         return tagged_tuple<Tags(bind_element_t<Ts>)...>{static_cast<Ts &&>(ts)...};
     }
-} // namespace ranges
+} // namespace fermat::ranges
 
 RANGES_DIAGNOSTIC_POP
 

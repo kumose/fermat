@@ -17,7 +17,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-functional
     /// @{
@@ -32,16 +32,16 @@ namespace ranges
     };
 
     /// \cond
-    using ident RANGES_DEPRECATED("Replace uses of ranges::ident with ranges::identity") =
+    using ident RANGES_DEPRECATED("Replace uses of fermat::ranges::ident with fermat::ranges::identity") =
         identity;
     /// \endcond
 
     namespace cpp20
     {
-        using ranges::identity;
+        using fermat::ranges::identity;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

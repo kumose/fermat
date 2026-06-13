@@ -54,8 +54,8 @@ public:
 // ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (const auto& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -84,23 +84,23 @@ struct MoveOnlyReadable {
     using value_type = std::unique_ptr<int>;
     value_type operator*() const;
 };
-static_assert(ranges::indirectly_readable<MoveOnlyReadable>);
+static_assert(fermat::ranges::indirectly_readable<MoveOnlyReadable>);
 
 TEST(IteratorTest, InsertIterator) {
-    static_assert(ranges::output_iterator<ranges::insert_iterator<std::vector<int>>, int&&>);
-    static_assert(!ranges::equality_comparable<ranges::insert_iterator<std::vector<int>>>);
+    static_assert(fermat::ranges::output_iterator<fermat::ranges::insert_iterator<std::vector<int>>, int&&>);
+    static_assert(!fermat::ranges::equality_comparable<fermat::ranges::insert_iterator<std::vector<int>>>);
     std::vector<int> vi{5,6,7,8};
-    ranges::copy(std::initializer_list<int>{1,2,3,4}, ranges::inserter(vi, vi.begin()+2));
+    fermat::ranges::copy(std::initializer_list<int>{1,2,3,4}, fermat::ranges::inserter(vi, vi.begin()+2));
     check_equal(vi, {5,6,1,2,3,4,7,8});
 }
 
 TEST(IteratorTest, OStreamJoiner) {
     std::ostringstream oss;
     std::vector<int> vi{};
-    ranges::copy(vi, ranges::make_ostream_joiner(oss, ","));
+    fermat::ranges::copy(vi, fermat::ranges::make_ostream_joiner(oss, ","));
     EXPECT_EQ(oss.str(), std::string(""));
     vi = {1,2,3,4};
-    ranges::copy(vi, ranges::make_ostream_joiner(oss, ","));
+    fermat::ranges::copy(vi, fermat::ranges::make_ostream_joiner(oss, ","));
     EXPECT_EQ(oss.str(), std::string("1,2,3,4"));
 }
 
@@ -111,35 +111,35 @@ TEST(IteratorTest, MoveIterator) {
     in.emplace_back("his");
     in.emplace_back("face");
     std::vector<MoveOnlyString> out;
-    auto first = ranges::make_move_iterator(in.begin());
+    auto first = fermat::ranges::make_move_iterator(in.begin());
     using I = decltype(first);
-    static_assert(ranges::input_iterator<I>);
-    static_assert(!ranges::forward_iterator<I>);
-    static_assert(ranges::same_as<I, ranges::move_iterator<std::vector<MoveOnlyString>::iterator>>);
-    auto last = ranges::make_move_sentinel(in.end());
+    static_assert(fermat::ranges::input_iterator<I>);
+    static_assert(!fermat::ranges::forward_iterator<I>);
+    static_assert(fermat::ranges::same_as<I, fermat::ranges::move_iterator<std::vector<MoveOnlyString>::iterator>>);
+    auto last = fermat::ranges::make_move_sentinel(in.end());
     using S = decltype(last);
-    static_assert(ranges::sentinel_for<S, I>);
-    static_assert(ranges::sized_sentinel_for<I, I>);
+    static_assert(fermat::ranges::sentinel_for<S, I>);
+    static_assert(fermat::ranges::sized_sentinel_for<I, I>);
     EXPECT_EQ((first - first), 0);
-    static_assert(ranges::sized_sentinel_for<S, I>);
+    static_assert(fermat::ranges::sized_sentinel_for<S, I>);
     EXPECT_EQ(static_cast<std::size_t>(last - first), in.size());
-    ranges::copy(first, last, ranges::back_inserter(out));
+    fermat::ranges::copy(first, last, fermat::ranges::back_inserter(out));
     check_equal(in, {"","","",""});
     check_equal(out, {"this","is","his","face"});
 }
 
 TEST(IteratorTest, Issue420Regression) {
     using RI = std::reverse_iterator<int*>;
-    static_assert(ranges::sized_sentinel_for<RI, RI>);
-    static_assert(!ranges::sized_sentinel_for<RI, std::reverse_iterator<float*>>);
+    static_assert(fermat::ranges::sized_sentinel_for<RI, RI>);
+    static_assert(!fermat::ranges::sized_sentinel_for<RI, std::reverse_iterator<float*>>);
     using BI = BidirectionalIterator<int*>;
-    static_assert(!ranges::sized_sentinel_for<std::reverse_iterator<BI>, std::reverse_iterator<BI>>);
+    static_assert(!fermat::ranges::sized_sentinel_for<std::reverse_iterator<BI>, std::reverse_iterator<BI>>);
 }
 
 TEST(IteratorTest, Issue1110) {
     std::vector<int> v = {1,2,3};
-    auto e = ranges::end(v);
-    ranges::advance(e, 0, ranges::begin(v));
+    auto e = fermat::ranges::end(v);
+    fermat::ranges::advance(e, 0, fermat::ranges::begin(v));
     SUCCEED();
 }
 
@@ -147,7 +147,7 @@ TEST(IteratorTest, Issue845) {
     struct S {};
     std::list<std::pair<S, int>> v = { {S{}, 0} };
     auto itr = v.begin();
-    ranges::advance(itr, 1);
+    fermat::ranges::advance(itr, 1);
     SUCCEED();
 }
 
@@ -155,7 +155,7 @@ TEST(IteratorTest, Issue845) {
 // indirectly_readable_traits tests (static assertions)
 // ------------------------------------------------------------
 struct value_type_tester_thingy {};
-namespace ranges {
+namespace fermat::ranges {
     template<>
     struct indirectly_readable_traits<::value_type_tester_thingy> {
         using value_type = int;
@@ -168,7 +168,7 @@ template<typename T>
 struct with_element_type { using element_type = T; };
 
 TEST(IteratorTest, IndirectlyReadableTraits) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     using meta::defer;
 
     // arrays of known bound
@@ -246,10 +246,10 @@ TEST(IteratorTest, IndirectlyReadableTraits) {
 }
 
 TEST(IteratorTest, Indirections) {
-    static_assert(ranges::indirectly_swappable<int*, int*>);
-    static_assert(ranges::indirectly_movable<int const*, int*>);
-    static_assert(!ranges::indirectly_swappable<int const*, int const*>);
-    static_assert(!ranges::indirectly_movable<int const*, int const*>);
+    static_assert(fermat::ranges::indirectly_swappable<int*, int*>);
+    static_assert(fermat::ranges::indirectly_movable<int const*, int*>);
+    static_assert(!fermat::ranges::indirectly_swappable<int const*, int const*>);
+    static_assert(!fermat::ranges::indirectly_movable<int const*, int const*>);
 }
 
 // ------------------------------------------------------------
@@ -273,7 +273,7 @@ namespace std {
         using iterator_category = std::input_iterator_tag;
     };
 }
-static_assert(ranges::input_iterator<X>);
+static_assert(fermat::ranges::input_iterator<X>);
 
 struct Y {
     using value_type = int;
@@ -294,7 +294,7 @@ struct Z {
     bool operator==(Z) const;
     bool operator!=(Z) const;
 };
-namespace ranges {
+namespace fermat::ranges {
     template<>
     struct indirectly_readable_traits<::Z> {
         using value_type = int;
@@ -374,8 +374,8 @@ struct bool_iterator {
 TEST(IteratorTest, DeepIntegration) {
     using std::is_same;
     using std::iterator_traits;
-    using ranges::iter_value_t;
-    using ranges::iter_difference_t;
+    using fermat::ranges::iter_value_t;
+    using fermat::ranges::iter_difference_t;
 
     static_assert(is_same<iter_difference_t<std::int_least16_t>, int>::value);
     static_assert(is_same<iter_difference_t<std::uint_least16_t>, int>::value);
@@ -387,36 +387,36 @@ TEST(IteratorTest, DeepIntegration) {
     static_assert(is_same<iter_difference_t<const int*>, std::ptrdiff_t>::value);
     static_assert(is_same<iter_difference_t<int* const>, std::ptrdiff_t>::value);
 
-    static_assert(ranges::detail::is_std_iterator_traits_specialized_v<X>);
+    static_assert(fermat::ranges::detail::is_std_iterator_traits_specialized_v<X>);
     static_assert(is_same<iterator_traits<X>::value_type, int>::value);
     static_assert(is_same<iter_value_t<X>, int>::value);
 
-    static_assert(!ranges::detail::is_std_iterator_traits_specialized_v<Y>);
+    static_assert(!fermat::ranges::detail::is_std_iterator_traits_specialized_v<Y>);
     static_assert(is_same<iterator_traits<Y>::value_type, int>::value);
     static_assert(is_same<iter_value_t<Y>, int>::value);
 
 #ifndef _LIBCPP_VERSION
-    static_assert(!ranges::detail::is_std_iterator_traits_specialized_v<Z>);
+    static_assert(!fermat::ranges::detail::is_std_iterator_traits_specialized_v<Z>);
     static_assert(is_same<iterator_traits<Z>::value_type, int>::value);
     static_assert(is_same<iter_value_t<Z>, int>::value);
     static_assert(is_same<iterator_traits<Z>::iterator_category, std::bidirectional_iterator_tag>::value);
 #endif
 
-    static_assert(ranges::input_iterator<WouldBeFwd>);
-    static_assert(!ranges::forward_iterator<WouldBeFwd>);
+    static_assert(fermat::ranges::input_iterator<WouldBeFwd>);
+    static_assert(!fermat::ranges::forward_iterator<WouldBeFwd>);
     static_assert(is_same<iterator_traits<WouldBeFwd>::iterator_category, std::input_iterator_tag>::value);
 
-    static_assert(ranges::forward_iterator<WouldBeBidi>);
-    static_assert(!ranges::bidirectional_iterator<WouldBeBidi>);
+    static_assert(fermat::ranges::forward_iterator<WouldBeBidi>);
+    static_assert(!fermat::ranges::bidirectional_iterator<WouldBeBidi>);
     static_assert(is_same<iterator_traits<WouldBeBidi>::iterator_category, std::input_iterator_tag>::value);
 
-    static_assert(ranges::input_or_output_iterator<OutIter>);
-    static_assert(!ranges::input_iterator<OutIter>);
+    static_assert(fermat::ranges::input_or_output_iterator<OutIter>);
+    static_assert(!fermat::ranges::input_iterator<OutIter>);
     static_assert(is_same<iterator_traits<OutIter>::difference_type, std::ptrdiff_t>::value);
     static_assert(is_same<iterator_traits<OutIter>::iterator_category, std::output_iterator_tag>::value);
 
-    static_assert(ranges::contiguous_iterator<int volatile*>);
-    static_assert(ranges::forward_iterator<bool_iterator>);
+    static_assert(fermat::ranges::contiguous_iterator<int volatile*>);
+    static_assert(fermat::ranges::forward_iterator<bool_iterator>);
     static_assert(is_same<iterator_traits<bool_iterator>::iterator_category, std::input_iterator_tag>::value);
 }
 

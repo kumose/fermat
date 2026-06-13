@@ -13,7 +13,7 @@ struct gen_test {
 TEST(GenerateNTest, Basic) {
     const unsigned n = 4;
     int ia[n] = {0};
-    auto res = ranges::generate_n(ia, n, gen_test(1));
+    auto res = fermat::ranges::generate_n(ia, n, gen_test(1));
     EXPECT_EQ(ia[0], 1);
     EXPECT_EQ(ia[1], 2);
     EXPECT_EQ(ia[2], 3);
@@ -24,7 +24,7 @@ TEST(GenerateNTest, Basic) {
 
 TEST(GenerateNTest, OutputRange) {
     std::vector<int> v;
-    ranges::generate_n(ranges::back_inserter(v), 5, gen_test(1));
+    fermat::ranges::generate_n(fermat::ranges::back_inserter(v), 5, gen_test(1));
     EXPECT_EQ(v.size(), 5u);
     EXPECT_EQ(v[0], 1);
     EXPECT_EQ(v[1], 2);
@@ -36,7 +36,7 @@ TEST(GenerateNTest, OutputRange) {
 constexpr bool test_constexpr() {
     const unsigned n = 4;
     int ia[n] = {0};
-    auto res = ranges::generate_n(ia, n, gen_test(1));
+    auto res = fermat::ranges::generate_n(ia, n, gen_test(1));
     bool ok = true;
     ok = ok && (ia[0] == 1);
     ok = ok && (ia[1] == 2);

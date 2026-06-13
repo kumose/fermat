@@ -18,7 +18,7 @@ void test_partial_sort_copy_sizes(int N, int M) {
 
     std::vector<int> output(M, 0);
     /// iterator-pair version
-    auto res = ranges::partial_sort_copy(input.begin(), input.end(),
+    auto res = fermat::ranges::partial_sort_copy(input.begin(), input.end(),
                                          output.begin(), output.end());
     auto expected = output.begin() + std::min(N, M);
     EXPECT_EQ(res, expected);
@@ -29,7 +29,7 @@ void test_partial_sort_copy_sizes(int N, int M) {
     /// with greater comparator
     std::shuffle(input.begin(), input.end(), gen);
     std::fill(output.begin(), output.end(), 0);
-    auto res2 = ranges::partial_sort_copy(input.begin(), input.end(),
+    auto res2 = fermat::ranges::partial_sort_copy(input.begin(), input.end(),
                                           output.begin(), output.end(),
                                           std::greater<int>());
     EXPECT_EQ(res2, expected);
@@ -54,7 +54,7 @@ void test_partial_sort_copy_for_N(int N) {
 
 TEST(PartialSortCopyTest, Basic) {
     int i = 0;
-    auto r = ranges::partial_sort_copy(&i, &i, &i, &i + 5);
+    auto r = fermat::ranges::partial_sort_copy(&i, &i, &i, &i + 5);
     EXPECT_EQ(r, &i);
     EXPECT_EQ(i, 0);
 }
@@ -74,7 +74,7 @@ TEST(PartialSortCopyTest, VariousSizes) {
 TEST(PartialSortCopyTest, InitializerList) {
     std::initializer_list<int> input = {5, 3, 4, 1, 8, 2, 6, 7, 0, 9};
     std::vector<int> output(10, 0);
-    auto res = ranges::partial_sort_copy(input.begin(), input.end(),
+    auto res = fermat::ranges::partial_sort_copy(input.begin(), input.end(),
                                          output.begin(), output.end());
     EXPECT_EQ(res, output.end());
     for (int i = 0; i < 10; ++i) {

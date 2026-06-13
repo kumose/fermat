@@ -28,10 +28,10 @@
 /// ------------------------------------------------------------
 template<typename Rng1, typename Rng2>
 void check_equal(Rng1&& rng1, Rng2&& rng2) {
-    auto it1 = ranges::begin(rng1);
-    auto end1 = ranges::end(rng1);
-    auto it2 = ranges::begin(rng2);
-    auto end2 = ranges::end(rng2);
+    auto it1 = fermat::ranges::begin(rng1);
+    auto end1 = fermat::ranges::end(rng1);
+    auto it2 = fermat::ranges::begin(rng2);
+    auto end2 = fermat::ranges::end(rng2);
     while (it1 != end1 && it2 != end2) {
         EXPECT_EQ(*it1, *it2);
         ++it1; ++it2;
@@ -43,8 +43,8 @@ void check_equal(Rng1&& rng1, Rng2&& rng2) {
 /// Overload for initializer_list (expected)
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -64,17 +64,17 @@ void check_equal(Rng&& rng, const std::array<T, N>& expected) {
 /// ------------------------------------------------------------
 template<typename Rng>
 void test_const_forward_range(Rng const& rng) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto r = rng | views::cycle;
 
     // Check distances
-    EXPECT_EQ(ranges::distance(r | views::take_exactly(0)), 0);
-    EXPECT_EQ(ranges::distance(r | views::take_exactly(1)), 1);
-    EXPECT_EQ(ranges::distance(r | views::take_exactly(2)), 2);
-    EXPECT_EQ(ranges::distance(r | views::take_exactly(3)), 3);
-    EXPECT_EQ(ranges::distance(r | views::take_exactly(4)), 4);
-    EXPECT_EQ(ranges::distance(r | views::take_exactly(6)), 6);
-    EXPECT_EQ(ranges::distance(r | views::take_exactly(7)), 7);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take_exactly(0)), 0);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take_exactly(1)), 1);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take_exactly(2)), 2);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take_exactly(3)), 3);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take_exactly(4)), 4);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take_exactly(6)), 6);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take_exactly(7)), 7);
 
     // Check content using manual loops
     check_equal(r | views::take_exactly(0), std::array<int,0>{});
@@ -86,13 +86,13 @@ void test_const_forward_range(Rng const& rng) {
     check_equal(r | views::take_exactly(7), {0,1,2,0,1,2,0});
 
     // With take (non-exact)
-    EXPECT_EQ(ranges::distance(r | views::take(0)), 0);
-    EXPECT_EQ(ranges::distance(r | views::take(1)), 1);
-    EXPECT_EQ(ranges::distance(r | views::take(2)), 2);
-    EXPECT_EQ(ranges::distance(r | views::take(3)), 3);
-    EXPECT_EQ(ranges::distance(r | views::take(4)), 4);
-    EXPECT_EQ(ranges::distance(r | views::take(6)), 6);
-    EXPECT_EQ(ranges::distance(r | views::take(7)), 7);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take(0)), 0);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take(1)), 1);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take(2)), 2);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take(3)), 3);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take(4)), 4);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take(6)), 6);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take(7)), 7);
 
     check_equal(r | views::take(0), std::array<int,0>{});
     check_equal(r | views::take(1), {0});
@@ -105,18 +105,18 @@ void test_const_forward_range(Rng const& rng) {
 
 template<typename Rng>
 void test_const_forward_reversed_range(Rng const& rng) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     test_const_forward_range(rng);
 
     auto r = rng | views::reverse | views::cycle;
 
-    EXPECT_EQ(ranges::distance(r | views::take_exactly(0)), 0);
-    EXPECT_EQ(ranges::distance(r | views::take_exactly(1)), 1);
-    EXPECT_EQ(ranges::distance(r | views::take_exactly(2)), 2);
-    EXPECT_EQ(ranges::distance(r | views::take_exactly(3)), 3);
-    EXPECT_EQ(ranges::distance(r | views::take_exactly(4)), 4);
-    EXPECT_EQ(ranges::distance(r | views::take_exactly(6)), 6);
-    EXPECT_EQ(ranges::distance(r | views::take_exactly(7)), 7);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take_exactly(0)), 0);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take_exactly(1)), 1);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take_exactly(2)), 2);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take_exactly(3)), 3);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take_exactly(4)), 4);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take_exactly(6)), 6);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take_exactly(7)), 7);
 
     check_equal(r | views::take_exactly(0), std::array<int,0>{});
     check_equal(r | views::take_exactly(1), {2});
@@ -126,13 +126,13 @@ void test_const_forward_reversed_range(Rng const& rng) {
     check_equal(r | views::take_exactly(6), {2,1,0,2,1,0});
     check_equal(r | views::take_exactly(7), {2,1,0,2,1,0,2});
 
-    EXPECT_EQ(ranges::distance(r | views::take(0)), 0);
-    EXPECT_EQ(ranges::distance(r | views::take(1)), 1);
-    EXPECT_EQ(ranges::distance(r | views::take(2)), 2);
-    EXPECT_EQ(ranges::distance(r | views::take(3)), 3);
-    EXPECT_EQ(ranges::distance(r | views::take(4)), 4);
-    EXPECT_EQ(ranges::distance(r | views::take(6)), 6);
-    EXPECT_EQ(ranges::distance(r | views::take(7)), 7);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take(0)), 0);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take(1)), 1);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take(2)), 2);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take(3)), 3);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take(4)), 4);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take(6)), 6);
+    EXPECT_EQ(fermat::ranges::distance(r | views::take(7)), 7);
 
     check_equal(r | views::take(0), std::array<int,0>{});
     check_equal(r | views::take(1), {2});
@@ -145,7 +145,7 @@ void test_const_forward_reversed_range(Rng const& rng) {
 
 template<typename Rng>
 void test_mutable_forward_range_reversed(Rng& rng) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     test_const_forward_reversed_range(rng);
     int count = 2;
     for (auto&& i : rng | views::cycle | views::take_exactly(6)) {
@@ -157,7 +157,7 @@ void test_mutable_forward_range_reversed(Rng& rng) {
 
 template<typename Rng>
 void test_forward_it(Rng const& rng) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto r = rng | views::cycle;
     auto f = begin(r);
     EXPECT_EQ(*f, 0);
@@ -167,7 +167,7 @@ void test_forward_it(Rng const& rng) {
 
 template<typename Rng>
 void test_bidirectional_it(Rng const& rng) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     test_forward_it(rng);
     auto r = rng | views::cycle;
     auto f = begin(r);
@@ -180,7 +180,7 @@ void test_bidirectional_it(Rng const& rng) {
 
 template<typename Rng>
 void test_random_access_it(Rng const& rng) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     test_bidirectional_it(rng);
     auto r = rng | views::cycle;
     auto f = begin(r);
@@ -291,7 +291,7 @@ TEST(CycleTest, StdForwardList) {
 }
 
 TEST(CycleTest, MoveOnlyTypes) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::array<std::unique_ptr<int>, 3> a = {
         std::unique_ptr<int>(new int(0)),
         std::unique_ptr<int>(new int(1)),
@@ -303,7 +303,7 @@ TEST(CycleTest, MoveOnlyTypes) {
 }
 
 TEST(CycleTest, Infinite) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int count = 0;
     auto il = {0, 1, 2};
     int v = 10;
@@ -317,7 +317,7 @@ TEST(CycleTest, Infinite) {
 }
 
 TEST(CycleTest, NonBounded) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto sz = views::c_str((char const*)"hi! ");
     auto cycled = sz | views::cycle;
     auto taken = cycled | views::take(10);
@@ -326,7 +326,7 @@ TEST(CycleTest, NonBounded) {
     EXPECT_EQ(result, std::vector<char>({'h','i','!',' ','h','i','!',' ','h','i'}));
 
     auto rng = sz | views::cycle;
-    auto it = ranges::begin(rng);
+    auto it = fermat::ranges::begin(rng);
     EXPECT_EQ(*it, 'h');
     EXPECT_EQ(*++it, 'i');
     EXPECT_EQ(*++it, '!');
@@ -338,19 +338,19 @@ TEST(CycleTest, NonBounded) {
     EXPECT_EQ(*--it, 'h');
 
     rng = sz | views::cycle;
-    it = ranges::begin(rng);
+    it = fermat::ranges::begin(rng);
     it += 4;
     EXPECT_EQ(*it, 'h');
 }
 
 TEST(CycleTest, CycleOfInfiniteRange) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto view = views::iota(0) | views::cycle;
     EXPECT_EQ(view[5], 5);
 }
 
 TEST(CycleTest, CycleWithSlice) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     const auto length = 512;
     const auto k = 16;
 
@@ -360,7 +360,7 @@ TEST(CycleTest, CycleWithSlice) {
 
     EXPECT_NE(begin(output), end(output));
     EXPECT_EQ(size(output), 512u);
-    EXPECT_EQ(ranges::distance(output), 512);
+    EXPECT_EQ(fermat::ranges::distance(output), 512);
 }
 
 int main(int argc, char** argv) {

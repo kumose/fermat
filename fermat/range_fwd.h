@@ -63,7 +63,7 @@
 RANGES_DIAGNOSTIC_PUSH
 RANGES_DIAGNOSTIC_IGNORE_CXX17_COMPAT
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace views
@@ -79,28 +79,28 @@ namespace ranges
 #if(RANGES_CXX_VER < RANGES_CXX_STD_17 || defined(__GNUC__) && !defined(__clang__))
     inline namespace v3
     {
-        using namespace ranges;
+        using namespace fermat::ranges;
     }
 
     namespace view = views;
     namespace action = actions;
 #else
     inline namespace RANGES_DEPRECATED(
-        "The name ranges::v3 namespace is deprecated. "
+        "The name fermat::ranges::v3 namespace is deprecated. "
         "Please discontinue using it.") v3
     {
-        using namespace ranges;
+        using namespace fermat::ranges;
     }
 
     namespace RANGES_DEPRECATED(
-        "The ranges::view namespace has been renamed to ranges::views. "
+        "The fermat::ranges::view namespace has been renamed to fermat::ranges::views. "
         "(Sorry!)") view
     {
         using namespace views;
     }
 
     namespace RANGES_DEPRECATED(
-        "The ranges::action namespace has been renamed to ranges::actions. "
+        "The fermat::ranges::action namespace has been renamed to fermat::ranges::actions. "
         "(Sorry!)") action
     {
         using namespace actions;
@@ -123,8 +123,8 @@ namespace ranges
 
     template<typename Sig>
     using result_of_t RANGES_DEPRECATED(
-        "ranges::result_of_t is deprecated. "
-        "Please use ranges::invoke_result_t") = meta::_t<result_of<Sig>>;
+        "fermat::ranges::result_of_t is deprecated. "
+        "Please use fermat::ranges::invoke_result_t") = meta::_t<result_of<Sig>>;
     /// \endcond
 
     template<typename...>
@@ -172,7 +172,7 @@ namespace ranges
     struct indirectly_readable_traits;
 
     template<typename T>
-    using readable_traits RANGES_DEPRECATED("Please use ranges::indirectly_readable_traits")
+    using readable_traits RANGES_DEPRECATED("Please use fermat::ranges::indirectly_readable_traits")
      = indirectly_readable_traits<T>;
 
     template<typename T>
@@ -193,14 +193,14 @@ namespace ranges
 
     template<typename T>
     using difference_type RANGES_DEPRECATED(
-        "ranges::difference_type<T>::type is deprecated. Use "
-        "ranges::incrementable_traits<T>::difference_type instead.") =
+        "fermat::ranges::difference_type<T>::type is deprecated. Use "
+        "fermat::ranges::incrementable_traits<T>::difference_type instead.") =
         detail::difference_type_<T>;
 
     template<typename T>
     using value_type RANGES_DEPRECATED(
-        "ranges::value_type<T>::type is deprecated. Use "
-        "ranges::indirectly_readable_traits<T>::value_type instead.") = detail::value_type_<T>;
+        "fermat::ranges::value_type<T>::type is deprecated. Use "
+        "fermat::ranges::indirectly_readable_traits<T>::value_type instead.") = detail::value_type_<T>;
 
     template<typename T>
     struct size_type;
@@ -532,7 +532,7 @@ namespace ranges
     namespace detail
     {
         template<typename R>
-        RANGES_DEPRECATED("Please use ranges::enable_borrowed_range instead.")
+        RANGES_DEPRECATED("Please use fermat::ranges::enable_borrowed_range instead.")
         inline constexpr bool enable_safe_range = enable_borrowed_range<R>;
     } // namespace detail
 
@@ -923,15 +923,15 @@ namespace ranges
 
         struct zip_fn;
     } // namespace views
-} // namespace ranges
+} // namespace fermat::ranges
 
 /// \cond
-namespace ranges
+namespace fermat::ranges
 {
     namespace concepts = ::concepts;
     using namespace ::concepts::defs;
     using ::concepts::and_v;
-} // namespace ranges
+} // namespace fermat::ranges
 /// \endcond
 
 RANGES_DIAGNOSTIC_POP

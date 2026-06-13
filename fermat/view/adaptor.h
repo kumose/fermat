@@ -30,7 +30,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -120,12 +120,12 @@ namespace ranges
         template<typename Rng>
         static constexpr auto CPP_auto_fun(begin)(Rng &rng)
         (
-            return ranges::begin(rng.base())
+            return fermat::ranges::begin(rng.base())
         )
         template<typename Rng>
         static constexpr auto CPP_auto_fun(end)(Rng &rng)
         (
-            return ranges::end(rng.base())
+            return fermat::ranges::end(rng.base())
         )
             // clang-format on
             template(typename I)(
@@ -413,9 +413,9 @@ namespace ranges
                      detail::adaptor_base_current_mem_fn{})),
                  typename X = iter_rvalue_reference_t<BaseIter>>
         X iter_move_(long) const
-            noexcept(noexcept(X(ranges::iter_move(std::declval<BaseIter const &>()))))
+            noexcept(noexcept(X(fermat::ranges::iter_move(std::declval<BaseIter const &>()))))
         {
-            return ranges::iter_move(this->data_.first());
+            return fermat::ranges::iter_move(this->data_.first());
         }
         // If the adaptor does not have an iter_move function but overrides the read
         // member function, apply std::move to the result of calling read.
@@ -568,7 +568,7 @@ namespace ranges
     };
 
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

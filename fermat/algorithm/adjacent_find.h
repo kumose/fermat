@@ -27,7 +27,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges {
+namespace fermat::ranges {
     /// \addtogroup group-algorithms
     /// @{
     RANGES_FUNC_BEGIN(adjacent_find)
@@ -63,11 +63,11 @@ namespace ranges {
     RANGES_FUNC_END(adjacent_find)
 
     namespace cpp20 {
-        using ranges::adjacent_find;
+        using fermat::ranges::adjacent_find;
     }
 
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

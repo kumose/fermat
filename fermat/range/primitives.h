@@ -29,7 +29,7 @@
 #include <string>
 #endif
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-range
     // Specialize this if the default is wrong.
@@ -155,18 +155,18 @@ namespace ranges
                     forward_iterator<_begin_::_t<R>> AND
                     sized_sentinel_for<_end_::_t<R>, _begin_::_t<R>>)
             constexpr _result_t<R> operator()(R && r) const
-                noexcept(noexcept(ranges::end((R &&) r) - ranges::begin((R &&) r)))
+                noexcept(noexcept(fermat::ranges::end((R &&) r) - fermat::ranges::begin((R &&) r)))
             {
                 using size_type = detail::iter_size_t<_begin_::_t<R>>;
-                return static_cast<size_type>(ranges::end((R &&) r) -
-                                              ranges::begin((R &&) r));
+                return static_cast<size_type>(fermat::ranges::end((R &&) r) -
+                                              fermat::ranges::begin((R &&) r));
             }
         };
     } // namespace _size_
     /// \endcond
 
     /// \ingroup group-range
-    /// \return For a given expression `E` of type `T`, `ranges::size(E)` is equivalent
+    /// \return For a given expression `E` of type `T`, `fermat::ranges::size(E)` is equivalent
     /// to:
     ///   * `+extent_v<T>` if `T` is an array type.
     ///   * Otherwise, `+E.size()` if it is a valid expression and its type `I` models
@@ -177,16 +177,16 @@ namespace ranges
     ///     \code
     ///     template<class T> void size(T&&) = delete;
     ///     \endcode
-    ///     and does not include a declaration of `ranges::size`, and
+    ///     and does not include a declaration of `fermat::ranges::size`, and
     ///     `disable_sized_range<std::remove_cvref_t<T>>` is false.
-    ///   * Otherwise, `static_cast<U>(ranges::end(E) - ranges::begin(E))` where `U` is
+    ///   * Otherwise, `static_cast<U>(fermat::ranges::end(E) - fermat::ranges::begin(E))` where `U` is
     ///     `std::make_unsigned_t<iter_difference_t<iterator_t<T>>>` if
     ///     `iter_difference_t<iterator_t<T>>` satisfies `integral` and
     ///     `iter_difference_t<iterator_t<T>>` otherwise; except that `E` is
     ///     evaluated once, if it is a valid expression and the types `I` and `S` of
-    ///     `ranges::begin(E)` and `ranges::end(E)` model `sized_sentinel_for<S, I>` and
+    ///     `fermat::ranges::begin(E)` and `fermat::ranges::end(E)` model `sized_sentinel_for<S, I>` and
     ///     `forward_iterator<I>`.
-    ///   * Otherwise, `ranges::size(E)` is ill-formed.
+    ///   * Otherwise, `fermat::ranges::size(E)` is ill-formed.
     RANGES_DEFINE_CPO(_size_::fn, size)
 
     // Customization point data
@@ -261,9 +261,9 @@ namespace ranges
                 requires (!has_member_data<R &>) AND
                     std::is_pointer<_begin_::_t<R>>::value)
             constexpr _result_t<R> operator()(R && r) const //
-                noexcept(noexcept(ranges::begin((R &&) r)))
+                noexcept(noexcept(fermat::ranges::begin((R &&) r)))
             {
-                return ranges::begin((R &&) r);
+                return fermat::ranges::begin((R &&) r);
             }
             template(typename R)(
                 requires (!has_member_data<R &>) AND
@@ -271,13 +271,13 @@ namespace ranges
                     contiguous_iterator<_begin_::_t<R>>)
             constexpr _result_t<R> operator()(R && r) const //
                 noexcept(noexcept(
-                    ranges::begin((R &&) r) == ranges::end((R &&) r)
+                    fermat::ranges::begin((R &&) r) == fermat::ranges::end((R &&) r)
                       ? nullptr
-                      : detail::addressof(*ranges::begin((R &&) r))))
+                      : detail::addressof(*fermat::ranges::begin((R &&) r))))
             {
-                return ranges::begin((R &&) r) == ranges::end((R &&) r)
+                return fermat::ranges::begin((R &&) r) == fermat::ranges::end((R &&) r)
                   ? nullptr
-                  : detail::addressof(*ranges::begin((R &&) r));
+                  : detail::addressof(*fermat::ranges::begin((R &&) r));
             }
 
 #if RANGES_CXX_STD <= RANGES_CXX_STD_14
@@ -305,15 +305,15 @@ namespace ranges
         {
             template<typename R>
             constexpr _data_::_t<R const &> operator()(R const & r) const
-                noexcept(noexcept(ranges::data(r)))
+                noexcept(noexcept(fermat::ranges::data(r)))
             {
-                return ranges::data(r);
+                return fermat::ranges::data(r);
             }
             template<typename R>
             constexpr _data_::_t<R const> operator()(R const && r) const
-                noexcept(noexcept(ranges::data((R const &&)r)))
+                noexcept(noexcept(fermat::ranges::data((R const &&)r)))
             {
-                return ranges::data((R const &&)r);
+                return fermat::ranges::data((R const &&)r);
             }
         };
     } // namespace _cdata_
@@ -321,7 +321,7 @@ namespace ranges
 
     /// \ingroup group-range
     /// \param r
-    /// \return The result of calling `ranges::data` with a const-qualified
+    /// \return The result of calling `fermat::ranges::data` with a const-qualified
     ///    (lvalue or rvalue) reference to `r`.
     RANGES_INLINE_VARIABLE(_cdata_::fn, cdata)
 
@@ -349,7 +349,7 @@ namespace ranges
         CPP_requires(has_size_,
             requires(T && t) //
             (
-                ranges::size((T &&) t)
+                fermat::ranges::size((T &&) t)
             ));
         /// \concept has_size
         /// \brief The \c has_size concept
@@ -373,9 +373,9 @@ namespace ranges
             template(typename R)(
                 requires (!has_member_empty<R>) AND has_size<R>)
             constexpr bool operator()(R && r) const
-                noexcept(noexcept(bool(ranges::size((R &&) r) == 0)))
+                noexcept(noexcept(bool(fermat::ranges::size((R &&) r) == 0)))
             {
-                return bool(ranges::size((R &&) r) == 0);
+                return bool(fermat::ranges::size((R &&) r) == 0);
             }
 
             // Fall further back to begin == end.
@@ -383,9 +383,9 @@ namespace ranges
                 requires (!has_member_empty<R>) AND (!has_size<R>) AND
                     forward_iterator<_begin_::_t<R>>)
             constexpr bool operator()(R && r) const
-                noexcept(noexcept(bool(ranges::begin((R &&) r) == ranges::end((R &&) r))))
+                noexcept(noexcept(bool(fermat::ranges::begin((R &&) r) == fermat::ranges::end((R &&) r))))
             {
-                return bool(ranges::begin((R &&) r) == ranges::end((R &&) r));
+                return bool(fermat::ranges::begin((R &&) r) == fermat::ranges::end((R &&) r));
             }
         };
     } // namespace _empty_
@@ -397,14 +397,14 @@ namespace ranges
 
     namespace cpp20
     {
-        // Specialize this is namespace ranges::
-        using ranges::cdata;
-        using ranges::data;
-        using ranges::disable_sized_range;
-        using ranges::empty;
-        using ranges::size;
+        // Specialize this is namespace fermat::fermat::ranges::
+        using fermat::ranges::cdata;
+        using fermat::ranges::data;
+        using fermat::ranges::disable_sized_range;
+        using fermat::ranges::empty;
+        using fermat::ranges::size;
     } // namespace cpp20
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

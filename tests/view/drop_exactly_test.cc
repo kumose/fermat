@@ -23,7 +23,7 @@
 /// debug_input_view: minimal input view for testing
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T>>
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>>
 {
     struct data
     {
@@ -42,7 +42,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T>>
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T>> = true;
@@ -62,8 +62,8 @@ void has_type(Actual&&) {
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected)
 {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected)
     {
         EXPECT_NE(it, end);
@@ -79,7 +79,7 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected)
 
 TEST(DropExactlyTest, RawArrayDrop6)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int rgi[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
     auto rng0 = rgi | views::drop_exactly(6);
@@ -94,7 +94,7 @@ TEST(DropExactlyTest, RawArrayDrop6)
 
 TEST(DropExactlyTest, RawArrayReverseAfterDrop)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int rgi[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
     auto rng0 = rgi | views::drop_exactly(6);
@@ -109,7 +109,7 @@ TEST(DropExactlyTest, RawArrayReverseAfterDrop)
 
 TEST(DropExactlyTest, VectorDrop6Reverse)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::vector<int> v{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
     auto rng2 = v | views::drop_exactly(6) | views::reverse;
@@ -123,7 +123,7 @@ TEST(DropExactlyTest, VectorDrop6Reverse)
 
 TEST(DropExactlyTest, ListDrop6)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::list<int> l{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
     auto rng3 = l | views::drop_exactly(6);
@@ -138,32 +138,32 @@ TEST(DropExactlyTest, ListDrop6)
 
 TEST(DropExactlyTest, IotaInfiniteDrop10)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto rng4 = views::iota(10) | views::drop_exactly(10);
     static_assert(view_<decltype(rng4)>, "");
     static_assert(!common_range<decltype(rng4)>, "");
     static_assert(!sized_range<decltype(rng4)>, "");
-    static_assert(ranges::is_infinite<decltype(rng4)>::value, "");
-    auto b = ranges::begin(rng4);
+    static_assert(fermat::ranges::is_infinite<decltype(rng4)>::value, "");
+    auto b = fermat::ranges::begin(rng4);
     EXPECT_EQ(*b, 20);
     EXPECT_EQ(*(b + 1), 21);
 }
 
 TEST(DropExactlyTest, IotaDrop10Take10Reverse)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto rng5 = views::iota(10) | views::drop_exactly(10) | views::take(10) | views::reverse;
     static_assert(view_<decltype(rng5)>, "");
     static_assert(common_range<decltype(rng5)>, "");
     static_assert(sized_range<decltype(rng5)>, "");
-    static_assert(!ranges::is_infinite<decltype(rng5)>::value, "");
+    static_assert(!fermat::ranges::is_infinite<decltype(rng5)>::value, "");
     check_equal(rng5, {29, 28, 27, 26, 25, 24, 23, 22, 21, 20});
     EXPECT_EQ(size(rng5), 10u);
 }
 
 TEST(DropExactlyTest, ComposeWithChunkTransformJoin)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     // drop_exactly should work with random-access mutable-only Views.
     auto odds = views::iota(0) |
                 views::chunk(2) |
@@ -175,7 +175,7 @@ TEST(DropExactlyTest, ComposeWithChunkTransformJoin)
 
 TEST(DropExactlyTest, DebugInputView)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int rgi[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     auto rng = debug_input_view<int const>{rgi, 11} | views::drop_exactly(5);
     using Rng = decltype(rng);

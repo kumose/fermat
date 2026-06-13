@@ -31,7 +31,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     namespace detail
     {
@@ -63,23 +63,23 @@ namespace ranges
         }
         iterator_t<Rng> begin()
         {
-            return next(ranges::begin(rng_), 1, ranges::end(rng_));
+            return next(fermat::ranges::begin(rng_), 1, fermat::ranges::end(rng_));
         }
         template(bool Const = true)(
             requires Const AND range<meta::const_if_c<Const, Rng>>)
         iterator_t<meta::const_if_c<Const, Rng>> begin() const
         {
-            return next(ranges::begin(rng_), 1, ranges::end(rng_));
+            return next(fermat::ranges::begin(rng_), 1, fermat::ranges::end(rng_));
         }
         sentinel_t<Rng> end()
         {
-            return ranges::end(rng_);
+            return fermat::ranges::end(rng_);
         }
         template(bool Const = true)(
             requires Const AND range<meta::const_if_c<Const, Rng>>)
         sentinel_t<meta::const_if_c<Const, Rng>> end() const
         {
-            return ranges::end(rng_);
+            return fermat::ranges::end(rng_);
         }
         // Strange cast to bool in the requires clause is to work around gcc bug.
         CPP_auto_member
@@ -89,7 +89,7 @@ namespace ranges
             using size_type = range_size_t<Rng>;
             return range_cardinality<Rng>::value >= 0
                        ? detail::prev_or_zero_((size_type)range_cardinality<Rng>::value)
-                       : detail::prev_or_zero_(ranges::size(rng_));
+                       : detail::prev_or_zero_(fermat::ranges::size(rng_));
         }
         CPP_auto_member
         constexpr auto CPP_fun(size)()(const //
@@ -98,7 +98,7 @@ namespace ranges
             using size_type = range_size_t<Rng>;
             return range_cardinality<Rng>::value >= 0
                        ? detail::prev_or_zero_((size_type)range_cardinality<Rng>::value)
-                       : detail::prev_or_zero_(ranges::size(rng_));
+                       : detail::prev_or_zero_(fermat::ranges::size(rng_));
         }
         Rng base() const
         {
@@ -137,10 +137,10 @@ namespace ranges
         RANGES_INLINE_VARIABLE(view_closure<tail_fn>, tail)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::tail_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::tail_view)
 
 #endif

@@ -34,7 +34,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-numerics
     /// @{
@@ -65,7 +65,7 @@ namespace ranges
     template<typename I, typename O, typename BOp = minus, typename P = identity>
     CPP_concept differenceable =
         input_iterator<I> &&
-        CPP_concept_ref(ranges::differenceable_, I, O, BOp, P);
+        CPP_concept_ref(fermat::ranges::differenceable_, I, O, BOp, P);
     // clang-format on
 
     template<typename I, typename O>
@@ -149,7 +149,7 @@ namespace ranges
 
     RANGES_INLINE_VARIABLE(adjacent_difference_fn, adjacent_difference)
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

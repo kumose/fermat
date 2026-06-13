@@ -38,7 +38,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -124,7 +124,7 @@ namespace ranges
             constexpr adaptor(meta::const_if_c<Const, chunk_view_> * cv)
               : box<offset_t<Const>>{0}
               , n_((RANGES_EXPECT(0 < cv->n_), cv->n_))
-              , end_(ranges::end(cv->base()))
+              , end_(fermat::ranges::end(cv->base()))
             {}
             template(bool Other)(
                 requires Const AND CPP_NOT(Other)) //
@@ -144,14 +144,14 @@ namespace ranges
             {
                 RANGES_EXPECT(it != end_);
                 RANGES_EXPECT(0 == offset());
-                offset() = ranges::advance(it, n_, end_);
+                offset() = fermat::ranges::advance(it, n_, end_);
             }
             CPP_member
             constexpr auto prev(iterator_t<CRng> & it) //
                 -> CPP_ret(void)(
                     requires bidirectional_range<CRng>)
             {
-                ranges::advance(it, -n_ + offset());
+                fermat::ranges::advance(it, -n_ + offset());
                 offset() = 0;
             }
             CPP_member
@@ -178,14 +178,14 @@ namespace ranges
                 {
                     RANGES_EXPECT(0 == offset());
                     RANGES_EXPECT(n <= Limits::max() / n_);
-                    auto const remainder = ranges::advance(it, n * n_, end_) % n_;
+                    auto const remainder = fermat::ranges::advance(it, n * n_, end_) % n_;
                     RANGES_EXPECT(0 <= remainder && remainder < n_);
                     offset() = remainder;
                 }
                 else if(0 > n)
                 {
                     RANGES_EXPECT(n >= Limits::min() / n_);
-                    ranges::advance(it, n * n_ + offset());
+                    fermat::ranges::advance(it, n * n_ + offset());
                     offset() = 0;
                 }
             }
@@ -219,13 +219,13 @@ namespace ranges
         constexpr auto CPP_fun(size)()(const
             requires sized_range<Rng const>)
         {
-            return size_(ranges::size(this->base()));
+            return size_(fermat::ranges::size(this->base()));
         }
         CPP_auto_member
         constexpr auto CPP_fun(size)()(
             requires sized_range<Rng>)
         {
-            return size_(ranges::size(this->base()));
+            return size_(fermat::ranges::size(this->base()));
         }
     };
 
@@ -283,14 +283,14 @@ namespace ranges
                 constexpr iter_rvalue_reference_t<iterator_t<Rng>> move() const
                 {
                     RANGES_EXPECT(!done());
-                    return ranges::iter_move(rng_->it());
+                    return fermat::ranges::iter_move(rng_->it());
                 }
                 constexpr void next()
                 {
                     RANGES_EXPECT(!done());
                     ++rng_->it();
                     --rng_->remainder_;
-                    if(rng_->remainder_ != 0 && rng_->it() == ranges::end(rng_->base_))
+                    if(rng_->remainder_ != 0 && rng_->it() == fermat::ranges::end(rng_->base_))
                         rng_->remainder_ = 0;
                 }
                 CPP_member
@@ -299,8 +299,8 @@ namespace ranges
                         requires sized_sentinel_for<sentinel_t<Rng>, iterator_t<Rng>>)
                 {
                     RANGES_EXPECT(rng_);
-                    auto const d = ranges::end(rng_->base_) - rng_->it();
-                    return ranges::min(d, rng_->remainder_);
+                    auto const d = fermat::ranges::end(rng_->base_) - rng_->it();
+                    return fermat::ranges::min(d, rng_->remainder_);
                 }
 
             public:
@@ -334,7 +334,7 @@ namespace ranges
             constexpr bool done() const
             {
                 RANGES_EXPECT(rng_);
-                return rng_->it() == ranges::end(rng_->base_) && rng_->remainder_ != 0;
+                return rng_->it() == fermat::ranges::end(rng_->base_) && rng_->remainder_ != 0;
             }
             constexpr bool equal(default_sentinel_t) const
             {
@@ -343,7 +343,7 @@ namespace ranges
             constexpr void next()
             {
                 RANGES_EXPECT(!done());
-                ranges::advance(rng_->it(), rng_->remainder_, ranges::end(rng_->base_));
+                fermat::ranges::advance(rng_->it(), rng_->remainder_, fermat::ranges::end(rng_->base_));
                 rng_->remainder_ = rng_->n_;
             }
             CPP_member
@@ -352,7 +352,7 @@ namespace ranges
                     requires sized_sentinel_for<sentinel_t<Rng>, iterator_t<Rng>>)
             {
                 RANGES_EXPECT(rng_);
-                auto d = ranges::end(rng_->base_) - rng_->it();
+                auto d = fermat::ranges::end(rng_->base_) - rng_->it();
                 if(d < rng_->remainder_)
                     return 1;
 
@@ -365,7 +365,7 @@ namespace ranges
 
         constexpr outer_cursor begin_cursor() noexcept
         {
-            it_cache_ = ranges::begin(base_);
+            it_cache_ = fermat::ranges::begin(base_);
             return outer_cursor{this};
         }
         template<typename Size>
@@ -387,13 +387,13 @@ namespace ranges
         constexpr auto CPP_fun(size)()(const
             requires sized_range<Rng const>)
         {
-            return size_(ranges::size(base_));
+            return size_(fermat::ranges::size(base_));
         }
         CPP_auto_member
         constexpr auto CPP_fun(size)()(
             requires sized_range<Rng>)
         {
-            return size_(ranges::size(base_));
+            return size_(fermat::ranges::size(base_));
         }
         Rng base() const
         {
@@ -454,10 +454,10 @@ namespace ranges
         RANGES_INLINE_VARIABLE(chunk_fn, chunk)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::chunk_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::chunk_view)
 
 #endif

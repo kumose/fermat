@@ -22,8 +22,8 @@
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -35,8 +35,8 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected) {
 /// Overload for ranges of pairs (uses (*it).first to avoid -> operator)
 template<typename Rng, typename U, typename V>
 void check_equal(Rng&& rng, std::initializer_list<std::pair<U, V>> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ((*it).first, val.first);
@@ -49,8 +49,8 @@ void check_equal(Rng&& rng, std::initializer_list<std::pair<U, V>> expected) {
 /// Overload for checking a range against a std::vector (for chunk sub‑ranges)
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, const std::vector<T>& expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -91,7 +91,7 @@ public:
 using P = std::pair<int, int>;
 
 TEST(ChunkByTest, VectorWithPair) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<P> v = {
         {1,1}, {1,1}, {1,2}, {1,2}, {1,2}, {1,2},
@@ -102,7 +102,7 @@ TEST(ChunkByTest, VectorWithPair) {
         auto rng = v | views::chunk_by([](P p0, P p1) { return p0.second == p1.second; });
         static_assert(forward_range<decltype(rng)>, "");
         static_assert(!bidirectional_range<decltype(rng)>, "");
-        EXPECT_EQ(ranges::distance(rng), 3);
+        EXPECT_EQ(fermat::ranges::distance(rng), 3);
         check_equal(*rng.begin(), {P{1,1}, P{1,1}});
         auto it = rng.begin();
         ++it;
@@ -114,7 +114,7 @@ TEST(ChunkByTest, VectorWithPair) {
         auto rng = v | views::chunk_by([](P p0, P p1) { return p0.first == p1.first; });
         static_assert(forward_range<decltype(rng)>, "");
         static_assert(!bidirectional_range<decltype(rng)>, "");
-        EXPECT_EQ(ranges::distance(rng), 2);
+        EXPECT_EQ(fermat::ranges::distance(rng), 2);
         check_equal(*rng.begin(), {P{1,1}, P{1,1}, P{1,2}, P{1,2}, P{1,2}, P{1,2}});
         auto it = rng.begin();
         ++it;
@@ -123,7 +123,7 @@ TEST(ChunkByTest, VectorWithPair) {
 }
 
 TEST(ChunkByTest, ForwardIteratorCounted) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<P> v = {
         {1,1}, {1,1}, {1,2}, {1,2}, {1,2}, {1,2},
@@ -135,7 +135,7 @@ TEST(ChunkByTest, ForwardIteratorCounted) {
                 views::chunk_by([](P p0, P p1) { return p0.second == p1.second; });
     static_assert(forward_range<decltype(rng0)>, "");
     static_assert(!bidirectional_range<decltype(rng0)>, "");
-    EXPECT_EQ(ranges::distance(rng0), 3);
+    EXPECT_EQ(fermat::ranges::distance(rng0), 3);
     check_equal(*rng0.begin(), {P{1,1}, P{1,1}});
     auto it0 = rng0.begin();
     ++it0;
@@ -147,7 +147,7 @@ TEST(ChunkByTest, ForwardIteratorCounted) {
                 views::chunk_by([](P p0, P p1) { return p0.first == p1.first; });
     static_assert(forward_range<decltype(rng1)>, "");
     static_assert(!bidirectional_range<decltype(rng1)>, "");
-    EXPECT_EQ(ranges::distance(rng1), 2);
+    EXPECT_EQ(fermat::ranges::distance(rng1), 2);
     check_equal(*rng1.begin(), {P{1,1}, P{1,1}, P{1,2}, P{1,2}, P{1,2}, P{1,2}});
     auto it1 = rng1.begin();
     ++it1;
@@ -155,7 +155,7 @@ TEST(ChunkByTest, ForwardIteratorCounted) {
 }
 
 TEST(ChunkByTest, RemoveIfThenChunk) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int a[] = {0,1,2,3,4,5};
     auto rng = a | views::remove_if([](int n) { return n % 2 == 0; }) |
@@ -164,7 +164,7 @@ TEST(ChunkByTest, RemoveIfThenChunk) {
 }
 
 TEST(ChunkByTest, VectorWithPredicate) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v2{0,1,2,6,8,10,15,17,18,29};
     auto rng0 = views::chunk_by(v2, [](int i, int j) { return j - i < 3; });
@@ -176,11 +176,11 @@ TEST(ChunkByTest, VectorWithPredicate) {
     check_equal(*it, {15,17,18});
     ++it;
     check_equal(*it, {29});
-    EXPECT_EQ(ranges::distance(rng0), 4);
+    EXPECT_EQ(fermat::ranges::distance(rng0), 4);
 }
 
 TEST(ChunkByTest, AlwaysFalsePredicate) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v3{1,2,3,4,5};
     int count_invoc = 0;
@@ -189,7 +189,7 @@ TEST(ChunkByTest, AlwaysFalsePredicate) {
         return false;
     });
 
-    EXPECT_EQ(ranges::distance(rng), 5);
+    EXPECT_EQ(fermat::ranges::distance(rng), 5);
     EXPECT_EQ(count_invoc, 4);
 
     auto it = rng.begin();
@@ -207,11 +207,11 @@ TEST(ChunkByTest, AlwaysFalsePredicate) {
 }
 
 TEST(ChunkByTest, StrictlyIncreasing) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v4 = {2,3,4,5,0,1,2,3,4,5,6,0,1,2,3,0};
     auto rng = v4 | views::chunk_by(std::less<>{});
-    EXPECT_EQ(ranges::distance(rng), 4);
+    EXPECT_EQ(fermat::ranges::distance(rng), 4);
     check_equal(*rng.begin(), {2,3,4,5});
     auto it = rng.begin();
     ++it;
@@ -223,11 +223,11 @@ TEST(ChunkByTest, StrictlyIncreasing) {
 }
 
 TEST(ChunkByTest, CycleThenTake) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v5 = {0,1,2};
     auto rng = views::cycle(v5) | views::take(6) | views::chunk_by(std::less<>{});
-    EXPECT_EQ(ranges::distance(rng), 2);
+    EXPECT_EQ(fermat::ranges::distance(rng), 2);
     check_equal(*rng.begin(), v5);
     auto it = rng.begin();
     ++it;
@@ -235,24 +235,24 @@ TEST(ChunkByTest, CycleThenTake) {
 }
 
 TEST(ChunkByTest, EmptyRange) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> e;
     auto rng = e | views::chunk_by(std::less<>{});
-    EXPECT_EQ(ranges::distance(rng), 0);
+    EXPECT_EQ(fermat::ranges::distance(rng), 0);
 }
 
 TEST(ChunkByTest, SingleElement) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> single{2};
     auto rng = single | views::chunk_by([](int, int) -> bool { throw 0; });
-    EXPECT_EQ(ranges::distance(rng), 1);
+    EXPECT_EQ(fermat::ranges::distance(rng), 1);
     check_equal(*rng.begin(), {2});
 }
 
 TEST(ChunkByTest, VariousChunks) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v6 = {3,6,9,4,5,0,3,2};
     auto rng = v6 | views::chunk_by(std::less<>{});
@@ -264,5 +264,5 @@ TEST(ChunkByTest, VariousChunks) {
     check_equal(*it, {0,3});
     ++it;
     check_equal(*it, {2});
-    EXPECT_EQ(ranges::distance(rng), 4);
+    EXPECT_EQ(fermat::ranges::distance(rng), 4);
 }

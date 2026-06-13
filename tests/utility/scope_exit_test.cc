@@ -5,7 +5,7 @@
 
 #include <gtest/gtest.h>
 
-#include <fermat/utility/scope_exit.h>   /// ranges::make_scope_exit
+#include <fermat/utility/scope_exit.h>   /// fermat::ranges::make_scope_exit
 
 namespace
 {
@@ -52,7 +52,7 @@ TEST(ScopeExitTest, BasicLambda)
 {
     i = 0;
     {
-        auto guard = ranges::make_scope_exit([&]{ ++i; });
+        auto guard = fermat::ranges::make_scope_exit([&]{ ++i; });
         EXPECT_EQ(i, 0);
     }
     EXPECT_EQ(i, 1);
@@ -62,7 +62,7 @@ TEST(ScopeExitTest, NoexceptFalse)
 {
     i = 0;
     {
-        auto guard = ranges::make_scope_exit(NoexceptFalse{});
+        auto guard = fermat::ranges::make_scope_exit(NoexceptFalse{});
         EXPECT_EQ(i, 0);
     }
     EXPECT_EQ(i, 1);
@@ -73,7 +73,7 @@ TEST(ScopeExitTest, ThrowingCopy)
     i = 0;
     try
     {
-        auto guard = ranges::make_scope_exit(ThrowingCopy{});
+        auto guard = fermat::ranges::make_scope_exit(ThrowingCopy{});
         // Should not reach here because the copy constructor of ThrowingCopy throws.
         ADD_FAILURE() << "Expected exception was not thrown";
     }

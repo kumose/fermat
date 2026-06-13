@@ -30,7 +30,7 @@ bool operator==(my_data left, my_data right) {
 /// debug_input_view (minimal input view for testing)
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T> > {
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T> > {
     struct data {
         const T *first_;
         std::ptrdiff_t size_;
@@ -49,7 +49,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T> > {
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges {
+namespace fermat::ranges {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T> > = true;
 }
@@ -59,8 +59,8 @@ namespace ranges {
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng &&rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -86,7 +86,7 @@ void check_equal(const std::list<T> &actual, std::initializer_list<T> expected) 
 // ------------------------------------------------------------------
 
 TEST(DropWhileTest, IotaDropWhile) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto rng0 = views::iota(10) | views::drop_while([](int i) { return i < 25; });
     auto b = rng0.begin();
@@ -96,7 +96,7 @@ TEST(DropWhileTest, IotaDropWhile) {
 }
 
 TEST(DropWhileTest, ListDropWhileNoMatch) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::list<int> vi{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     auto rng1 = vi | views::drop_while([](int i) { return i != 50; });
@@ -104,7 +104,7 @@ TEST(DropWhileTest, ListDropWhileNoMatch) {
 }
 
 TEST(DropWhileTest, MutablePredicate) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     static int const rgi[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     int cnt = 0;
@@ -113,7 +113,7 @@ TEST(DropWhileTest, MutablePredicate) {
 }
 
 TEST(DropWhileTest, DebugInputView) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     static int const rgi[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     auto rng = debug_input_view<int const>{rgi, 10} | views::drop_while([](int i) { return i < 4; });
@@ -121,7 +121,7 @@ TEST(DropWhileTest, DebugInputView) {
 }
 
 TEST(DropWhileTest, Projection) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     const std::list<my_data> data_list{{1}, {2}, {3}, {1}};
     auto rng = data_list | views::drop_while([](int i) { return i <= 2; }, &my_data::i);
@@ -129,9 +129,9 @@ TEST(DropWhileTest, Projection) {
 }
 
 TEST(DropWhileTest, ConstArrayAllDropped) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     static int const rgi[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     auto rng2 = rgi | views::drop_while([](int i) { return i != 50; });
-    EXPECT_EQ(ranges::size(rng2), 0u);
+    EXPECT_EQ(fermat::ranges::size(rng2), 0u);
 }

@@ -20,7 +20,7 @@
 #include <fermat/view/adaptor.h>
 #include <fermat/view/all.h>
 
-using namespace ranges;
+using namespace fermat::ranges;
 
 /// ------------------------------------------------------------
 /// view_non_const_only: a view that is only usable as non‑const
@@ -38,7 +38,7 @@ public:
 
     template<typename R = Rng>
     auto size() -> std::enable_if_t<sized_range<R>, range_size_t<R> > {
-        return ranges::size(this->base());
+        return fermat::ranges::size(this->base());
     }
 };
 
@@ -52,8 +52,8 @@ view_non_const_only<views::all_t<Rng> > non_const_only(Rng &&rng) {
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng &&rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -84,12 +84,12 @@ void test_range(Rng &&src) {
     {
         auto src_ = src;
         auto list = src_ | views::drop_last(4);
-        EXPECT_TRUE(ranges::empty(list));
+        EXPECT_TRUE(fermat::ranges::empty(list));
     }
     {
         auto src_ = src;
         auto list = src_ | views::drop_last(5);
-        EXPECT_TRUE(ranges::empty(list));
+        EXPECT_TRUE(fermat::ranges::empty(list));
     }
 }
 
@@ -187,13 +187,13 @@ void sized_test() {
     {
         auto src = make_src();
         auto rng = src | views::drop_last(4);
-        EXPECT_TRUE(ranges::empty(rng));
+        EXPECT_TRUE(fermat::ranges::empty(rng));
     }
     // drop_last(5) -> empty
     {
         auto src = make_src();
         auto rng = src | views::drop_last(5);
-        EXPECT_TRUE(ranges::empty(rng));
+        EXPECT_TRUE(fermat::ranges::empty(rng));
     }
     // size checks
     {

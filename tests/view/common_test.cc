@@ -25,7 +25,7 @@
 /// debug_input_view: minimal input view for testing
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T>>
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>>
 {
     struct data
     {
@@ -44,7 +44,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T>>
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T>> = true;
@@ -56,8 +56,8 @@ namespace ranges
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected)
 {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected)
     {
         EXPECT_NE(it, end);
@@ -79,7 +79,7 @@ constexpr const T& as_const(T& t) { return t; }
 
 TEST(CommonViewTest, IstreamDelimitCommon)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::stringstream sinx("1 2 3 4 5 6 7 8 9 1 2 3 4 5 6 7 8 9 1 2 3 4 42 6 7 8 9 ");
     auto rng1 = istream<int>(sinx) | views::delimit(42);
@@ -97,7 +97,7 @@ TEST(CommonViewTest, IstreamDelimitCommon)
 
 TEST(CommonViewTest, VectorDelimitCommon)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v{1,2,3,4,5,6,7,8,9,0,42,64};
     auto rng1 = v | views::delimit(42) | views::common;
@@ -113,7 +113,7 @@ TEST(CommonViewTest, VectorDelimitCommon)
 
 TEST(CommonViewTest, CountedListCommon)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::list<int> l{1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9,0};
     auto rng3 = views::counted(l.begin(), 10) | views::common;
@@ -137,7 +137,7 @@ TEST(CommonViewTest, CountedListCommon)
 
 TEST(CommonViewTest, CountedVectorCommon)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v{1,2,3,4,5,6,7,8,9,0,42,64};
     auto rng4 = views::counted(begin(v), 8) | views::common;
@@ -151,7 +151,7 @@ TEST(CommonViewTest, CountedVectorCommon)
 
 TEST(CommonViewTest, RepeatNCommon)   // Regression test for #504
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto rng1 = views::repeat_n(0, 10);
     // static_assert(view_<decltype(rng1)>);
@@ -177,7 +177,7 @@ TEST(CommonViewTest, RepeatNCommon)   // Regression test for #504
 
 TEST(CommonViewTest, DebugInputViewCommon)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int const rgi[] = {1,2,3,4};
     auto rng = debug_input_view<int const>{rgi, 4} | views::common;

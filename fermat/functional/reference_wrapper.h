@@ -26,7 +26,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-functional
     /// @{
@@ -177,7 +177,7 @@ namespace ranges
     template<typename T>
     using unwrap_reference_t = decltype(unwrap_reference(std::declval<T>()));
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

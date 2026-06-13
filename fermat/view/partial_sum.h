@@ -37,7 +37,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -99,9 +99,9 @@ namespace ranges
             cursor() = default;
             constexpr explicit cursor(Parent * rng)
               : parent_{rng}
-              , current_(ranges::begin(rng->base_))
+              , current_(fermat::ranges::begin(rng->base_))
             {
-                if(current_ != ranges::end(rng->base_))
+                if(current_ != fermat::ranges::end(rng->base_))
                     sum_ = *current_;
             }
             template(bool Other)(
@@ -115,12 +115,12 @@ namespace ranges
             {}
             constexpr range_value_t<Rng> read() const
             {
-                RANGES_EXPECT(current_ != ranges::end(parent_->base_));
+                RANGES_EXPECT(current_ != fermat::ranges::end(parent_->base_));
                 return sum_;
             }
             constexpr void next()
             {
-                auto last = ranges::end(parent_->base_);
+                auto last = fermat::ranges::end(parent_->base_);
                 RANGES_EXPECT(current_ != last);
                 if(++current_ != last)
                 {
@@ -132,7 +132,7 @@ namespace ranges
             }
             constexpr bool equal(default_sentinel_t) const
             {
-                return current_ == ranges::end(parent_->base_);
+                return current_ == fermat::ranges::end(parent_->base_);
             }
             CPP_auto_member
             constexpr bool CPP_fun(equal)(cursor const & that)(const //
@@ -166,13 +166,13 @@ namespace ranges
         constexpr auto CPP_fun(size)()(
             requires sized_range<Rng>)
         {
-            return ranges::size(base_);
+            return fermat::ranges::size(base_);
         }
         CPP_auto_member
         constexpr auto CPP_fun(size)()(const //
             requires sized_range<Rng const>)
         {
-            return ranges::size(base_);
+            return fermat::ranges::size(base_);
         }
     };
 
@@ -209,8 +209,8 @@ namespace ranges
             }
             template<typename Fun = plus>
             RANGES_DEPRECATED(
-                "Use \"ranges::views::partial_sum\" instead of "
-                "\"ranges::views::partial_sum()\".")
+                "Use \"fermat::ranges::views::partial_sum\" instead of "
+                "\"fermat::ranges::views::partial_sum()\".")
             constexpr auto
             operator()() const
             {
@@ -223,11 +223,11 @@ namespace ranges
         RANGES_INLINE_VARIABLE(view_closure<partial_sum_fn>, partial_sum)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::partial_sum_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::partial_sum_view)
 
 #endif

@@ -77,8 +77,8 @@ struct NonDefaultInt
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -90,8 +90,8 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected) {
 /// Overload for char (for indirect view test)
 template<typename Rng>
 void check_equal(Rng&& rng, const std::string& expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (char c : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, c);
@@ -103,8 +103,8 @@ void check_equal(Rng&& rng, const std::string& expected) {
 /// Overload for Int (using (*it).i to avoid operator-> issues)
 template<typename Rng>
 void check_equal(Rng&& rng, std::initializer_list<Int> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ((*it).i, val.i);
@@ -118,7 +118,7 @@ void check_equal(Rng&& rng, std::initializer_list<Int> expected) {
 /// ------------------------------------------------------------
 template<typename I>
 void test_iota_distance() {
-    using namespace ranges;
+    using namespace fermat::ranges;
     using D = iter_difference_t<I>;
     I max = std::numeric_limits<I>::max();
 
@@ -139,7 +139,7 @@ void test_iota_distance() {
 // ------------------------------------------------------------------
 
 TEST(IotaTest, BasicConcepts) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     static_assert(random_access_range<decltype(views::iota((unsigned short)0))>, "");
     static_assert(random_access_range<decltype(views::iota(0))>, "");
@@ -148,7 +148,7 @@ TEST(IotaTest, BasicConcepts) {
 }
 
 TEST(IotaTest, BasicOperations) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     // With ForwardIterator
     {
@@ -171,33 +171,33 @@ TEST(IotaTest, BasicOperations) {
 }
 
 TEST(IotaTest, SignedCharRange) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto chars = views::ints(std::numeric_limits<signed char>::min(),
                             std::numeric_limits<signed char>::max());
     static_assert(random_access_range<decltype(chars)>, "");
     static_assert(std::is_same<int, range_difference_t<decltype(chars)>>::value, "");
     static_assert(view_<decltype(chars)>, "");
     static_assert(common_range<decltype(chars)>, "");
-    EXPECT_EQ(ranges::distance(chars.begin(), chars.end()),
+    EXPECT_EQ(fermat::ranges::distance(chars.begin(), chars.end()),
               static_cast<long>(CHAR_MAX) - static_cast<long>(CHAR_MIN));
     EXPECT_EQ(chars.size(),
               static_cast<unsigned>(static_cast<long>(CHAR_MAX) - static_cast<long>(CHAR_MIN)));
 }
 
 TEST(IotaTest, UnsignedShortRange) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto ushorts = views::ints(std::numeric_limits<unsigned short>::min(),
                                std::numeric_limits<unsigned short>::max());
     static_assert(view_<decltype(ushorts)>, "");
     static_assert(common_range<decltype(ushorts)>, "");
     static_assert(std::is_same<int, range_difference_t<decltype(ushorts)>>::value, "");
     static_assert(std::is_same<unsigned int, range_size_t<decltype(ushorts)>>::value, "");
-    EXPECT_EQ(ranges::distance(ushorts.begin(), ushorts.end()), static_cast<int>(USHRT_MAX));
+    EXPECT_EQ(fermat::ranges::distance(ushorts.begin(), ushorts.end()), static_cast<int>(USHRT_MAX));
     EXPECT_EQ(ushorts.size(), static_cast<unsigned>(USHRT_MAX));
 }
 
 TEST(IotaTest, Uint32Range) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto uints = views::closed_indices(
         std::numeric_limits<std::uint_least32_t>::min(),
         std::numeric_limits<std::uint_least32_t>::max() - 1);
@@ -209,7 +209,7 @@ TEST(IotaTest, Uint32Range) {
 }
 
 TEST(IotaTest, Int32Range) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto is = views::closed_indices(
         std::numeric_limits<std::int_least32_t>::min(),
         std::numeric_limits<std::int_least32_t>::max() - 1);
@@ -219,7 +219,7 @@ TEST(IotaTest, Int32Range) {
 }
 
 TEST(IotaTest, IntRange) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto sints = views::ints(std::numeric_limits<int>::min(),
                             std::numeric_limits<int>::max());
     static_assert(random_access_range<decltype(sints)>, "");
@@ -227,12 +227,12 @@ TEST(IotaTest, IntRange) {
     static_assert(view_<decltype(sints)>, "");
     static_assert(common_range<decltype(sints)>, "");
     std::int_fast64_t diff = static_cast<std::int_fast64_t>(INT_MAX) - static_cast<std::int_fast64_t>(INT_MIN);
-    EXPECT_EQ(ranges::distance(sints.begin(), sints.end()), diff);
+    EXPECT_EQ(fermat::ranges::distance(sints.begin(), sints.end()), diff);
     EXPECT_EQ(sints.size(), static_cast<std::uint_fast64_t>(diff));
 }
 
 TEST(IotaTest, CustomIntType) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto is = views::closed_iota(Int{0}, Int{10});
     check_equal(is, {Int{0},Int{1},Int{2},Int{3},Int{4},Int{5},Int{6},Int{7},Int{8},Int{9},Int{10}});
     static_assert(view_<decltype(is)>, "");
@@ -243,14 +243,14 @@ TEST(IotaTest, CustomIntType) {
 }
 
 TEST(IotaTest, NonDefaultIntType) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto is = views::iota(NonDefaultInt{0});
     static_assert(input_range<decltype(is)>, "");
     static_assert(!forward_range<decltype(is)>, "");
 }
 
 TEST(IotaTest, ClosedIotaInt) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto is = views::closed_iota(0, 10);
     check_equal(is, {0,1,2,3,4,5,6,7,8,9,10});
     static_assert(view_<decltype(is)>, "");
@@ -307,7 +307,7 @@ TEST(IotaTest, DistanceFunctions) {
 }
 
 TEST(IotaTest, CStringWithIndirect) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     // https://github.com/ericniebler/range-v3/issues/506
     auto cstr = views::c_str((const char*)"hello world");
     auto cstr2 = views::iota(cstr.begin(), cstr.end()) | views::indirect;
@@ -319,7 +319,7 @@ TEST(IotaTest, CStringWithIndirect) {
 }
 
 TEST(IotaTest, Indices) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     check_equal(views::indices | views::take(10),
                 std::initializer_list<std::size_t>{0,1,2,3,4,5,6,7,8,9});
 

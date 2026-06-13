@@ -21,31 +21,31 @@ struct Approx {
 
 template<class Iter, class Sent = Iter>
 void test_left() {
-    using namespace ranges;
+    using namespace fermat::ranges;
     double da[] = {0.25, 0.75};
     EXPECT_EQ(fold_left(Iter(da), Sent(da), 1, std::plus<>()), Approx{1.0});
     EXPECT_EQ(fold_left(Iter(da), Sent(da + 2), 1, std::plus<>()), Approx{2.0});
 
-    auto res1 = fold_left_first(Iter(da), Sent(da), ranges::min);
+    auto res1 = fold_left_first(Iter(da), Sent(da), fermat::ranges::min);
     EXPECT_EQ(res1, std::nullopt);
 
-    auto res2 = fold_left_first(Iter(da), Sent(da + 2), ranges::min);
+    auto res2 = fold_left_first(Iter(da), Sent(da + 2), fermat::ranges::min);
     ASSERT_TRUE(res2.has_value());
     EXPECT_EQ(*res2, Approx(0.25));
 
     EXPECT_EQ(fold_left(make_subrange(Iter(da), Sent(da)), 1, std::plus<>()), Approx{1.0});
     EXPECT_EQ(fold_left(make_subrange(Iter(da), Sent(da + 2)), 1, std::plus<>()), Approx{2.0});
 
-    auto res3 = fold_left_first(make_subrange(Iter(da), Sent(da)), ranges::min);
+    auto res3 = fold_left_first(make_subrange(Iter(da), Sent(da)), fermat::ranges::min);
     EXPECT_EQ(res3, std::nullopt);
 
-    auto res4 = fold_left_first(make_subrange(Iter(da), Sent(da + 2)), ranges::min);
+    auto res4 = fold_left_first(make_subrange(Iter(da), Sent(da + 2)), fermat::ranges::min);
     ASSERT_TRUE(res4.has_value());
     EXPECT_EQ(*res4, Approx(0.25));
 }
 
 void test_right() {
-    using namespace ranges;
+    using namespace fermat::ranges;
     double da[] = {0.25, 0.75};
     EXPECT_EQ(fold_right(da, da + 2, 1, std::plus<>()), Approx{2.0});
     EXPECT_EQ(fold_right(da, da + 2, 1, std::minus<>()), Approx{0.5});

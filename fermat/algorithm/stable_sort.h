@@ -61,7 +61,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -104,7 +104,7 @@ namespace ranges
                              .out;
                 first += two_step;
             }
-            step_size = ranges::min(D(last - first), step_size);
+            step_size = fermat::ranges::min(D(last - first), step_size);
             merge(make_move_iterator(first),
                   make_move_iterator(first + step_size),
                   make_move_iterator(first + step_size),
@@ -198,7 +198,7 @@ namespace ranges
             sentinel_for<S, I>)
         I RANGES_FUNC(stable_sort)(I first, S end_, C pred = C{}, P proj = P{})
         {
-            I last = ranges::next(first, end_);
+            I last = fermat::ranges::next(first, end_);
             using D = iter_difference_t<I>;
             using V = iter_value_t<I>;
             D len = last - first;
@@ -226,10 +226,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::stable_sort;
+        using fermat::ranges::stable_sort;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

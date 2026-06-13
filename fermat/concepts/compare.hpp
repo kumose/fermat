@@ -33,7 +33,7 @@ namespace concepts
     namespace detail
     {
         template<typename T, typename Cat>
-        concept compares_as = same_as<ranges::common_comparison_category_t<T, Cat>, Cat>;
+        concept compares_as = same_as<fermat::ranges::common_comparison_category_t<T, Cat>, Cat>;
     } // namespace detail
 
     inline namespace defs

@@ -26,7 +26,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-iterator
     /// @{
@@ -63,7 +63,7 @@ namespace ranges
         template<>
         struct contiguous_iterator_concept_base<true>
         {
-            using iterator_concept = ranges::contiguous_iterator_tag;
+            using iterator_concept = fermat::ranges::contiguous_iterator_tag;
         };
     } // namespace _counted_iterator_
     /// \endcond
@@ -259,7 +259,7 @@ namespace ranges
             -> CPP_broken_friend_ret(iter_rvalue_reference_t<I>)(
                 requires input_iterator<I>)
         {
-            return ranges::iter_move(i.current_);
+            return fermat::ranges::iter_move(i.current_);
         }
         template<typename I2, typename S2>
         friend constexpr auto iter_swap(counted_iterator const & x,
@@ -268,7 +268,7 @@ namespace ranges
             -> CPP_broken_friend_ret(void)(
                 requires indirectly_swappable<I2, I>)
         {
-            return ranges::iter_swap(x.current_, _counted_iterator_::access::current(y));
+            return fermat::ranges::iter_swap(x.current_, _counted_iterator_::access::current(y));
         }
 #endif
     };
@@ -283,7 +283,7 @@ namespace ranges
             -> CPP_broken_friend_ret(iter_rvalue_reference_t<I>)(
                 requires input_iterator<I>)
         {
-            return ranges::iter_move(_counted_iterator_::access::current(i));
+            return fermat::ranges::iter_move(_counted_iterator_::access::current(i));
         }
         template<typename I1, typename I2>
         constexpr auto iter_swap(
@@ -293,7 +293,7 @@ namespace ranges
             -> CPP_broken_friend_ret(void)(
                 requires indirectly_swappable<I2, I1>)
         {
-            return ranges::iter_swap(_counted_iterator_::access::current(x),
+            return fermat::ranges::iter_swap(_counted_iterator_::access::current(x),
                                      _counted_iterator_::access::current(y));
         }
     } // namespace _counted_iterator_
@@ -429,13 +429,13 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::counted_iterator;
+        using fermat::ranges::counted_iterator;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 /// \cond
-namespace ranges
+namespace fermat::ranges
 {
     namespace _counted_iterator_
     {
@@ -456,13 +456,13 @@ namespace ranges
             using pointer = void;
         };
     } // namespace _counted_iterator_
-} // namespace ranges
+} // namespace fermat::ranges
 
 namespace std
 {
     template<typename I>
-    struct iterator_traits<::ranges::counted_iterator<I>>
-      : ::ranges::_counted_iterator_::iterator_traits_<I>
+    struct iterator_traits<::fermat::ranges::counted_iterator<I>>
+      : ::fermat::ranges::_counted_iterator_::iterator_traits_<I>
     {};
 } // namespace std
 /// \endcond

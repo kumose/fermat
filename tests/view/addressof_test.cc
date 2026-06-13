@@ -8,7 +8,7 @@
 #include <sstream>
 #include <vector>
 
-#include <fermat/range/access.h>                       /// ranges::begin, ranges::end
+#include <fermat/range/access.h>                       /// fermat::ranges::begin, fermat::ranges::end
 #include <fermat/view/addressof.h>               /// views::addressof
 #include <fermat/view/facade.h>                  /// view_facade
 #include <fermat/view/iota.h>                    /// views::iota
@@ -17,8 +17,8 @@
 /// Helper to compare a range with an initializer list
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -32,7 +32,7 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected) {
 // ------------------------------------------------------------------
 void simple_test() {
     std::vector<int> list = {1, 2, 3};
-    auto out = list | ranges::views::addressof;
+    auto out = list | fermat::ranges::views::addressof;
     check_equal(out, {&list[0], &list[1], &list[2]});
 }
 
@@ -40,10 +40,10 @@ void simple_test() {
 // Custom input range (simulates an input range)
 // ------------------------------------------------------------------
 struct test_istream_range
-  : ranges::view_facade<test_istream_range, ranges::unknown>
+  : fermat::ranges::view_facade<test_istream_range, fermat::ranges::unknown>
 {
 private:
-    friend ranges::range_access;
+    friend fermat::ranges::range_access;
 
     std::vector<int>* list;
 
@@ -56,7 +56,7 @@ private:
 
         void next() { ++i; }
         int& read() const noexcept { return (*list)[i]; }
-        bool equal(ranges::default_sentinel_t) const {
+        bool equal(fermat::ranges::default_sentinel_t) const {
             return i == list->size();
         }
     };
@@ -72,9 +72,9 @@ void test_input_range() {
     std::vector<int> list{1, 2, 3};
     auto rng = test_istream_range(list);
     // Check that rng is an input_range
-    static_assert(ranges::input_range<decltype(rng)>, "rng must be input_range");
+    static_assert(fermat::ranges::input_range<decltype(rng)>, "rng must be input_range");
 
-    auto out = rng | ranges::views::addressof;
+    auto out = rng | fermat::ranges::views::addressof;
     check_equal(out, {&list[0], &list[1], &list[2]});
 }
 
@@ -82,16 +82,16 @@ void test_input_range() {
 // xvalue range (declared but not defined)
 // ------------------------------------------------------------------
 struct test_xvalue_range
-  : ranges::view_facade<test_xvalue_range, ranges::unknown>
+  : fermat::ranges::view_facade<test_xvalue_range, fermat::ranges::unknown>
 {
 private:
-    friend ranges::range_access;
+    friend fermat::ranges::range_access;
 
     struct cursor {
         cursor() = default;
         void next();
         int&& read() const noexcept;
-        bool equal(ranges::default_sentinel_t) const;
+        bool equal(fermat::ranges::default_sentinel_t) const;
     };
 
     cursor begin_cursor();
@@ -103,10 +103,10 @@ constexpr bool can_view = false;
 
 template<typename R>
 constexpr bool can_view<R,
-    meta::void_<decltype(ranges::views::addressof(std::declval<R>()))>> = true;
+    meta::void_<decltype(fermat::ranges::views::addressof(std::declval<R>()))>> = true;
 
 // prvalue ranges cannot be passed to views::addressof
-static_assert(!can_view<decltype(ranges::views::iota(0, 3))>, "prvalue range should not be addressable");
+static_assert(!can_view<decltype(fermat::ranges::views::iota(0, 3))>, "prvalue range should not be addressable");
 // xvalue ranges cannot be passed to views::addressof
 static_assert(!can_view<test_xvalue_range>, "xvalue range should not be addressable");
 

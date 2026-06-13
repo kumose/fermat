@@ -31,16 +31,16 @@ void test_symmetric_difference() {
 
     auto checker = [&](auto res) {
         EXPECT_EQ(res.out - ic, sr);
-        EXPECT_FALSE(ranges::lexicographical_compare(ic, res.out, ir, ir + sr));
-        ranges::fill(ic, 0);
+        EXPECT_FALSE(fermat::ranges::lexicographical_compare(ic, res.out, ir, ir + sr));
+        fermat::ranges::fill(ic, 0);
     };
 
     // All calls use raw pointers; template arguments are ignored inside.
     // The Iter1, Iter2, OutIter are only for matching the original test names.
-    checker(ranges::set_symmetric_difference(ia, ia + sa, ib, ib + sb, ic));
-    checker(ranges::set_symmetric_difference(ib, ib + sb, ia, ia + sa, ic));
-    checker(ranges::set_symmetric_difference(ia, ia + sa, ib, ib + sb, ic, std::less<int>()));
-    checker(ranges::set_symmetric_difference(ib, ib + sb, ia, ia + sa, ic, std::less<int>()));
+    checker(fermat::ranges::set_symmetric_difference(ia, ia + sa, ib, ib + sb, ic));
+    checker(fermat::ranges::set_symmetric_difference(ib, ib + sb, ia, ia + sa, ic));
+    checker(fermat::ranges::set_symmetric_difference(ia, ia + sa, ib, ib + sb, ic, std::less<int>()));
+    checker(fermat::ranges::set_symmetric_difference(ib, ib + sb, ia, ia + sa, ic, std::less<int>()));
 }
 
 // ------------------------------------------------------------
@@ -55,7 +55,7 @@ struct U {
 };
 
 constexpr bool test_constexpr() {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int ia[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     int ib[] = {2, 4, 4, 6};
     int ic[20] = {0};
@@ -247,16 +247,16 @@ TEST(SetSymmetricDifference, Projection) {
     int ir[] = {1, 2, 3, 3, 3, 4, 4, 6};
     const int sr = sizeof(ir)/sizeof(ir[0]);
 
-    auto res1 = ranges::set_symmetric_difference(ranges::views::all(ia), ranges::views::all(ib), ic,
+    auto res1 = fermat::ranges::set_symmetric_difference(fermat::ranges::views::all(ia), fermat::ranges::views::all(ib), ic,
                                                  std::less<int>(), &S::i, &T::j);
     EXPECT_EQ(res1.out - ic, sr);
-    EXPECT_FALSE(ranges::lexicographical_compare(ic, res1.out, ir, ir+sr, std::less<int>(), &U::k));
-    ranges::fill(ic, U{0});
+    EXPECT_FALSE(fermat::ranges::lexicographical_compare(ic, res1.out, ir, ir+sr, std::less<int>(), &U::k));
+    fermat::ranges::fill(ic, U{0});
 
-    auto res2 = ranges::set_symmetric_difference(ranges::views::all(ib), ranges::views::all(ia), ic,
+    auto res2 = fermat::ranges::set_symmetric_difference(fermat::ranges::views::all(ib), fermat::ranges::views::all(ia), ic,
                                                  std::less<int>(), &T::j, &S::i);
     EXPECT_EQ(res2.out - ic, sr);
-    EXPECT_FALSE(ranges::lexicographical_compare(ic, res2.out, ir, ir+sr, std::less<int>(), &U::k));
+    EXPECT_FALSE(fermat::ranges::lexicographical_compare(ic, res2.out, ir, ir+sr, std::less<int>(), &U::k));
 }
 
 TEST(SetSymmetricDifference, Constexpr) {

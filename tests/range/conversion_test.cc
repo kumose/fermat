@@ -90,10 +90,10 @@ void check_map_equal(const M &m, const std::initializer_list<std::pair<K, V> > &
 
 // Dummy overload for test_zip_to_map (compile-time check)
 #if RANGES_CXX_DEDUCTION_GUIDES >= RANGES_CXX_DEDUCTION_GUIDES_17
-template<typename Rng, typename CI = ranges::range_common_iterator_t<Rng>,
+template<typename Rng, typename CI = fermat::ranges::range_common_iterator_t<Rng>,
     typename = decltype(std::map{CI{}, CI{}})> // SFINAE
 void test_zip_to_map(Rng &&rng, int) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 #ifdef RANGES_WORKAROUND_MSVC_779708
     auto m = static_cast<Rng &&>(rng) | to<std::map>();
 #else
@@ -110,7 +110,7 @@ void test_zip_to_map(Rng &&, long) {
 // GTest fixture not needed, just standalone tests.
 
 TEST(RangeConversionTest, ToStdListFromIotaTransformTake) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto lst0 = views::ints | views::transform([](int i) { return i * i; }) |
                 views::take(10) | to<std::list>();
     static_assert(std::is_same_v<decltype(lst0), std::list<int> >);
@@ -119,7 +119,7 @@ TEST(RangeConversionTest, ToStdListFromIotaTransformTake) {
 
 #ifndef RANGES_WORKAROUND_MSVC_779708
 TEST(RangeConversionTest, ToStdListFromIotaTransformTakeWithoutParens) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto lst1 = views::ints | views::transform([](int i) { return i * i; }) |
                 views::take(10) | to<std::list>;
     static_assert(std::is_same_v<decltype(lst1), std::list<int> >);
@@ -128,7 +128,7 @@ TEST(RangeConversionTest, ToStdListFromIotaTransformTakeWithoutParens) {
 #endif
 
 TEST(RangeConversionTest, ToVectorThenSort) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto vec0 = views::ints | views::transform([](int i) { return i * i; }) |
                 views::take(10) | to_vector | actions::sort(std::greater<int>{});
     static_assert(std::is_same_v<decltype(vec0), std::vector<int> >);
@@ -136,7 +136,7 @@ TEST(RangeConversionTest, ToVectorThenSort) {
 }
 
 TEST(RangeConversionTest, ToVectorLong) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto vec1 = views::ints | views::transform([](int i) { return i * i; }) |
                 views::take(10) | to<std::vector<long> >() |
                 actions::sort(std::greater<long>{});
@@ -146,7 +146,7 @@ TEST(RangeConversionTest, ToVectorLong) {
 
 #ifndef RANGES_WORKAROUND_MSVC_779708
 TEST(RangeConversionTest, ToVectorLongWithoutParens) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto vec2 = views::ints | views::transform([](int i) { return i * i; }) |
                 views::take(10) | to<std::vector<long> > |
                 actions::sort(std::greater<long>{});
@@ -156,7 +156,7 @@ TEST(RangeConversionTest, ToVectorLongWithoutParens) {
 #endif
 
 TEST(RangeConversionTest, ToVectorLikeWithReserve) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     const std::size_t N = 4096;
     auto vl = views::iota(0, int{N}) | to<vector_like<int> >();
     static_assert(std::is_same_v<decltype(vl), vector_like<int> >);
@@ -165,14 +165,14 @@ TEST(RangeConversionTest, ToVectorLikeWithReserve) {
 }
 
 TEST(RangeConversionTest, ZipToMap) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     // Issue #1145
     auto r1 = views::indices(std::uintmax_t{100});
     auto r2 = views::zip(r1, r1);
 #ifdef RANGES_WORKAROUND_MSVC_779708
-    auto m = r2 | ranges::to<std::map<std::uintmax_t, std::uintmax_t> >();
+    auto m = r2 | fermat::ranges::to<std::map<std::uintmax_t, std::uintmax_t> >();
 #else
-    auto m = r2 | ranges::to<std::map<std::uintmax_t, std::uintmax_t> >;
+    auto m = r2 | fermat::ranges::to<std::map<std::uintmax_t, std::uintmax_t> >;
 #endif
     static_assert(std::is_same_v<decltype(m), std::map<std::uintmax_t, std::uintmax_t> >);
     EXPECT_EQ(m.size(), 100u);
@@ -184,10 +184,10 @@ TEST(RangeConversionTest, ZipToMap) {
 }
 
 TEST(RangeConversionTest, TransformRangeOfRangesToVectorOfVectors) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto r = views::ints(1, 4) |
              views::transform([](int i) { return views::ints(i, i + 3); });
-    auto m = r | ranges::to<std::vector<std::vector<int> > >();
+    auto m = r | fermat::ranges::to<std::vector<std::vector<int> > >();
     static_assert(std::is_same_v<decltype(m), std::vector<std::vector<int> > >);
     EXPECT_EQ(m.size(), 3u);
     check_equal(m[0], {1, 2, 3});
@@ -196,11 +196,11 @@ TEST(RangeConversionTest, TransformRangeOfRangesToVectorOfVectors) {
 }
 
 TEST(RangeConversionTest, ClosureWithAction) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 #ifdef RANGES_WORKAROUND_MSVC_779708
-    auto closure = ranges::to<std::vector>() | actions::sort;
+    auto closure = fermat::ranges::to<std::vector>() | actions::sort;
 #else
-    auto closure = ranges::to<std::vector> | actions::sort;
+    auto closure = fermat::ranges::to<std::vector> | actions::sort;
 #endif
     auto r = views::ints(1, 4) | views::reverse;
     auto m = r | closure;
@@ -211,24 +211,24 @@ TEST(RangeConversionTest, ClosureWithAction) {
 
 TEST(RangeConversionTest, ZipToMapCompileTimeCheck) {
     // This test only checks compile-time overload resolution.
-    test_zip_to_map(ranges::views::zip(ranges::views::ints, ranges::views::iota(0, 10)), 0);
+    test_zip_to_map(fermat::ranges::views::zip(fermat::ranges::views::ints, fermat::ranges::views::iota(0, 10)), 0);
 }
 
 TEST(RangeConversionTest, TransformAllOfVectorOfVectors) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::vector<std::vector<int> > d;
     auto m = views::transform(d, views::all);
-    auto v = ranges::to<std::vector<std::vector<int> > >(m);
+    auto v = fermat::ranges::to<std::vector<std::vector<int> > >(m);
     EXPECT_EQ(v, d);
 }
 
 TEST(RangeConversionTest, ToMapLike) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     using MapType = map_like<int, int>;
     std::vector<std::pair<int, int>> v = {{1, 2}, {3, 4}};
 
-    auto m1 = ranges::to<MapType>(v);
-    auto m2 = v | ranges::to<MapType>();
+    auto m1 = fermat::ranges::to<MapType>(v);
+    auto m2 = v | fermat::ranges::to<MapType>();
 
     static_assert(std::is_same_v<decltype(m1), MapType>);
     static_assert(std::is_same_v<decltype(m2), MapType>);

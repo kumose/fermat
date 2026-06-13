@@ -34,13 +34,13 @@ namespace test_weak_input {
     struct cursor {
         I it_;
 
-        struct mixin : ranges::basic_mixin<cursor> {
+        struct mixin : fermat::ranges::basic_mixin<cursor> {
             mixin() = default;
 
-            explicit mixin(cursor &&cur) : ranges::basic_mixin<cursor>(static_cast<cursor &&>(cur)) {
+            explicit mixin(cursor &&cur) : fermat::ranges::basic_mixin<cursor>(static_cast<cursor &&>(cur)) {
             }
 
-            explicit mixin(cursor const &cur) : ranges::basic_mixin<cursor>(cur) {
+            explicit mixin(cursor const &cur) : fermat::ranges::basic_mixin<cursor>(cur) {
             }
 
             mixin(I i) : mixin(cursor{i}) {
@@ -52,7 +52,7 @@ namespace test_weak_input {
         explicit cursor(I i) : it_(i) {
         }
 
-        CPP_template(class J)(requires ranges::convertible_to<J, I>)
+        CPP_template(class J)(requires fermat::ranges::convertible_to<J, I>)
         cursor(cursor<J> that) : it_(std::move(that.it_)) {
         }
 
@@ -60,19 +60,19 @@ namespace test_weak_input {
         void next() { ++it_; }
     };
 
-    static_assert(ranges::detail::input_cursor<cursor<char *> >);
-    static_assert(!ranges::detail::sentinel_for_cursor<cursor<char *>, cursor<char *> >);
+    static_assert(fermat::ranges::detail::input_cursor<cursor<char *> >);
+    static_assert(!fermat::ranges::detail::sentinel_for_cursor<cursor<char *>, cursor<char *> >);
 
     template<class I>
-    using iterator = ranges::basic_iterator<cursor<I> >;
-    static_assert(ranges::indirectly_readable<iterator<char *> >);
-    static_assert(ranges::input_iterator<iterator<char *> >);
+    using iterator = fermat::ranges::basic_iterator<cursor<I> >;
+    static_assert(fermat::ranges::indirectly_readable<iterator<char *> >);
+    static_assert(fermat::ranges::input_iterator<iterator<char *> >);
 
     // has_iter_cat checks – fixed with the global trait
     static_assert(!has_iter_cat<iterator<char *> >::value, "");
     static_assert(!has_iter_cat<std::iterator_traits<iterator<char *> > >::value, "");
     static_assert(std::is_same<iterator<char *>::iterator_concept, std::input_iterator_tag>::value, "");
-    static_assert(!ranges::equality_comparable<iterator<char *> >, "");
+    static_assert(!fermat::ranges::equality_comparable<iterator<char *> >, "");
 
     void test() {
         using I = iterator<char const *>;
@@ -95,13 +95,13 @@ namespace test_random_access {
     struct cursor {
         I it_;
 
-        struct mixin : ranges::basic_mixin<cursor> {
+        struct mixin : fermat::ranges::basic_mixin<cursor> {
             mixin() = default;
 
-            explicit mixin(cursor &&cur) : ranges::basic_mixin<cursor>(static_cast<cursor &&>(cur)) {
+            explicit mixin(cursor &&cur) : fermat::ranges::basic_mixin<cursor>(static_cast<cursor &&>(cur)) {
             }
 
-            explicit mixin(cursor const &cur) : ranges::basic_mixin<cursor>(cur) {
+            explicit mixin(cursor const &cur) : fermat::ranges::basic_mixin<cursor>(cur) {
             }
 
             mixin(I i) : mixin(cursor{i}) {
@@ -113,29 +113,29 @@ namespace test_random_access {
         explicit cursor(I i) : it_(i) {
         }
 
-        CPP_template(class J)(requires ranges::convertible_to<J, I>)
+        CPP_template(class J)(requires fermat::ranges::convertible_to<J, I>)
         cursor(cursor<J> that) : it_(std::move(that.it_)) {
         }
 
         auto read() const -> decltype(*it_) { return *it_; }
-        CPP_template(class J)(requires ranges::sentinel_for<J, I>)
+        CPP_template(class J)(requires fermat::ranges::sentinel_for<J, I>)
         bool equal(cursor<J> const &that) const { return that.it_ == it_; }
 
         void next() { ++it_; }
         void prev() { --it_; }
-        void advance(ranges::iter_difference_t<I> n) { it_ += n; }
-        CPP_template(class J)(requires ranges::sized_sentinel_for<J, I>)
-        ranges::iter_difference_t<I> distance_to(cursor<J> const &that) const { return that.it_ - it_; }
+        void advance(fermat::ranges::iter_difference_t<I> n) { it_ += n; }
+        CPP_template(class J)(requires fermat::ranges::sized_sentinel_for<J, I>)
+        fermat::ranges::iter_difference_t<I> distance_to(cursor<J> const &that) const { return that.it_ - it_; }
     };
 
-    static_assert(ranges::detail::random_access_cursor<cursor<char *> >);
+    static_assert(fermat::ranges::detail::random_access_cursor<cursor<char *> >);
 
     template<class I>
-    using iterator = ranges::basic_iterator<cursor<I> >;
+    using iterator = fermat::ranges::basic_iterator<cursor<I> >;
     static_assert(std::is_same<iterator<char *>::iterator_category, std::random_access_iterator_tag>::value, "");
 
     void test() {
-        using namespace ranges;
+        using namespace fermat::ranges;
         iterator<char *> a(nullptr);
         iterator<char const *> b(nullptr);
         iterator<char const *> c(a);
@@ -153,13 +153,13 @@ namespace test_random_access {
 namespace test_weak_output {
     template<typename I>
     struct cursor {
-        struct mixin : ranges::basic_mixin<cursor> {
+        struct mixin : fermat::ranges::basic_mixin<cursor> {
             mixin() = default;
 
-            explicit mixin(cursor &&cur) : ranges::basic_mixin<cursor>(static_cast<cursor &&>(cur)) {
+            explicit mixin(cursor &&cur) : fermat::ranges::basic_mixin<cursor>(static_cast<cursor &&>(cur)) {
             }
 
-            explicit mixin(cursor const &cur) : ranges::basic_mixin<cursor>(cur) {
+            explicit mixin(cursor const &cur) : fermat::ranges::basic_mixin<cursor>(cur) {
             }
 
             explicit mixin(I i) : mixin(cursor{i}) {
@@ -171,20 +171,20 @@ namespace test_weak_output {
         explicit cursor(I i) : it_(i) {
         }
 
-        void write(ranges::iter_value_t<I> v) const { *it_ = v; }
+        void write(fermat::ranges::iter_value_t<I> v) const { *it_ = v; }
         void next() { ++it_; }
 
     private:
         I it_;
     };
 
-    static_assert(ranges::detail::output_cursor<cursor<char *>, char>);
-    static_assert(!ranges::detail::sentinel_for_cursor<cursor<char *>, cursor<char *> >);
+    static_assert(fermat::ranges::detail::output_cursor<cursor<char *>, char>);
+    static_assert(!fermat::ranges::detail::sentinel_for_cursor<cursor<char *>, cursor<char *> >);
 
     template<class I>
-    using iterator = ranges::basic_iterator<cursor<I> >;
-    static_assert(ranges::output_iterator<iterator<char *>, char>);
-    static_assert(!ranges::equality_comparable<iterator<char *> >);
+    using iterator = fermat::ranges::basic_iterator<cursor<I> >;
+    static_assert(fermat::ranges::output_iterator<iterator<char *>, char>);
+    static_assert(!fermat::ranges::equality_comparable<iterator<char *> >);
 
     void test() {
         char buf[10];
@@ -212,13 +212,13 @@ namespace test_output {
     struct cursor {
         I it_;
 
-        struct mixin : ranges::basic_mixin<cursor> {
+        struct mixin : fermat::ranges::basic_mixin<cursor> {
             mixin() = default;
 
-            explicit mixin(cursor &&cur) : ranges::basic_mixin<cursor>(static_cast<cursor &&>(cur)) {
+            explicit mixin(cursor &&cur) : fermat::ranges::basic_mixin<cursor>(static_cast<cursor &&>(cur)) {
             }
 
-            explicit mixin(cursor const &cur) : ranges::basic_mixin<cursor>(cur) {
+            explicit mixin(cursor const &cur) : fermat::ranges::basic_mixin<cursor>(cur) {
             }
 
             mixin(I i) : mixin(cursor{i}) {
@@ -230,11 +230,11 @@ namespace test_output {
         explicit cursor(I i) : it_(i) {
         }
 
-        CPP_template(class J)(requires ranges::convertible_to<J, I>)
+        CPP_template(class J)(requires fermat::ranges::convertible_to<J, I>)
         cursor(cursor<J> that) : it_(std::move(that.it_)) {
         }
 
-        using value_type = ranges::iter_value_t<I>;
+        using value_type = fermat::ranges::iter_value_t<I>;
         value_type read() const { return *it_; }
         void write(value_type v) const { *it_ = v; }
         I arrow() const { return it_; }
@@ -242,13 +242,13 @@ namespace test_output {
         bool equal(cursor const &that) const { return it_ == that.it_; }
     };
 
-    static_assert(ranges::detail::output_cursor<cursor<char *>, char>);
-    static_assert(ranges::detail::forward_cursor<cursor<char *> >);
+    static_assert(fermat::ranges::detail::output_cursor<cursor<char *>, char>);
+    static_assert(fermat::ranges::detail::forward_cursor<cursor<char *> >);
 
     template<class I>
-    using iterator = ranges::basic_iterator<cursor<I> >;
-    static_assert(ranges::output_iterator<iterator<char *>, char>);
-    static_assert(ranges::forward_iterator<iterator<char *> >);
+    using iterator = fermat::ranges::basic_iterator<cursor<I> >;
+    static_assert(fermat::ranges::output_iterator<iterator<char *>, char>);
+    static_assert(fermat::ranges::forward_iterator<iterator<char *> >);
     static_assert(std::is_same<std::iterator_traits<iterator<char *> >::pointer, char *>());
 
     void test() {
@@ -296,13 +296,13 @@ namespace test_move_only {
     struct zip1_cursor {
         I it_;
 
-        struct mixin : ranges::basic_mixin<zip1_cursor> {
+        struct mixin : fermat::ranges::basic_mixin<zip1_cursor> {
             mixin() = default;
 
-            explicit mixin(zip1_cursor &&cur) : ranges::basic_mixin<zip1_cursor>(static_cast<zip1_cursor &&>(cur)) {
+            explicit mixin(zip1_cursor &&cur) : fermat::ranges::basic_mixin<zip1_cursor>(static_cast<zip1_cursor &&>(cur)) {
             }
 
-            explicit mixin(zip1_cursor const &cur) : ranges::basic_mixin<zip1_cursor>(cur) {
+            explicit mixin(zip1_cursor const &cur) : fermat::ranges::basic_mixin<zip1_cursor>(cur) {
             }
 
             mixin(I i) : mixin(zip1_cursor{i}) {
@@ -314,36 +314,36 @@ namespace test_move_only {
         explicit zip1_cursor(I i) : it_(i) {
         }
 
-        CPP_template(class J)(requires ranges::convertible_to<J, I>)
+        CPP_template(class J)(requires fermat::ranges::convertible_to<J, I>)
         zip1_cursor(zip1_cursor<J> that) : it_(std::move(that.it_)) {
         }
 
-        using value_type = std::tuple<ranges::iter_value_t<I> >;
-        using reference = ranges::common_tuple<ranges::iter_reference_t<I> >;
-        using rvalue_reference = ranges::common_tuple<ranges::iter_rvalue_reference_t<I> >;
+        using value_type = std::tuple<fermat::ranges::iter_value_t<I> >;
+        using reference = fermat::ranges::common_tuple<fermat::ranges::iter_reference_t<I> >;
+        using rvalue_reference = fermat::ranges::common_tuple<fermat::ranges::iter_rvalue_reference_t<I> >;
         reference read() const { return reference{*it_}; }
-        rvalue_reference move() const { return rvalue_reference{ranges::iter_move(it_)}; }
+        rvalue_reference move() const { return rvalue_reference{fermat::ranges::iter_move(it_)}; }
         void write(reference const &v) const { reference{*it_} = v; }
         void write(value_type &&v) const { reference{*it_} = std::move(v); }
         void next() { ++it_; }
         bool equal(zip1_cursor const &that) const { return it_ == that.it_; }
     };
 
-    static_assert(ranges::detail::output_cursor<zip1_cursor<MoveOnly *>, std::tuple<MoveOnly> &&>);
-    static_assert(ranges::detail::forward_cursor<zip1_cursor<MoveOnly *> >);
+    static_assert(fermat::ranges::detail::output_cursor<zip1_cursor<MoveOnly *>, std::tuple<MoveOnly> &&>);
+    static_assert(fermat::ranges::detail::forward_cursor<zip1_cursor<MoveOnly *> >);
 
     template<class I>
-    using iterator = ranges::basic_iterator<zip1_cursor<I> >;
-    static_assert(ranges::output_iterator<iterator<MoveOnly *>, std::tuple<MoveOnly> &&>);
-    static_assert(ranges::forward_iterator<iterator<MoveOnly *> >);
+    using iterator = fermat::ranges::basic_iterator<zip1_cursor<I> >;
+    static_assert(fermat::ranges::output_iterator<iterator<MoveOnly *>, std::tuple<MoveOnly> &&>);
+    static_assert(fermat::ranges::forward_iterator<iterator<MoveOnly *> >);
 
     void test() {
         MoveOnly buf[10] = {};
         iterator<MoveOnly *> i(buf);
         *i = std::tuple<MoveOnly>{};
-        ranges::common_tuple<MoveOnly &> x = *i;
+        fermat::ranges::common_tuple<MoveOnly &> x = *i;
         (void) x;
-        std::tuple<MoveOnly> v = ranges::iter_move(i);
+        std::tuple<MoveOnly> v = fermat::ranges::iter_move(i);
         *i = std::move(v);
     }
 } // namespace test_move_only
@@ -356,13 +356,13 @@ namespace test_forward_sized {
     struct cursor {
         I it_;
 
-        struct mixin : ranges::basic_mixin<cursor> {
+        struct mixin : fermat::ranges::basic_mixin<cursor> {
             mixin() = default;
 
-            explicit mixin(cursor &&cur) : ranges::basic_mixin<cursor>(static_cast<cursor &&>(cur)) {
+            explicit mixin(cursor &&cur) : fermat::ranges::basic_mixin<cursor>(static_cast<cursor &&>(cur)) {
             }
 
-            explicit mixin(cursor const &cur) : ranges::basic_mixin<cursor>(cur) {
+            explicit mixin(cursor const &cur) : fermat::ranges::basic_mixin<cursor>(cur) {
             }
 
             mixin(I i) : mixin(cursor{i}) {
@@ -374,28 +374,28 @@ namespace test_forward_sized {
         explicit cursor(I i) : it_(i) {
         }
 
-        CPP_template(class J)(requires ranges::convertible_to<J, I>)
+        CPP_template(class J)(requires fermat::ranges::convertible_to<J, I>)
         cursor(cursor<J> that) : it_(std::move(that.it_)) {
         }
 
         auto read() const -> decltype(*it_) { return *it_; }
-        CPP_template(class J)(requires ranges::sentinel_for<J, I>)
+        CPP_template(class J)(requires fermat::ranges::sentinel_for<J, I>)
         bool equal(cursor<J> const &that) const { return that.it_ == it_; }
 
         void next() { ++it_; }
-        CPP_template(class J)(requires ranges::sized_sentinel_for<J, I>)
-        ranges::iter_difference_t<I> distance_to(cursor<J> const &that) const { return that.it_ - it_; }
+        CPP_template(class J)(requires fermat::ranges::sized_sentinel_for<J, I>)
+        fermat::ranges::iter_difference_t<I> distance_to(cursor<J> const &that) const { return that.it_ - it_; }
     };
 
-    static_assert(ranges::detail::sized_sentinel_for_cursor<cursor<char *>, cursor<char *> >);
-    static_assert(ranges::detail::forward_cursor<cursor<char *> >);
+    static_assert(fermat::ranges::detail::sized_sentinel_for_cursor<cursor<char *>, cursor<char *> >);
+    static_assert(fermat::ranges::detail::forward_cursor<cursor<char *> >);
 
     template<class I>
-    using iterator = ranges::basic_iterator<cursor<I> >;
+    using iterator = fermat::ranges::basic_iterator<cursor<I> >;
     static_assert(std::is_same<iterator<char *>::iterator_category, std::forward_iterator_tag>::value, "");
 
     void test() {
-        using namespace ranges;
+        using namespace fermat::ranges;
         iterator<char *> a(nullptr);
         iterator<char const *> b(nullptr);
         iterator<char const *> c(a);
@@ -410,24 +410,24 @@ namespace test_forward_sized {
 // test_box
 // ------------------------------------------------------------
 void test_box() {
-    struct A : ranges::box<int> {
+    struct A : fermat::ranges::box<int> {
     };
     EXPECT_EQ(sizeof(A), sizeof(int));
     struct empty {
     };
-    struct B : ranges::box<empty> {
+    struct B : fermat::ranges::box<empty> {
         int i;
     };
     EXPECT_EQ(sizeof(B), sizeof(int));
     B b1, b2;
-    if (ranges::detail::box_compression<empty>() == ranges::detail::box_compress::coalesce) {
+    if (fermat::ranges::detail::box_compression<empty>() == fermat::ranges::detail::box_compress::coalesce) {
         EXPECT_EQ(&b1.get(), &b2.get());
     }
     struct nontrivial {
         nontrivial() {
         }
     };
-    struct C : ranges::box<nontrivial> {
+    struct C : fermat::ranges::box<nontrivial> {
         int i;
     };
     EXPECT_EQ(sizeof(C), sizeof(int));
@@ -446,8 +446,8 @@ void test_box() {
             void next() {
             }
         };
-        static_assert(ranges::detail::box_compression<cursor>() == ranges::detail::box_compress::ebo);
-        static_assert(ranges::same_as<int, ranges::basic_iterator<cursor>::value_type>);
+        static_assert(fermat::ranges::detail::box_compression<cursor>() == fermat::ranges::detail::box_compress::ebo);
+        static_assert(fermat::ranges::same_as<int, fermat::ranges::basic_iterator<cursor>::value_type>);
     }
 }
 

@@ -27,7 +27,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     namespace views
     {
@@ -116,7 +116,7 @@ namespace ranges
         /// \ingroup group-views
         RANGES_INLINE_VARIABLE(linear_distribute_fn, linear_distribute)
     } // namespace views
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

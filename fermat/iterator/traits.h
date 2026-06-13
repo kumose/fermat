@@ -28,7 +28,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-iterator
     /// @{
@@ -56,7 +56,7 @@ namespace ranges
 
         template<typename I>
         inline constexpr bool has_nothrow_iter_move_v =
-            noexcept(iter_rvalue_reference_t<I>(ranges::iter_move(std::declval<I &>())));
+            noexcept(iter_rvalue_reference_t<I>(fermat::ranges::iter_move(std::declval<I &>())));
     } // namespace detail
     /// \endcond
 
@@ -126,17 +126,17 @@ namespace ranges
 
     template<typename T>
     using difference_type_t RANGES_DEPRECATED(
-        "ranges::difference_type_t is deprecated. Please use "
-        "ranges::iter_difference_t instead.") = iter_difference_t<T>;
+        "fermat::ranges::difference_type_t is deprecated. Please use "
+        "fermat::ranges::iter_difference_t instead.") = iter_difference_t<T>;
 
     template<typename T>
     using value_type_t RANGES_DEPRECATED(
-        "ranges::value_type_t is deprecated. Please use "
-        "ranges::iter_value_t instead.") = iter_value_t<T>;
+        "fermat::ranges::value_type_t is deprecated. Please use "
+        "fermat::ranges::iter_value_t instead.") = iter_value_t<T>;
 
     template<typename R>
     using reference_t RANGES_DEPRECATED(
-        "ranges::reference_t is deprecated. Use ranges::iter_reference_t "
+        "fermat::ranges::reference_t is deprecated. Use fermat::ranges::iter_reference_t "
         "instead.") = iter_reference_t<R>;
 
     template<typename I>
@@ -146,7 +146,7 @@ namespace ranges
 
     template<typename T>
     struct RANGES_DEPRECATED(
-        "ranges::size_type is deprecated. Iterators do not have an associated "
+        "fermat::ranges::size_type is deprecated. Iterators do not have an associated "
         "size_type.") size_type : detail::size_type_<T>
     {};
 
@@ -157,21 +157,21 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::iter_common_reference_t;
-        using ranges::iter_difference_t;
-        using ranges::iter_reference_t;
-        using ranges::iter_rvalue_reference_t;
-        using ranges::iter_value_t;
+        using fermat::ranges::iter_common_reference_t;
+        using fermat::ranges::iter_difference_t;
+        using fermat::ranges::iter_reference_t;
+        using fermat::ranges::iter_rvalue_reference_t;
+        using fermat::ranges::iter_value_t;
 
-        // Specialize these in the ranges:: namespace
-        using ranges::disable_sized_sentinel;
+        // Specialize these in the fermat::ranges:: namespace
+        using fermat::ranges::disable_sized_sentinel;
         template<typename T>
-        using incrementable_traits = ranges::incrementable_traits<T>;
+        using incrementable_traits = fermat::ranges::incrementable_traits<T>;
         template<typename T>
-        using indirectly_readable_traits = ranges::indirectly_readable_traits<T>;
+        using indirectly_readable_traits = fermat::ranges::indirectly_readable_traits<T>;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

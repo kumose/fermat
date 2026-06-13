@@ -27,7 +27,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -42,7 +42,7 @@ namespace ranges
             {
                 if(first == --last)
                     break;
-                ranges::iter_swap(first, last);
+                fermat::ranges::iter_swap(first, last);
                 ++first;
             }
         }
@@ -52,7 +52,7 @@ namespace ranges
         {
             if(first != last)
                 for(; first < --last; ++first)
-                    ranges::iter_swap(first, last);
+                    fermat::ranges::iter_swap(first, last);
         }
     } // namespace detail
     /// \endcond
@@ -64,7 +64,7 @@ namespace ranges
             requires bidirectional_iterator<I> AND sentinel_for<S, I> AND permutable<I>)
         constexpr I RANGES_FUNC(reverse)(I first, S end_)
         {
-            I last = ranges::next(first, end_);
+            I last = fermat::ranges::next(first, end_);
             detail::reverse_impl(first, last, iterator_tag_of<I>{});
             return last;
         }
@@ -81,10 +81,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::reverse;
+        using fermat::ranges::reverse;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

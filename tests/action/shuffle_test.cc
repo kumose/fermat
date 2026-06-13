@@ -12,7 +12,7 @@
 #include <fermat/action/shuffle.h>
 #include <fermat/range/conversion.h>
 
-using namespace ranges;
+using namespace fermat::ranges;
 
 TEST(ActionShuffleTest, ShuffleVsInts) {
     std::mt19937 gen;

@@ -31,7 +31,7 @@
 // TODO: Reuse subrange's pair_like concept here and have get_first and get_second
 // dispatch through get<>()
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -137,13 +137,13 @@ namespace ranges
     {
         namespace views
         {
-            using ranges::views::keys;
-            using ranges::views::values;
+            using fermat::ranges::views::keys;
+            using fermat::ranges::views::values;
         } // namespace views
         // TODO(@cjdb): provide implementation for elements_view
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

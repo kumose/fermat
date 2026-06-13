@@ -284,33 +284,33 @@ namespace {
         // I is a pointer type
         {
             int i = 42;
-            auto ci = ranges::common_iterator<int *, ranges::unreachable_sentinel_t>{&i};
-            static_assert(ranges::same_as<int *, decltype(ci.operator->())>);
+            auto ci = fermat::ranges::common_iterator<int *, fermat::ranges::unreachable_sentinel_t>{&i};
+            static_assert(fermat::ranges::same_as<int *, decltype(ci.operator->())>);
             EXPECT_EQ(ci.operator->(), &i);
         }
         // the expression i.operator->() is well-formed
         {
-            using I = ranges::basic_iterator<silly_arrow_cursor>;
-            auto ci = ranges::common_iterator<I, ranges::unreachable_sentinel_t>{};
-            static_assert(ranges::same_as<I, decltype(ci.operator->())>);
+            using I = fermat::ranges::basic_iterator<silly_arrow_cursor>;
+            auto ci = fermat::ranges::common_iterator<I, fermat::ranges::unreachable_sentinel_t>{};
+            static_assert(fermat::ranges::same_as<I, decltype(ci.operator->())>);
             EXPECT_EQ(ci.operator->().operator->(), 42);
         }
         // the expression *i is a glvalue [lvalue case]
         {
-            auto ci = ranges::common_iterator<lvalue_iterator, ranges::unreachable_sentinel_t>{};
-            static_assert(ranges::same_as<int *, decltype(ci.operator->())>);
+            auto ci = fermat::ranges::common_iterator<lvalue_iterator, fermat::ranges::unreachable_sentinel_t>{};
+            static_assert(fermat::ranges::same_as<int *, decltype(ci.operator->())>);
             EXPECT_EQ(ci.operator->(), &forty_two);
         }
         // the expression *i is a glvalue [xvalue case]
         {
-            auto ci = ranges::common_iterator<xvalue_iterator, ranges::unreachable_sentinel_t>{};
-            static_assert(ranges::same_as<int *, decltype(ci.operator->())>);
+            auto ci = fermat::ranges::common_iterator<xvalue_iterator, fermat::ranges::unreachable_sentinel_t>{};
+            static_assert(fermat::ranges::same_as<int *, decltype(ci.operator->())>);
             EXPECT_EQ(ci.operator->(), &forty_two);
         }
         // Otherwise, returns a proxy object
         {
-            using I = ranges::basic_iterator<proxy_cursor>;
-            auto ci = ranges::common_iterator<I, ranges::unreachable_sentinel_t>{};
+            using I = fermat::ranges::basic_iterator<proxy_cursor>;
+            auto ci = fermat::ranges::common_iterator<I, fermat::ranges::unreachable_sentinel_t>{};
             using A = decltype(ci.operator->());
             static_assert(std::is_class<A>::value);
             static_assert(!std::is_same<I, A>::value);
@@ -324,34 +324,34 @@ namespace {
 // ------------------------------------------------------------
 TEST(CommonIteratorTest, Concepts) {
     // forward_iterator concept test: BidiPtr + Sentinel -> forward, not bidirectional
-    using CI_forward = ranges::common_iterator<BidiPtr<const char>, Sentinel<BidiPtr<const char> > >;
-    static_assert(ranges::forward_iterator<CI_forward>);
-    static_assert(!ranges::bidirectional_iterator<CI_forward>);
+    using CI_forward = fermat::ranges::common_iterator<BidiPtr<const char>, Sentinel<BidiPtr<const char> > >;
+    static_assert(fermat::ranges::forward_iterator<CI_forward>);
+    static_assert(!fermat::ranges::bidirectional_iterator<CI_forward>);
 
     // common_reference test
-    using CI_ref = ranges::common_iterator<BidiPtr<const char>, Sentinel<BidiPtr<const char> > >;
+    using CI_ref = fermat::ranges::common_iterator<BidiPtr<const char>, Sentinel<BidiPtr<const char> > >;
     static_assert(std::is_same<
-        ranges::common_reference<CI_ref &, CI_ref>::type,
+        fermat::ranges::common_reference<CI_ref &, CI_ref>::type,
         CI_ref
     >::value);
 
     // sized sentinel tests
     // Case 1: forward iterator + sized sentinel -> not sized (ForwardPtr does not support subtraction)
-    using CI_forward_sized = ranges::common_iterator<ForwardPtr<int>, Sentinel<ForwardPtr<int>, true> >;
-    static_assert(!ranges::sized_sentinel_for<CI_forward_sized, CI_forward_sized>);
+    using CI_forward_sized = fermat::ranges::common_iterator<ForwardPtr<int>, Sentinel<ForwardPtr<int>, true> >;
+    static_assert(!fermat::ranges::sized_sentinel_for<CI_forward_sized, CI_forward_sized>);
 
     // Case 2: random access iterator + sized sentinel -> sized
-    using CI_random_sized = ranges::common_iterator<RAPtr<int>, Sentinel<RAPtr<int>, true> >;
-    static_assert(ranges::sized_sentinel_for<CI_random_sized, CI_random_sized>);
+    using CI_random_sized = fermat::ranges::common_iterator<RAPtr<int>, Sentinel<RAPtr<int>, true> >;
+    static_assert(fermat::ranges::sized_sentinel_for<CI_random_sized, CI_random_sized>);
 
     // Case 3: random access iterator + non-sized sentinel -> not sized
-    using CI_random_unsized = ranges::common_iterator<RAPtr<int>, Sentinel<RAPtr<int>, false> >;
-    static_assert(!ranges::sized_sentinel_for<CI_random_unsized, CI_random_unsized>);
+    using CI_random_unsized = fermat::ranges::common_iterator<RAPtr<int>, Sentinel<RAPtr<int>, false> >;
+    static_assert(!fermat::ranges::sized_sentinel_for<CI_random_unsized, CI_random_unsized>);
 }
 
 TEST(CommonIteratorTest, Accumulate) {
     int rgi[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-    using CI = ranges::common_iterator<RAPtr<int>, Sentinel<RAPtr<int> > >;
+    using CI = fermat::ranges::common_iterator<RAPtr<int>, Sentinel<RAPtr<int> > >;
     CI first{RAPtr<int>{rgi}};
     CI last{Sentinel<RAPtr<int> >{rgi + 10}};
     int sum = std::accumulate(first, last, 0, std::plus<int>{});

@@ -36,7 +36,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -51,7 +51,7 @@ namespace ranges
         Rng rng_;
         constexpr reverse_iterator<iterator_t<Rng>> begin_(std::true_type)
         {
-            return make_reverse_iterator(ranges::end(rng_));
+            return make_reverse_iterator(fermat::ranges::end(rng_));
         }
         constexpr reverse_iterator<iterator_t<Rng>> begin_(std::false_type)
         {
@@ -61,12 +61,12 @@ namespace ranges
             if(!end_)
             {
 #if defined(_MSC_VER)
-                auto tmp = ranges::begin(rng_);
-                auto e = ranges::end(rng_);
+                auto tmp = fermat::ranges::begin(rng_);
+                auto e = fermat::ranges::end(rng_);
                 while(tmp != e)
                     ++tmp;
 #else
-                auto tmp = ranges::next(ranges::begin(rng_), ranges::end(rng_));
+                auto tmp = fermat::ranges::next(fermat::ranges::begin(rng_), fermat::ranges::end(rng_));
 #endif
                 end_ = std::move(tmp);
             }
@@ -90,29 +90,29 @@ namespace ranges
             requires Const AND common_range<meta::const_if_c<Const, Rng>>)
         constexpr reverse_iterator<iterator_t<meta::const_if_c<Const, Rng>>> begin() const
         {
-            return make_reverse_iterator(ranges::end(rng_));
+            return make_reverse_iterator(fermat::ranges::end(rng_));
         }
         constexpr reverse_iterator<iterator_t<Rng>> end()
         {
-            return make_reverse_iterator(ranges::begin(rng_));
+            return make_reverse_iterator(fermat::ranges::begin(rng_));
         }
         template(bool Const = true)(
             requires Const AND common_range<meta::const_if_c<Const, Rng>>)
         constexpr reverse_iterator<iterator_t<meta::const_if_c<Const, Rng>>> end() const
         {
-            return make_reverse_iterator(ranges::begin(rng_));
+            return make_reverse_iterator(fermat::ranges::begin(rng_));
         }
         CPP_auto_member
         constexpr auto CPP_fun(size)()(
             requires sized_range<Rng>)
         {
-            return ranges::size(rng_);
+            return fermat::ranges::size(rng_);
         }
         CPP_auto_member
         constexpr auto CPP_fun(size)()(const //
             requires sized_range<Rng const>)
         {
-            return ranges::size(rng_);
+            return fermat::ranges::size(rng_);
         }
     };
 
@@ -170,17 +170,17 @@ namespace ranges
     {
         namespace views
         {
-            using ranges::views::reverse;
+            using fermat::ranges::views::reverse;
         }
         template(typename Rng)(
             requires view_<Rng> AND bidirectional_range<Rng>)
-        using reverse_view = ranges::reverse_view<Rng>;
+        using reverse_view = fermat::ranges::reverse_view<Rng>;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::reverse_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::reverse_view)
 
 #endif

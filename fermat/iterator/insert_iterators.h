@@ -23,7 +23,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-iterator
     /// @{
@@ -138,12 +138,12 @@ namespace ranges
         {}
         insert_iterator & operator=(typename Container::value_type const & value)
         {
-            where_ = ranges::next(container_->insert(where_, value));
+            where_ = fermat::ranges::next(container_->insert(where_, value));
             return *this;
         }
         insert_iterator & operator=(typename Container::value_type && value)
         {
-            where_ = ranges::next(container_->insert(where_, std::move(value)));
+            where_ = fermat::ranges::next(container_->insert(where_, std::move(value)));
             return *this;
         }
         insert_iterator & operator*()
@@ -179,15 +179,15 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::back_insert_iterator;
-        using ranges::back_inserter;
-        using ranges::front_insert_iterator;
-        using ranges::front_inserter;
-        using ranges::insert_iterator;
-        using ranges::inserter;
+        using fermat::ranges::back_insert_iterator;
+        using fermat::ranges::back_inserter;
+        using fermat::ranges::front_insert_iterator;
+        using fermat::ranges::front_inserter;
+        using fermat::ranges::insert_iterator;
+        using fermat::ranges::inserter;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 /// \cond
 RANGES_DIAGNOSTIC_PUSH
@@ -196,18 +196,18 @@ RANGES_DIAGNOSTIC_IGNORE_MISMATCHED_TAGS
 namespace std
 {
     template<typename Container>
-    struct iterator_traits<::ranges::back_insert_iterator<Container>>
-      : ::ranges::detail::std_output_iterator_traits<>
+    struct iterator_traits<::fermat::ranges::back_insert_iterator<Container>>
+      : ::fermat::ranges::detail::std_output_iterator_traits<>
     {};
 
     template<typename Container>
-    struct iterator_traits<::ranges::front_insert_iterator<Container>>
-      : ::ranges::detail::std_output_iterator_traits<>
+    struct iterator_traits<::fermat::ranges::front_insert_iterator<Container>>
+      : ::fermat::ranges::detail::std_output_iterator_traits<>
     {};
 
     template<typename Container>
-    struct iterator_traits<::ranges::insert_iterator<Container>>
-      : ::ranges::detail::std_output_iterator_traits<>
+    struct iterator_traits<::fermat::ranges::insert_iterator<Container>>
+      : ::fermat::ranges::detail::std_output_iterator_traits<>
     {};
 } // namespace std
 

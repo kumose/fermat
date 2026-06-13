@@ -28,7 +28,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-actions
     /// @{
@@ -43,7 +43,7 @@ namespace ranges
 
         template<typename Cont, typename Rng>
         using insert_t = decltype(static_cast<void>(
-            ranges::insert(std::declval<Cont &>(), std::declval<sentinel_t<Cont>>(),
+            fermat::ranges::insert(std::declval<Cont &>(), std::declval<sentinel_t<Cont>>(),
                            std::declval<Rng>())));
 
         template(typename Cont, typename T)(
@@ -58,7 +58,7 @@ namespace ranges
             requires lvalue_container_like<Cont> AND range<Rng>)
         insert_t<Cont, Rng> push_back(Cont && cont, Rng && rng)
         {
-            ranges::insert(cont, end(cont), static_cast<Rng &&>(rng));
+            fermat::ranges::insert(cont, end(cont), static_cast<Rng &&>(rng));
         }
 
         /// \cond
@@ -142,7 +142,7 @@ namespace ranges
     using actions::push_back;
 
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

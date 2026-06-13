@@ -25,7 +25,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -41,12 +41,12 @@ namespace ranges
             };
             void fill_default_(T * p, std::true_type)
             {
-                for(; p != ranges::end(data_); ++p)
+                for(; p != fermat::ranges::end(data_); ++p)
                     ::new((void *)p) T{};
             }
             void fill_default_(T * p, std::false_type)
             {
-                RANGES_EXPECT(p == ranges::end(data_));
+                RANGES_EXPECT(p == fermat::ranges::end(data_));
             }
 
         public:
@@ -82,14 +82,14 @@ namespace ranges
             template(typename R)(
                 requires input_range<R> AND constructible_from<T, range_reference_t<R>>)
             explicit indexed_datum(R && r)
-              : indexed_datum{ranges::begin(r), ranges::end(r)}
+              : indexed_datum{fermat::ranges::begin(r), fermat::ranges::end(r)}
             {}
             CPP_member
             auto operator=(indexed_datum && that) //
                 -> CPP_ret(indexed_datum &)(
                     requires assignable_from<T &, T>)
             {
-                ranges::move(that.data_, data_);
+                fermat::ranges::move(that.data_, data_);
                 return *this;
             }
             CPP_member
@@ -97,15 +97,15 @@ namespace ranges
                 -> CPP_ret(indexed_datum &)(
                     requires assignable_from<T &, T const &>)
             {
-                ranges::copy(that.data_, data_);
+                fermat::ranges::copy(that.data_, data_);
                 return *this;
             }
-            // \pre Requires ranges::distance(r) <= N
+            // \pre Requires fermat::ranges::distance(r) <= N
             template(typename R)(
                 requires input_range<R> AND assignable_from<T &, range_reference_t<R>>)
             indexed_datum & operator=(R && r)
             {
-                ranges::copy(r, data_);
+                fermat::ranges::copy(r, data_);
                 return *this;
             }
             constexpr auto ref()
@@ -127,7 +127,7 @@ namespace ranges
         };
     } // namespace detail
     /// \endcond
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

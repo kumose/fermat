@@ -21,7 +21,7 @@
 
 namespace my_drop_ns
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     struct my_drop_base_fn
     {
@@ -56,8 +56,8 @@ using my_drop_ns::my_drop;
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected)
 {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected)
     {
         EXPECT_NE(it, end);
@@ -74,7 +74,7 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected)
 /// Test constexpr composition of custom drop views (issue #1169)
 TEST(MyDropViewTest, ConstexprComposition)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     // The original test used a constexpr lambda, which requires C++17.
     // We keep the same conditional compilation for portability.

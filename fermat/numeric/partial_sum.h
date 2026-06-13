@@ -32,7 +32,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-numerics
     /// @{
@@ -70,7 +70,7 @@ namespace ranges
     template<typename I, typename BOp>
     CPP_concept indirect_semigroup =
         indirectly_readable<I> &&
-        CPP_concept_ref(ranges::indirect_semigroup_, I, BOp);
+        CPP_concept_ref(fermat::ranges::indirect_semigroup_, I, BOp);
 
     /// \concept partial_sum_constraints_
     /// \brief The \c partial_sum_constraints_ concept
@@ -89,7 +89,7 @@ namespace ranges
     template<typename I, typename O, typename BOp = plus, typename P = identity>
     CPP_concept partial_sum_constraints =
         input_iterator<I> &&
-        CPP_concept_ref(ranges::partial_sum_constraints_, I, O, BOp, P);
+        CPP_concept_ref(fermat::ranges::partial_sum_constraints_, I, O, BOp, P);
     // clang-format on
 
     template<typename I, typename O>
@@ -171,7 +171,7 @@ namespace ranges
 
     RANGES_INLINE_VARIABLE(partial_sum_fn, partial_sum)
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

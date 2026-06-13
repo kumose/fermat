@@ -41,8 +41,8 @@ struct MoveOnlyString {
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -54,8 +54,8 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected) {
 /// Overload for MoveOnlyString
 template<typename Rng>
 void check_equal(Rng&& rng, std::initializer_list<MoveOnlyString> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -69,7 +69,7 @@ void check_equal(Rng&& rng, std::initializer_list<MoveOnlyString> expected) {
 // ------------------------------------------------------------------
 
 TEST(GenerateNTest, ConstantGenerator) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int i = 0, j = 1;
     auto fib = views::generate_n([&]() -> int {
@@ -83,7 +83,7 @@ TEST(GenerateNTest, ConstantGenerator) {
 }
 
 TEST(GenerateNTest, MutableOnlyGenerator) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int i = 0, j = 1;
     auto fib = views::generate_n([=]() mutable -> int {
@@ -98,7 +98,7 @@ TEST(GenerateNTest, MutableOnlyGenerator) {
 }
 
 TEST(GenerateNTest, MoveOnlyTypes) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     char str[] = "gi";
     auto rng = views::generate_n([&] {
@@ -112,12 +112,12 @@ TEST(GenerateNTest, MoveOnlyTypes) {
     EXPECT_TRUE(*rng.begin() == MoveOnlyString{"hi"});
     EXPECT_TRUE(*rng.begin() == MoveOnlyString{"hi"});
     check_equal(rng, {MoveOnlyString{"hi"}, MoveOnlyString{"ii"}});
-    static_assert(std::is_same<ranges::range_reference_t<decltype(rng)>, MoveOnlyString&&>::value,
+    static_assert(std::is_same<fermat::ranges::range_reference_t<decltype(rng)>, MoveOnlyString&&>::value,
                   "reference type mismatch");
 }
 
 TEST(GenerateNTest, InternalReference) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int i = 42;
     auto rng = views::generate_n([i] { return &i; }, 2);
@@ -129,7 +129,7 @@ TEST(GenerateNTest, InternalReference) {
 }
 
 TEST(GenerateNTest, CallCount) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int i = 0;
     auto rng = views::generate_n([&i] { return ++i; }, 2);
@@ -145,7 +145,7 @@ TEST(GenerateNTest, CallCount) {
 }
 
 TEST(GenerateNTest, EmptyMethod) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int i = 0;
     auto rng = views::generate_n([&i] { return ++i; }, 2);
@@ -153,7 +153,7 @@ TEST(GenerateNTest, EmptyMethod) {
 }
 
 TEST(GenerateNTest, SkipPastPositions) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto fib = [p = std::make_pair(0, 1)]() mutable -> int {
         auto a = p.first;

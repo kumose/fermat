@@ -29,7 +29,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-utility
     /// @{
@@ -189,7 +189,7 @@ namespace ranges
     /// \sa `make_tuple_fn`
     RANGES_INLINE_VARIABLE(make_tuple_fn, make_tuple)
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

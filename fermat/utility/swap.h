@@ -24,7 +24,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename T>
     using is_swappable = concepts::is_swappable<T>;
@@ -46,9 +46,9 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::swap;
+        using fermat::ranges::swap;
     }
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

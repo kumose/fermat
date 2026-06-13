@@ -31,7 +31,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -85,7 +85,7 @@ namespace ranges
             {}
             constexpr void next(iterator_t<CRng> & it) const
             {
-                auto const last = ranges::end(rng_->base());
+                auto const last = fermat::ranges::end(rng_->base());
                 auto & pred = rng_->adjacent_filter_view::box::get();
                 RANGES_EXPECT(it != last);
                 for(auto tmp = it; ++it != last; tmp = it)
@@ -97,7 +97,7 @@ namespace ranges
                 -> CPP_ret(void)(
                     requires bidirectional_range<CRng>)
             {
-                auto const first = ranges::begin(rng_->base());
+                auto const first = fermat::ranges::begin(rng_->base());
                 auto & pred = rng_->adjacent_filter_view::box::get();
                 RANGES_EXPECT(it != first);
                 --it;
@@ -179,11 +179,11 @@ namespace ranges
         RANGES_INLINE_VARIABLE(adjacent_filter_fn, adjacent_filter)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::adjacent_filter_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::adjacent_filter_view)
 
 #endif

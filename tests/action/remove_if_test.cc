@@ -7,7 +7,7 @@
 #include <fermat/action/remove_if.h>
 #include <fermat/range/conversion.h>
 
-using namespace ranges;
+using namespace fermat::ranges;
 
 TEST(ActionRemoveIfTest, Example) {
     auto v = views::ints(1, 21) | to<std::vector>();

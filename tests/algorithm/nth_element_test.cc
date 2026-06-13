@@ -14,14 +14,14 @@ void test_one(unsigned N, unsigned M) {
     std::shuffle(data.begin(), data.end(), gen);
 
     // iterator-pair version: nth_element(first, nth, last)
-    auto res = ranges::nth_element(data.data(), data.data() + M, data.data() + N);
+    auto res = fermat::ranges::nth_element(data.data(), data.data() + M, data.data() + N);
     EXPECT_EQ(res, data.data() + N);
     EXPECT_EQ(static_cast<unsigned>(data[M]), M);
 
     // shuffle again for range version
     std::shuffle(data.begin(), data.end(), gen);
     // range version: nth_element(rng, nth)
-    auto res2 = ranges::nth_element(data, data.begin() + M);
+    auto res2 = fermat::ranges::nth_element(data, data.begin() + M);
     EXPECT_EQ(res2, data.end());
     EXPECT_EQ(static_cast<unsigned>(data[M]), M);
 }
@@ -41,7 +41,7 @@ void test(unsigned N) {
 
 TEST(NthElementTest, SingleElement) {
     int d = 0;
-    ranges::nth_element(&d, &d, &d);
+    fermat::ranges::nth_element(&d, &d, &d);
     EXPECT_EQ(d, 0);
 }
 
@@ -65,7 +65,7 @@ TEST(NthElementTest, Projection) {
         data[i].j = i;
     }
     std::shuffle(data.begin(), data.end(), gen);
-    auto res = ranges::nth_element(data, data.begin() + M, std::less<int>(), &S::i);
+    auto res = fermat::ranges::nth_element(data, data.begin() + M, std::less<int>(), &S::i);
     EXPECT_EQ(res, data.end());
     EXPECT_EQ(data[M].i, M);
     EXPECT_EQ(data[M].j, M);

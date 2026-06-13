@@ -6,7 +6,7 @@
 #include <fermat/action/sort.h>
 #include <fermat/range/conversion.h>
 
-using namespace ranges;
+using namespace fermat::ranges;
 
 // ---------- helper for fuzzy test ----------
 namespace {

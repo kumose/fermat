@@ -36,7 +36,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -67,7 +67,7 @@ namespace ranges
             }
             constexpr void next(iterator_t<Rng> & it) const
             {
-                RANGES_ASSERT(it != ranges::end(rng_->base()));
+                RANGES_ASSERT(it != fermat::ranges::end(rng_->base()));
                 rng_->satisfy_forward(++it);
             }
             CPP_member
@@ -107,7 +107,7 @@ namespace ranges
 
         constexpr void satisfy_forward(iterator_t<Rng> & it)
         {
-            auto const last = ranges::end(this->base());
+            auto const last = fermat::ranges::end(this->base());
             auto & pred = this->remove_if_view::box::get();
             while(it != last && invoke(pred, *it))
                 ++it;
@@ -129,7 +129,7 @@ namespace ranges
         {
             if(begin_)
                 return;
-            auto it = ranges::begin(this->base());
+            auto it = fermat::ranges::begin(this->base());
             satisfy_forward(it);
             begin_.emplace(std::move(it));
         }
@@ -199,10 +199,10 @@ namespace ranges
         RANGES_INLINE_VARIABLE(remove_if_fn, remove_if)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::remove_if_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::remove_if_view)
 
 #include <fermat/detail/epilogue.h>
 

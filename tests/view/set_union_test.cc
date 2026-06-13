@@ -16,7 +16,7 @@
 #include <fermat/range/conversion.h>
 #include <fermat/algorithm/set_algorithm.h>
 #include <fermat/algorithm/move.h>
-#include <fermat/algorithm/equal.h>          // for ranges::equal
+#include <fermat/algorithm/equal.h>          // for fermat::ranges::equal
 #include <fermat/iterator/operations.h>
 #include <fermat/iterator/insert_iterators.h>
 #include <fermat/functional/identity.h>
@@ -58,7 +58,7 @@ struct MoveOnlyString {
 /// debug_input_view (minimal input view for testing)
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T>>
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>>
 {
     struct data
     {
@@ -77,7 +77,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T>>
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T>> = true;
@@ -88,8 +88,8 @@ namespace ranges
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -112,8 +112,8 @@ void check_equal(const std::vector<MoveOnlyString>& actual, std::initializer_lis
 /// Overload for ranges of MoveOnlyString
 template<typename Rng>
 void check_equal(Rng&& rng, std::initializer_list<const char*> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(it->s_, val);
@@ -143,8 +143,8 @@ void check_equal(const std::vector<B>& actual, std::initializer_list<B> expected
 }
 template<typename Rng>
 void check_equal(Rng&& rng, std::initializer_list<B> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ((*it).val, val.val);   // use (*it).val to avoid operator->
@@ -157,18 +157,18 @@ void check_equal(Rng&& rng, std::initializer_list<B> expected) {
 /// Test cases
 /// ------------------------------------------------------------
 
-// Identity check: compares two views using ranges::equal
+// Identity check: compares two views using fermat::ranges::equal
 TEST(SetUnionTest, Identity) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto i1_infinite = views::ints | views::stride(3);
     auto res = views::set_union(i1_infinite, i1_infinite);
     // Compare two ranges directly
-    EXPECT_TRUE(ranges::equal(res | views::take(100), i1_infinite | views::take(100)));
+    EXPECT_TRUE(fermat::ranges::equal(res | views::take(100), i1_infinite | views::take(100)));
 }
 
 // Finite + finite
 TEST(SetUnionTest, FiniteFinite) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int i1_finite[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     int i2_finite[] = {-3, 2, 4, 4, 6, 9};
@@ -189,7 +189,7 @@ TEST(SetUnionTest, FiniteFinite) {
 
 // Infinite + infinite
 TEST(SetUnionTest, InfiniteInfinite) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto i1_infinite = views::ints | views::stride(3);
     auto i2_infinite = views::ints | views::transform([](int x) { return x * x; });
@@ -202,13 +202,13 @@ TEST(SetUnionTest, InfiniteInfinite) {
     set_union(i1_infinite | views::take(10),
               i2_infinite | views::take(10),
               back_inserter(greedy_union));
-    // Compare two ranges elementwise using ranges::equal
-    EXPECT_TRUE(ranges::equal(res | views::take(6), greedy_union | views::take(6)));
+    // Compare two ranges elementwise using fermat::ranges::equal
+    EXPECT_TRUE(fermat::ranges::equal(res | views::take(6), greedy_union | views::take(6)));
 }
 
 // Finite + infinite
 TEST(SetUnionTest, FiniteInfinite) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int i1_finite[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     auto i2_infinite = views::ints | views::transform([](int x) { return x * x; });
@@ -219,7 +219,7 @@ TEST(SetUnionTest, FiniteInfinite) {
 
 // Infinite + finite
 TEST(SetUnionTest, InfiniteFinite) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto i1_infinite = views::ints | views::stride(3);
     int i2_finite[] = {-3, 2, 4, 4, 6, 9};
@@ -230,7 +230,7 @@ TEST(SetUnionTest, InfiniteFinite) {
 
 // Unknown cardinalities
 TEST(SetUnionTest, UnknownCardinality) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto rng0 = views::iota(10) | views::drop_while([](int i) { return i < 25; });
     int i2_finite[] = {-3, 2, 4, 4, 6, 9};
@@ -242,13 +242,13 @@ TEST(SetUnionTest, UnknownCardinality) {
     auto res4 = views::set_union(rng0, i1_infinite);
     auto res5 = views::set_union(rng0, rng0);
     (void)res1; (void)res2; (void)res3; (void)res4;
-    // Compare two ranges with ranges::equal
-    EXPECT_TRUE(ranges::equal(res5 | views::take(100), rng0 | views::take(100)));
+    // Compare two ranges with fermat::ranges::equal
+    EXPECT_TRUE(fermat::ranges::equal(res5 | views::take(100), rng0 | views::take(100)));
 }
 
 // Const ranges
 TEST(SetUnionTest, ConstRanges) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int i1_finite[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     int i2_finite[] = {-3, 2, 4, 4, 6, 9};
@@ -262,7 +262,7 @@ TEST(SetUnionTest, ConstRanges) {
 
 // Different ordering
 TEST(SetUnionTest, DifferentOrdering) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int i1_finite[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     int i2_finite[] = {-3, 2, 4, 4, 6, 9};
@@ -275,7 +275,7 @@ TEST(SetUnionTest, DifferentOrdering) {
 
 // Different element types, custom ordering (B and D)
 TEST(SetUnionTest, DifferentElementTypes) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     B b_finite[] = {B{-20}, B{-10}, B{1}, B{3}, B{3}, B{6}, B{8}, B{20}};
     D d_finite[] = {D{0}, D{2}, D{4}, D{6}};
@@ -291,7 +291,7 @@ TEST(SetUnionTest, DifferentElementTypes) {
 
 // Projections
 TEST(SetUnionTest, Projections) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     B b_finite[] = {B{-20}, B{-10}, B{1}, B{3}, B{3}, B{6}, B{8}, B{20}};
     D d_finite[] = {D{0}, D{2}, D{4}, D{6}};
@@ -308,7 +308,7 @@ TEST(SetUnionTest, Projections) {
 
 // Move-only
 TEST(SetUnionTest, MoveOnly) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto v0 = to<std::vector<MoveOnlyString>>({"a","b","c","x"});
     auto v1 = to<std::vector<MoveOnlyString>>({"b","x","y","z"});
@@ -327,28 +327,28 @@ TEST(SetUnionTest, MoveOnly) {
 
 // Iterator equality
 TEST(SetUnionTest, IteratorEquality) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int r1[] = {1, 2, 3};
     int r2[] = {2, 3, 4, 5};
     auto res = views::set_union(r1, r2); // 1, 2, 3, 4, 5
 
-    auto it1 = ranges::next(res.begin(), 3); // *it1 == 4
-    auto it2 = ranges::next(it1);            // *it2 == 5
+    auto it1 = fermat::ranges::next(res.begin(), 3); // *it1 == 4
+    auto it2 = fermat::ranges::next(it1);            // *it2 == 5
     auto sentinel = res.end();
 
     EXPECT_EQ(*it1, 4);
     EXPECT_EQ(*it2, 5);
     EXPECT_NE(it1, it2);
     EXPECT_NE(it1, sentinel);
-    EXPECT_EQ(ranges::next(it1, 2), sentinel);
+    EXPECT_EQ(fermat::ranges::next(it1, 2), sentinel);
     EXPECT_NE(it2, sentinel);
-    EXPECT_EQ(ranges::next(it2, 1), sentinel);
+    EXPECT_EQ(fermat::ranges::next(it2, 1), sentinel);
 }
 
 // debug_input_view
 TEST(SetUnionTest, DebugInputView) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int i1_finite[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     int i2_finite[] = {-3, 2, 4, 4, 6, 9};

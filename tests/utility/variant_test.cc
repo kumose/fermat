@@ -10,15 +10,15 @@
 #include <memory>
 #include <type_traits>
 
-#include <fermat/utility/variant.h>               /// ranges::variant, ranges::bad_variant_access
-#include <fermat/functional/overload.h>          /// ranges::overload
-#include <fermat/algorithm/equal.h>        /// ranges::equal
+#include <fermat/utility/variant.h>               /// fermat::ranges::variant, fermat::ranges::bad_variant_access
+#include <fermat/functional/overload.h>          /// fermat::ranges::overload
+#include <fermat/algorithm/equal.h>        /// fermat::ranges::equal
 #include <fermat/view/concat.h>            /// views::concat
 #include <fermat/view/partial_sum.h>       /// views::partial_sum
 #include <fermat/view/transform.h>         /// views::transform
-#include <fermat/numeric/accumulate.h>     /// ranges::accumulate
+#include <fermat/numeric/accumulate.h>     /// fermat::ranges::accumulate
 
-using namespace ranges;
+using namespace fermat::ranges;
 /// ------------------------------------------------------------
 /// MoveOnlyString helper (as in original)
 /// ------------------------------------------------------------
@@ -38,8 +38,8 @@ struct MoveOnlyString
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -53,9 +53,9 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected) {
 /// ------------------------------------------------------------
 void bug_1217() {
     std::vector<int> vec;
-    if (auto tx = vec | ranges::views::transform([](int) { return 0; })) {
-        auto positions_visited = ranges::views::concat(tx, tx) | ranges::views::partial_sum;
-        ranges::accumulate(positions_visited, 0);
+    if (auto tx = vec | fermat::ranges::views::transform([](int) { return 0; })) {
+        auto positions_visited = fermat::ranges::views::concat(tx, tx) | fermat::ranges::views::partial_sum;
+        fermat::ranges::accumulate(positions_visited, 0);
     }
 }
 
@@ -64,9 +64,9 @@ void bug_1217() {
 /// ------------------------------------------------------------
 
 TEST(VariantTest, BasicVariantAndAccess) {
-    using ranges::variant;
-    using ranges::get;
-    using ranges::bad_variant_access;
+    using fermat::ranges::variant;
+    using fermat::ranges::get;
+    using fermat::ranges::bad_variant_access;
 
     variant<int, short> v;
     EXPECT_EQ(v.index(), 0u);
@@ -81,9 +81,9 @@ TEST(VariantTest, BasicVariantAndAccess) {
 }
 
 TEST(VariantTest, VariantOfVoid) {
-    using ranges::variant;
-    using ranges::get;
-    using ranges::bad_variant_access;
+    using fermat::ranges::variant;
+    using fermat::ranges::get;
+    using fermat::ranges::bad_variant_access;
 
     variant<void, void> v;
     EXPECT_EQ(v.index(), 0u);
@@ -97,9 +97,9 @@ TEST(VariantTest, VariantOfVoid) {
 }
 
 TEST(VariantTest, VariantOfReferences) {
-    using ranges::variant;
-    using ranges::get;
-    using ranges::emplaced_index;
+    using fermat::ranges::variant;
+    using fermat::ranges::get;
+    using fermat::ranges::emplaced_index;
 
     int i = 42;
     std::string s = "hello world";
@@ -120,9 +120,9 @@ TEST(VariantTest, VariantOfReferences) {
 }
 
 TEST(VariantTest, MoveTest1) {
-    using ranges::variant;
-    using ranges::get;
-    using ranges::emplaced_index;
+    using fermat::ranges::variant;
+    using fermat::ranges::get;
+    using fermat::ranges::emplaced_index;
 
     variant<int, MoveOnlyString> v{emplaced_index<1>, "hello world"};
     EXPECT_EQ(get<1>(v), "hello world");
@@ -140,9 +140,9 @@ TEST(VariantTest, MoveTest1) {
 }
 
 TEST(VariantTest, MoveTest2) {
-    using ranges::variant;
-    using ranges::get;
-    using ranges::emplaced_index;
+    using fermat::ranges::variant;
+    using fermat::ranges::get;
+    using fermat::ranges::emplaced_index;
 
     MoveOnlyString s = "hello world";
     variant<MoveOnlyString&> v{emplaced_index<0>, s};
@@ -152,8 +152,8 @@ TEST(VariantTest, MoveTest2) {
 }
 
 TEST(VariantTest, ApplyTest1) {
-    using ranges::variant;
-    using ranges::overload;
+    using fermat::ranges::variant;
+    using fermat::ranges::overload;
 
     std::stringstream sout;
     variant<int, std::string> v{emplaced_index<1>, "hello"};
@@ -164,12 +164,12 @@ TEST(VariantTest, ApplyTest1) {
     variant<void, int> x = v.visit(fun);
     EXPECT_EQ(sout.str(), "string");
     EXPECT_EQ(x.index(), 1u);
-    EXPECT_EQ(ranges::get<1>(x), 42);
+    EXPECT_EQ(fermat::ranges::get<1>(x), 42);
 }
 
 TEST(VariantTest, ApplyTest2) {
-    using ranges::variant;
-    using ranges::overload;
+    using fermat::ranges::variant;
+    using fermat::ranges::overload;
 
     std::stringstream sout;
     std::string s = "hello";
@@ -181,19 +181,19 @@ TEST(VariantTest, ApplyTest2) {
     variant<void, int> x = v.visit(fun);
     EXPECT_EQ(sout.str(), "string");
     EXPECT_EQ(x.index(), 1u);
-    EXPECT_EQ(ranges::get<1>(x), 42);
+    EXPECT_EQ(fermat::ranges::get<1>(x), 42);
 }
 
 TEST(VariantTest, ConstexprVariant) {
-    using ranges::variant;
+    using fermat::ranges::variant;
     constexpr variant<int, short> v{emplaced_index<1>, short(2)};
     static_assert(v.index() == 1, "");
     static_assert(v.valid(), "");
 }
 
 TEST(VariantTest, VariantAndArrays) {
-    using ranges::variant;
-    using ranges::get;
+    using fermat::ranges::variant;
+    using fermat::ranges::get;
 
     // Test with array of int[5]
     variant<int[5], std::vector<int>> v{emplaced_index<0>, {1,2,3,4,5}};

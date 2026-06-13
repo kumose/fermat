@@ -22,7 +22,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges {
+namespace fermat::ranges {
     /// \addtogroup group-utility
     /// @{
     namespace aux {
@@ -48,7 +48,7 @@ namespace ranges {
         RANGES_INLINE_VARIABLE(copy_fn, copy)
     } // namespace aux
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

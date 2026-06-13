@@ -40,7 +40,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -102,7 +102,7 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::includes;
+        using fermat::ranges::includes;
     }
 
     template<typename I1, typename I2, typename O>
@@ -134,7 +134,7 @@ namespace ranges
             {
                 if(begin2 == end2)
                 {
-                    auto tmp = ranges::copy(begin1, end1, out);
+                    auto tmp = fermat::ranges::copy(begin1, end1, out);
                     return {tmp.in, begin2, tmp.out};
                 }
                 if(invoke(pred, invoke(proj2, *begin2), invoke(proj1, *begin1)))
@@ -150,7 +150,7 @@ namespace ranges
                     ++begin1;
                 }
             }
-            auto tmp = ranges::copy(begin2, end2, out);
+            auto tmp = fermat::ranges::copy(begin2, end2, out);
             return {begin1, tmp.in, tmp.out};
         }
 
@@ -185,8 +185,8 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::set_union;
-        using ranges::set_union_result;
+        using fermat::ranges::set_union;
+        using fermat::ranges::set_union_result;
     } // namespace cpp20
 
     RANGES_FUNC_BEGIN(set_intersection)
@@ -259,7 +259,7 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::set_intersection;
+        using fermat::ranges::set_intersection;
     }
 
     template<typename I, typename O>
@@ -291,7 +291,7 @@ namespace ranges
             {
                 if(begin2 == end2)
                 {
-                    auto tmp = ranges::copy(begin1, end1, out);
+                    auto tmp = fermat::ranges::copy(begin1, end1, out);
                     return {tmp.in, tmp.out};
                 }
                 if(invoke(pred, invoke(proj1, *begin1), invoke(proj2, *begin2)))
@@ -341,8 +341,8 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::set_difference;
-        using ranges::set_difference_result;
+        using fermat::ranges::set_difference;
+        using fermat::ranges::set_difference_result;
     } // namespace cpp20
 
     template<typename I1, typename I2, typename O>
@@ -375,7 +375,7 @@ namespace ranges
             {
                 if(begin2 == end2)
                 {
-                    auto tmp = ranges::copy(begin1, end1, out);
+                    auto tmp = fermat::ranges::copy(begin1, end1, out);
                     return {tmp.in, begin2, tmp.out};
                 }
                 if(invoke(pred, invoke(proj1, *begin1), invoke(proj2, *begin2)))
@@ -396,7 +396,7 @@ namespace ranges
                     ++begin2;
                 }
             }
-            auto tmp = ranges::copy(begin2, end2, out);
+            auto tmp = fermat::ranges::copy(begin2, end2, out);
             return {begin1, tmp.in, tmp.out};
         }
 
@@ -433,11 +433,11 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::set_symmetric_difference;
-        using ranges::set_symmetric_difference_result;
+        using fermat::ranges::set_symmetric_difference;
+        using fermat::ranges::set_symmetric_difference_result;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

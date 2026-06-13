@@ -64,7 +64,7 @@ struct MoveOnlyString {
 /// debug_input_view: borrowed input view (from previous tests)
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T> > {
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T> > {
     struct data {
         const T *first_;
         std::ptrdiff_t size_;
@@ -83,7 +83,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T> > {
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges {
+namespace fermat::ranges {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T> > = true;
 }
@@ -93,8 +93,8 @@ namespace ranges {
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng &&rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -106,8 +106,8 @@ void check_equal(Rng &&rng, std::initializer_list<T> expected) {
 /// Overload for vector of tuples or pairs
 template<typename Rng, typename Tuple>
 void check_equal(Rng &&rng, std::vector<Tuple> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -141,7 +141,7 @@ void check_equal(const std::vector<MoveOnlyString> &a, const std::vector<MoveOnl
 
 /// Test zip with mixed range kinds (common, sized, input)
 TEST(ZipViewTest, MixedRanges) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> vi{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     std::vector<std::string> const vs{"hello", "goodbye", "hello", "goodbye"};
@@ -150,7 +150,7 @@ TEST(ZipViewTest, MixedRanges) {
     using V = std::tuple<int, std::string, std::string>;
     auto rng = views::zip(vi, vs, istream<std::string>(str) | views::common);
     std::vector<V> expected;
-    ranges::copy(rng, ranges::back_inserter(expected));
+    fermat::ranges::copy(rng, fermat::ranges::back_inserter(expected));
     check_equal(expected, {
                     V{0, "hello", "john"},
                     V{1, "goodbye", "paul"},
@@ -161,7 +161,7 @@ TEST(ZipViewTest, MixedRanges) {
 
 /// Test zip with mixed ranges, no common adaptor on input
 TEST(ZipViewTest, MixedRangesNoCommon) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> vi{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     std::vector<std::string> const vs{"hello", "goodbye", "hello", "goodbye"};
@@ -170,7 +170,7 @@ TEST(ZipViewTest, MixedRangesNoCommon) {
     using V = std::tuple<int, std::string, std::string>;
     auto rng = views::zip(vi, vs, istream<std::string>(str));
     std::vector<V> expected;
-    ranges::copy(rng, ranges::back_inserter(expected));
+    fermat::ranges::copy(rng, fermat::ranges::back_inserter(expected));
     check_equal(expected, {
                     V{0, "hello", "john"},
                     V{1, "goodbye", "paul"},
@@ -181,7 +181,7 @@ TEST(ZipViewTest, MixedRangesNoCommon) {
 
 /// Test zip with random-access ranges
 TEST(ZipViewTest, RandomAccessZip) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> vi{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     std::vector<std::string> const vs{"hello", "goodbye", "hello", "goodbye"};
@@ -198,14 +198,14 @@ TEST(ZipViewTest, RandomAccessZip) {
 
 /// Test zip_with
 TEST(ZipViewTest, ZipWith) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<std::string> v0{"a", "b", "c"};
     std::vector<std::string> v1{"x", "y", "z"};
 
     auto rng = views::zip_with(std::plus<std::string>{}, v0, v1);
     std::vector<std::string> expected;
-    ranges::copy(rng, ranges::back_inserter(expected));
+    fermat::ranges::copy(rng, fermat::ranges::back_inserter(expected));
     check_equal(expected, {"ax", "by", "cz"});
 
     auto rng2 = views::zip_with([] { return 42; });
@@ -215,14 +215,14 @@ TEST(ZipViewTest, ZipWith) {
 /// Test moving from a zip view (full original logic)
 /// Test moving from a zip view (full original logic)
 TEST(ZipViewTest, MoveFromZip) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     auto v0 = to<std::vector<MoveOnlyString>>({"a", "b", "c"});
     auto v1 = to<std::vector<MoveOnlyString>>({"x", "y", "z"});
 
     auto rng = views::zip(v0, v1);
     std::vector<std::pair<MoveOnlyString, MoveOnlyString>> expected;
-    move(rng, ranges::back_inserter(expected));
+    move(rng, fermat::ranges::back_inserter(expected));
 
     // Check keys and values
     auto keys = expected | views::keys;
@@ -249,7 +249,7 @@ TEST(ZipViewTest, MoveFromZip) {
     using R = decltype(rng);
     auto proj = [](range_reference_t<R> p) -> MoveOnlyString& { return p.first; };
     auto rng2 = rng | views::transform(proj);
-    move(rng2, ranges::back_inserter(res));
+    move(rng2, fermat::ranges::back_inserter(res));
     check_equal(res, {"a", "b", "c"});
     // After moving from the transform view, only v0 elements are moved-from, v1 unchanged.
     for (const auto& ms : v0) EXPECT_EQ(ms.s, "");
@@ -259,7 +259,7 @@ TEST(ZipViewTest, MoveFromZip) {
 
 /// Test const zip view with move‑only types (compile only)
 TEST(ZipViewTest, ConstZipWithMoveOnly) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     const auto v = to<std::vector<MoveOnlyString> >({"a", "b", "c"});
     auto rng = views::zip(v, v);
     (void) rng;
@@ -267,7 +267,7 @@ TEST(ZipViewTest, ConstZipWithMoveOnly) {
 
 /// Test views::move composed with zip
 TEST(ZipViewTest, MoveAndZip) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::vector<int> v{1, 2, 3, 4};
     auto moved = v | views::move;
     auto zipped = views::zip(moved);
@@ -276,7 +276,7 @@ TEST(ZipViewTest, MoveAndZip) {
 
 /// Test stride and zip interaction (view_adaptor logic)
 TEST(ZipViewTest, StrideZip) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::vector<int> vi{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     std::vector<std::string> const vs{"hello", "goodbye", "hello", "goodbye"};
     auto rng0 = views::zip(vi, vs);
@@ -286,7 +286,7 @@ TEST(ZipViewTest, StrideZip) {
 
 /// Test noexcept on iter_move with unique_ptr
 TEST(ZipViewTest, NoexceptIterMove) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     static_assert(noexcept(std::declval<std::unique_ptr<int> &>() = std::declval<std::unique_ptr<int> &&>()), "");
     std::unique_ptr<int> rg1[10], rg2[10];
     auto x = views::zip(rg1, rg2);
@@ -298,7 +298,7 @@ TEST(ZipViewTest, NoexceptIterMove) {
 
 /// Test common_iterator's iter_move via zip with take_while
 TEST(ZipViewTest, CommonIteratorIterMove) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::unique_ptr<int> rg1[10], rg2[10];
     auto rg3 = rg2 | views::take_while([](std::unique_ptr<int> &) { return true; });
     auto x = views::zip(rg1, rg3);
@@ -311,15 +311,15 @@ TEST(ZipViewTest, CommonIteratorIterMove) {
 
 /// Regression test for #439 (for_each and zip)
 TEST(ZipViewTest, Regression439) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::vector<int> vec{0, 1, 2};
-    auto rng = vec | views::for_each([](int i) { return ranges::yield(i); });
-    ranges::distance(views::zip(views::iota(0), rng) | views::common);
+    auto rng = vec | views::for_each([](int i) { return fermat::ranges::yield(i); });
+    fermat::ranges::distance(views::zip(views::iota(0), rng) | views::common);
 }
 
 /// Test zip with debug_input_view
 TEST(ZipViewTest, ZipDebugInputView) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int const i1[] = {0, 1, 2, 3};
     int const i2[] = {4, 5, 6, 7};
     auto rng = views::zip(
@@ -332,28 +332,28 @@ TEST(ZipViewTest, ZipDebugInputView) {
 
 /// Test zip with zero arguments
 TEST(ZipViewTest, ZipZeroArgs) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto rng = views::zip();
-    EXPECT_EQ(ranges::begin(rng), ranges::end(rng));
-    EXPECT_EQ(ranges::size(rng), 0u);
+    EXPECT_EQ(fermat::ranges::begin(rng), fermat::ranges::end(rng));
+    EXPECT_EQ(fermat::ranges::size(rng), 0u);
 }
 
 /// Test dangling detection (simplified – omit is_dangling check)
 TEST(ZipViewTest, DanglingDetection) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::vector<int> vi{0, 1, 2, 3};
     std::vector<std::string> vs{"a", "b", "c", "d"};
     auto true_ = [](auto &&) { return true; };
     // Just ensure compilation; we cannot test is_dangling easily.
-    ranges::find_if(views::zip(vi, vs), true_);
-    ranges::find_if(views::zip(vi | views::move, vs | views::common), true_);
-    ranges::find_if(views::zip(vi | views::filter(true_)), true_);
+    fermat::ranges::find_if(views::zip(vi, vs), true_);
+    fermat::ranges::find_if(views::zip(vi | views::move, vs | views::common), true_);
+    fermat::ranges::find_if(views::zip(vi | views::filter(true_)), true_);
     SUCCEED();
 }
 
 /// Test zip with infinite range (finite cardinality)
 TEST(ZipViewTest, ZipWithInfinite) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int const i1[] = {0, 1, 2, 3};
     auto rng = views::zip(i1, views::iota(4));
     using P = std::pair<int, int>;
@@ -362,7 +362,7 @@ TEST(ZipViewTest, ZipWithInfinite) {
 
 /// Test zip with only infinite ranges (infinite cardinality)
 TEST(ZipViewTest, ZipTwoInfinite) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto rng = views::zip(views::iota(0), views::iota(4));
     auto taken = rng | views::take(4);
     using P = std::pair<int, int>;
@@ -371,7 +371,7 @@ TEST(ZipViewTest, ZipTwoInfinite) {
 
 /// Test zip with unknown cardinality (istream)
 TEST(ZipViewTest, ZipUnknownCardinality) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::stringstream str;
     auto rng = views::zip(istream<std::string>(str));
     (void) rng;
@@ -380,25 +380,25 @@ TEST(ZipViewTest, ZipUnknownCardinality) {
 
 /// Test zip with empty range and non‑empty range
 TEST(ZipViewTest, ZipWithEmptyRange) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::vector<int> v0{1, 2, 3};
     std::vector<int> v1{};
 
     auto rng0 = views::zip(v0, v1);
     auto rng1 = views::zip(v1, v0);
 
-    EXPECT_EQ(ranges::distance(rng0.begin(), rng0.end()), 0);
-    EXPECT_EQ(ranges::distance(rng1.begin(), rng1.end()), 0);
-    EXPECT_EQ(ranges::distance(rng0.end(), rng0.begin()), 0);
-    EXPECT_EQ(ranges::distance(rng1.end(), rng1.begin()), 0);
+    EXPECT_EQ(fermat::ranges::distance(rng0.begin(), rng0.end()), 0);
+    EXPECT_EQ(fermat::ranges::distance(rng1.begin(), rng1.end()), 0);
+    EXPECT_EQ(fermat::ranges::distance(rng0.end(), rng0.begin()), 0);
+    EXPECT_EQ(fermat::ranges::distance(rng1.end(), rng1.begin()), 0);
 }
 
 /// Test zip with different sized ranges (shortest length)
 TEST(ZipViewTest, ZipDifferentSizes) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::vector<int> v0{1, 2, 3};
     std::vector<int> v1{1, 2, 3, 4, 5};
     auto rng = views::zip(v0, v1);
-    EXPECT_EQ(ranges::distance(rng.begin(), rng.end()), 3);
-    EXPECT_EQ(ranges::distance(rng.end(), rng.begin()), -3);
+    EXPECT_EQ(fermat::ranges::distance(rng.begin(), rng.end()), 3);
+    EXPECT_EQ(fermat::ranges::distance(rng.end(), rng.begin()), -3);
 }

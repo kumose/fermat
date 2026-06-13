@@ -36,7 +36,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -172,7 +172,7 @@ namespace ranges
         {
             range_size_t<range_reference_t<Rng>> n = 0;
             RANGES_FOR(auto && inner, outer_)
-                n += ranges::size(inner);
+                n += fermat::ranges::size(inner);
             return n;
         }
         // // ericniebler/stl2#605
@@ -200,11 +200,11 @@ namespace ranges
 
             void satisfy()
             {
-                for(; outer_it_ != ranges::end(rng_->outer_); ++outer_it_)
+                for(; outer_it_ != fermat::ranges::end(rng_->outer_); ++outer_it_)
                 {
                     auto && inner = rng_->update_inner_(outer_it_);
-                    inner_it_ = ranges::begin(inner);
-                    if(inner_it_ != ranges::end(inner))
+                    inner_it_ = fermat::ranges::begin(inner);
+                    if(inner_it_ != fermat::ranges::end(inner))
                         return;
                 }
                 if(RANGES_CONSTEXPR_IF(ref_is_glvalue::value))
@@ -242,7 +242,7 @@ namespace ranges
             }
             constexpr bool equal(default_sentinel_t) const
             {
-                return outer_it_ == ranges::end(rng_->outer_);
+                return outer_it_ == fermat::ranges::end(rng_->outer_);
             }
             CPP_member
             constexpr auto equal(cursor const & that) const //
@@ -256,7 +256,7 @@ namespace ranges
             constexpr void next()
             {
                 auto && inner_rng = rng_->get_inner_(outer_it_);
-                if(++inner_it_ == ranges::end(inner_rng))
+                if(++inner_it_ == fermat::ranges::end(inner_rng))
                 {
                     ++outer_it_;
                     satisfy();
@@ -270,10 +270,10 @@ namespace ranges
                         bidirectional_range<CInner> && //
                         common_range<CInner>) // ericniebler/stl2#606
             {
-                if(outer_it_ == ranges::end(rng_->outer_))
-                    inner_it_ = ranges::end(*--outer_it_);
-                while(inner_it_ == ranges::begin(*outer_it_))
-                    inner_it_ = ranges::end(*--outer_it_);
+                if(outer_it_ == fermat::ranges::end(rng_->outer_))
+                    inner_it_ = fermat::ranges::end(*--outer_it_);
+                while(inner_it_ == fermat::ranges::begin(*outer_it_))
+                    inner_it_ = fermat::ranges::end(*--outer_it_);
                 --inner_it_;
             }
             // clang-format off
@@ -295,7 +295,7 @@ namespace ranges
         {
             constexpr auto operator()(join_view * this_, std::true_type) const
             {
-                return cursor<use_const_always()>{this_, ranges::end};
+                return cursor<use_const_always()>{this_, fermat::ranges::end};
             }
             constexpr auto operator()(join_view *, std::false_type) const
             {
@@ -306,7 +306,7 @@ namespace ranges
         {
             constexpr auto operator()(join_view const * this_, std::true_type) const
             {
-                return cursor<true>{this_, ranges::end};
+                return cursor<true>{this_, fermat::ranges::end};
             }
             constexpr auto operator()(join_view const *, std::false_type) const
             {
@@ -316,7 +316,7 @@ namespace ranges
 
         constexpr cursor<use_const_always()> begin_cursor()
         {
-            return {this, ranges::begin};
+            return {this, fermat::ranges::begin};
         }
 
         template(bool Const = true)(
@@ -324,7 +324,7 @@ namespace ranges
                 std::is_reference<range_reference_t<meta::const_if_c<Const, Rng>>>::value)
         constexpr cursor<Const> begin_cursor() const
         {
-            return {this, ranges::begin};
+            return {this, fermat::ranges::begin};
         }
 
         constexpr auto end_cursor()
@@ -386,10 +386,10 @@ namespace ranges
         {
             range_size_t<range_reference_t<Rng>> n = 0;
             RANGES_FOR(auto && inner, outer_)
-                n += ranges::size(inner);
+                n += fermat::ranges::size(inner);
             return n + (range_cardinality<Rng>::value == 0
                             ? 0
-                            : ranges::size(val_) * (range_cardinality<Rng>::value - 1));
+                            : fermat::ranges::size(val_) * (range_cardinality<Rng>::value - 1));
         }
 
     private:
@@ -413,20 +413,20 @@ namespace ranges
                 {
                     if(cur_.index() == 0)
                     {
-                        if(ranges::get<0>(cur_) != ranges::end(rng_->val_))
+                        if(fermat::ranges::get<0>(cur_) != fermat::ranges::end(rng_->val_))
                             break;
                         // Intentionally promote xvalues to lvalues here:
                         auto && inner = rng_->update_inner_(outer_it_);
-                        ranges::emplace<1>(cur_, ranges::begin(inner));
+                        fermat::ranges::emplace<1>(cur_, fermat::ranges::begin(inner));
                     }
                     else
                     {
                         auto && inner = rng_->get_inner_(outer_it_);
-                        if(ranges::get<1>(cur_) != ranges::end(inner))
+                        if(fermat::ranges::get<1>(cur_) != fermat::ranges::end(inner))
                             break;
-                        if(++outer_it_ == ranges::end(rng_->outer_))
+                        if(++outer_it_ == fermat::ranges::end(rng_->outer_))
                             break;
-                        ranges::emplace<0>(cur_, ranges::begin(rng_->val_));
+                        fermat::ranges::emplace<0>(cur_, fermat::ranges::begin(rng_->val_));
                     }
                 }
             }
@@ -441,34 +441,34 @@ namespace ranges
             cursor() = default;
             cursor(join_with_view * rng)
               : rng_{rng}
-              , outer_it_(ranges::begin(rng->outer_))
+              , outer_it_(fermat::ranges::begin(rng->outer_))
             {
-                if(outer_it_ != ranges::end(rng->outer_))
+                if(outer_it_ != fermat::ranges::end(rng->outer_))
                 {
                     auto && inner = rng_->update_inner_(outer_it_);
-                    ranges::emplace<1>(cur_, ranges::begin(inner));
+                    fermat::ranges::emplace<1>(cur_, fermat::ranges::begin(inner));
                     satisfy();
                 }
             }
             bool equal(default_sentinel_t) const
             {
-                return outer_it_ == ranges::end(rng_->outer_);
+                return outer_it_ == fermat::ranges::end(rng_->outer_);
             }
             void next()
             {
                 // visit(cur_, [](auto& it){ ++it; });
                 if(cur_.index() == 0)
                 {
-                    auto & it = ranges::get<0>(cur_);
-                    RANGES_ASSERT(it != ranges::end(rng_->val_));
+                    auto & it = fermat::ranges::get<0>(cur_);
+                    RANGES_ASSERT(it != fermat::ranges::end(rng_->val_));
                     ++it;
                 }
                 else
                 {
-                    auto & it = ranges::get<1>(cur_);
+                    auto & it = fermat::ranges::get<1>(cur_);
                     #ifndef NDEBUG
                     auto && inner = rng_->get_inner_(outer_it_);
-                    RANGES_ASSERT(it != ranges::end(inner));
+                    RANGES_ASSERT(it != fermat::ranges::end(inner));
                     #endif
                     ++it;
                 }
@@ -478,18 +478,18 @@ namespace ranges
             {
                 // return visit(cur_, [](auto& it) -> reference { return *it; });
                 if(cur_.index() == 0)
-                    return *ranges::get<0>(cur_);
+                    return *fermat::ranges::get<0>(cur_);
                 else
-                    return *ranges::get<1>(cur_);
+                    return *fermat::ranges::get<1>(cur_);
             }
             rvalue_reference move() const
             {
                 // return visit(cur_, [](auto& it) -> rvalue_reference { return
                 // iter_move(it); });
                 if(cur_.index() == 0)
-                    return iter_move(ranges::get<0>(cur_));
+                    return iter_move(fermat::ranges::get<0>(cur_));
                 else
-                    return iter_move(ranges::get<1>(cur_));
+                    return iter_move(fermat::ranges::get<1>(cur_));
             }
         };
         cursor begin_cursor()
@@ -636,19 +636,19 @@ namespace ranges
         namespace views
         {
             RANGES_INLINE_VARIABLE(
-                ranges::views::view_closure<ranges::views::cpp20_join_fn>, join)
+                fermat::ranges::views::view_closure<fermat::ranges::views::cpp20_join_fn>, join)
         }
         template(typename Rng)(
             requires input_range<Rng> AND view_<Rng> AND
                 input_range<iter_reference_t<iterator_t<Rng>>>) //
-            using join_view = ranges::join_view<Rng>;
+            using join_view = fermat::ranges::join_view<Rng>;
     } // namespace cpp20
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::join_view)
-RANGES_SATISFY_BOOST_RANGE(::ranges::join_with_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::join_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::join_with_view)
 
 #endif

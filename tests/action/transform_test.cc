@@ -8,7 +8,7 @@
 #include <fermat/action/transform.h>
 #include <fermat/range/conversion.h>
 
-using namespace ranges;
+using namespace fermat::ranges;
 
 TEST(ActionTransformTest, Example) {
     auto v = views::ints(0, 10) | to<std::vector>();

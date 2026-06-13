@@ -17,7 +17,7 @@
 /// debug_input_view: minimal input view for testing
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T>>
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>>
 {
     struct data
     {
@@ -36,7 +36,7 @@ struct debug_input_view : ranges::view_interface<debug_input_view<T>>
     std::ptrdiff_t size() const { return data_->size_; }
 };
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T>> = true;
@@ -48,8 +48,8 @@ namespace ranges
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected)
 {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected)
     {
         EXPECT_NE(it, end);
@@ -65,7 +65,7 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected)
 
 TEST(DelimitTest, IotaDelimit)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto rng0 = views::iota(10) | views::delimit(25);
     check_equal(rng0, {10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
 
@@ -79,7 +79,7 @@ TEST(DelimitTest, IotaDelimit)
 
 TEST(DelimitTest, VectorDelimit)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::vector<int> vi{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     auto rng1 = vi | views::delimit(50);
     check_equal(rng1, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
@@ -87,7 +87,7 @@ TEST(DelimitTest, VectorDelimit)
 
 TEST(DelimitTest, IteratorDelimit)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::vector<int> vi{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     auto rng2 = views::delimit(vi.begin(), 8);
     check_equal(rng2, {0, 1, 2, 3, 4, 5, 6, 7});
@@ -95,7 +95,7 @@ TEST(DelimitTest, IteratorDelimit)
 
 TEST(DelimitTest, DebugInputViewDelimit)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int const some_ints[] = {1,2,3,0,4,5,6};
     auto rng = debug_input_view<int const>{some_ints, 7} | views::delimit(0);
     check_equal(rng, {1,2,3});
@@ -103,7 +103,7 @@ TEST(DelimitTest, DebugInputViewDelimit)
 
 TEST(DelimitTest, ArrayDelimit)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
     int const some_ints[] = {1,2,3};
     auto rng = views::delimit(some_ints, 0);
     check_equal(rng, {1,2,3});

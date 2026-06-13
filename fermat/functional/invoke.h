@@ -39,7 +39,7 @@ RANGES_DIAGNOSTIC_IGNORE_DEPRECATED_DECLARATIONS
 #endif
 #endif
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-functional
     /// @{
@@ -215,29 +215,29 @@ namespace ranges
     /// \cond
     template<typename Sig>
     struct RANGES_DEPRECATED(
-        "ranges::result_of is deprecated. "
-        "Please use ranges::invoke_result") result_of
+        "fermat::ranges::result_of is deprecated. "
+        "Please use fermat::ranges::invoke_result") result_of
     {};
 
     template<typename Fun, typename... Args>
     struct RANGES_DEPRECATED(
-        "ranges::result_of is deprecated. "
-        "Please use ranges::invoke_result") result_of<Fun(Args...)>
+        "fermat::ranges::result_of is deprecated. "
+        "Please use fermat::ranges::invoke_result") result_of<Fun(Args...)>
       : meta::defer<invoke_result_t, Fun, Args...>
     {};
     /// \endcond
 
     namespace cpp20
     {
-        using ranges::invoke;
-        using ranges::invoke_result;
-        using ranges::invoke_result_t;
-        using ranges::is_invocable_v;
-        using ranges::is_nothrow_invocable_v;
+        using fermat::ranges::invoke;
+        using fermat::ranges::invoke_result;
+        using fermat::ranges::invoke_result_t;
+        using fermat::ranges::is_invocable_v;
+        using fermat::ranges::is_nothrow_invocable_v;
     } // namespace cpp20
 
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 RANGES_DIAGNOSTIC_POP
 

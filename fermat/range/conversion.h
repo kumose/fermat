@@ -29,7 +29,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -66,8 +66,8 @@ namespace ranges
             }
         };
 
-        // A simple, light-weight transform iterator that applies ranges::to
-        // to each element in the range. Used by ranges::to to convert a range
+        // A simple, light-weight transform iterator that applies fermat::ranges::to
+        // to each element in the range. Used by fermat::ranges::to to convert a range
         // of ranges into a container of containers.
         template<typename Rng, typename Cont>
         struct to_container_iterator
@@ -234,7 +234,7 @@ namespace ranges
         template(typename Rng, typename Cont)(
         concept (convertible_to_cont_cont_impl_)(Rng, Cont),
             range_and_not_view<range_value_t<Cont>> AND
-            // Test that each element of the input range can be ranges::to<>
+            // Test that each element of the input range can be fermat::ranges::to<>
             // to the output container.
             invocable<
                 to_container::fn<meta::id<range_value_t<Cont>>>,
@@ -316,18 +316,18 @@ namespace ranges
             template<typename Cont, typename I, typename Rng>
             static Cont impl(Rng && rng, std::false_type)
             {
-                return Cont(I{ranges::begin(rng)}, I{ranges::end(rng)});
+                return Cont(I{fermat::ranges::begin(rng)}, I{fermat::ranges::end(rng)});
             }
             template<typename Cont, typename I, typename Rng>
             static auto impl(Rng && rng, std::true_type)
             {
                 Cont c;
-                auto const rng_size = ranges::size(rng);
+                auto const rng_size = fermat::ranges::size(rng);
                 using size_type = decltype(c.max_size());
                 using C = common_type_t<range_size_t<Rng>, size_type>;
                 RANGES_EXPECT(static_cast<C>(rng_size) <= static_cast<C>(c.max_size()));
                 c.reserve(static_cast<size_type>(rng_size));
-                c.assign(I{ranges::begin(rng)}, I{ranges::end(rng)});
+                c.assign(I{fermat::ranges::begin(rng)}, I{fermat::ranges::end(rng)});
                 return c;
             }
 
@@ -475,9 +475,9 @@ namespace ranges
     /// \cond
     namespace _to_
     {
-        // The old name "ranges::to_" is now deprecated:
+        // The old name "fermat::ranges::to_" is now deprecated:
         template<template<typename...> class ContT>
-        RANGES_DEPRECATED("Please use ranges::to (no underscore) instead.")
+        RANGES_DEPRECATED("Please use fermat::ranges::to (no underscore) instead.")
         detail::to_container_fn<detail::from_range<ContT>> to_(detail::to_container = {})
         {
             return {};
@@ -485,37 +485,37 @@ namespace ranges
         template(template<typename...> class ContT, typename Rng)(
             requires range<Rng> AND
                 detail::convertible_to_cont<Rng, ContT<range_value_t<Rng>>>)
-        RANGES_DEPRECATED("Please use ranges::to (no underscore) instead.")
+        RANGES_DEPRECATED("Please use fermat::ranges::to (no underscore) instead.")
         ContT<range_value_t<Rng>> to_(Rng && rng)
         {
-            return static_cast<Rng &&>(rng) | ranges::to_<ContT>();
+            return static_cast<Rng &&>(rng) | fermat::ranges::to_<ContT>();
         }
         template(template<typename...> class ContT, typename T)(
             requires detail::convertible_to_cont<std::initializer_list<T>, ContT<T>>)
-        RANGES_DEPRECATED("Please use ranges::to (no underscore) instead.")
+        RANGES_DEPRECATED("Please use fermat::ranges::to (no underscore) instead.")
         ContT<T> to_(std::initializer_list<T> il)
         {
-            return il | ranges::to_<ContT>();
+            return il | fermat::ranges::to_<ContT>();
         }
         template<typename Cont>
-        RANGES_DEPRECATED("Please use ranges::to (no underscore) instead.")
+        RANGES_DEPRECATED("Please use fermat::ranges::to (no underscore) instead.")
         detail::to_container_fn<meta::id<Cont>> to_(detail::to_container = {})
         {
             return {};
         }
         template(typename Cont, typename Rng)(
             requires range<Rng> AND detail::convertible_to_cont<Rng, Cont>)
-        RANGES_DEPRECATED("Please use ranges::to (no underscore) instead.")
+        RANGES_DEPRECATED("Please use fermat::ranges::to (no underscore) instead.")
         Cont to_(Rng && rng)
         {
-            return static_cast<Rng &&>(rng) | ranges::to_<Cont>();
+            return static_cast<Rng &&>(rng) | fermat::ranges::to_<Cont>();
         }
         template(typename Cont, typename T)(
             requires detail::convertible_to_cont<std::initializer_list<T>, Cont>)
-        RANGES_DEPRECATED("Please use ranges::to (no underscore) instead.")
+        RANGES_DEPRECATED("Please use fermat::ranges::to (no underscore) instead.")
         Cont to_(std::initializer_list<T> list)
         {
-            return list | ranges::to_<Cont>();
+            return list | fermat::ranges::to_<Cont>();
         }
     } // namespace _to_
     /// \endcond
@@ -523,7 +523,7 @@ namespace ranges
     template<typename MetaFn, typename Fn>
     inline constexpr bool
         is_pipeable_v<detail::to_container_closure<MetaFn, Fn>> = true;
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

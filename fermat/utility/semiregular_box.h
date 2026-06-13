@@ -31,7 +31,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     template<typename T>
@@ -250,57 +250,57 @@ namespace ranges
 
     template<typename T>
     struct semiregular_box<T &>
-      : private ranges::reference_wrapper<T &>
+      : private fermat::ranges::reference_wrapper<T &>
       , private detail::semiregular_get
     {
         semiregular_box() = default;
         template(typename Arg)(
-            requires constructible_from<ranges::reference_wrapper<T &>, Arg &>)
+            requires constructible_from<fermat::ranges::reference_wrapper<T &>, Arg &>)
         semiregular_box(in_place_t, Arg & arg) noexcept //
-          : ranges::reference_wrapper<T &>(arg)
+          : fermat::ranges::reference_wrapper<T &>(arg)
         {}
-        using ranges::reference_wrapper<T &>::get;
-        using ranges::reference_wrapper<T &>::operator T &;
-        using ranges::reference_wrapper<T &>::operator();
+        using fermat::ranges::reference_wrapper<T &>::get;
+        using fermat::ranges::reference_wrapper<T &>::operator T &;
+        using fermat::ranges::reference_wrapper<T &>::operator();
 
 #if defined(_MSC_VER)
         template(typename U)(
             requires (!same_as<uncvref_t<U>, semiregular_box>) AND
-            constructible_from<ranges::reference_wrapper<T &>, U>)
+            constructible_from<fermat::ranges::reference_wrapper<T &>, U>)
         constexpr semiregular_box(U && u) noexcept(
-            std::is_nothrow_constructible<ranges::reference_wrapper<T &>, U>::value)
-          : ranges::reference_wrapper<T &>{static_cast<U &&>(u)}
+            std::is_nothrow_constructible<fermat::ranges::reference_wrapper<T &>, U>::value)
+          : fermat::ranges::reference_wrapper<T &>{static_cast<U &&>(u)}
         {}
 #else
-        using ranges::reference_wrapper<T &>::reference_wrapper;
+        using fermat::ranges::reference_wrapper<T &>::reference_wrapper;
 #endif
     };
 
     template<typename T>
     struct semiregular_box<T &&>
-      : private ranges::reference_wrapper<T &&>
+      : private fermat::ranges::reference_wrapper<T &&>
       , private detail::semiregular_get
     {
         semiregular_box() = default;
         template(typename Arg)(
-            requires constructible_from<ranges::reference_wrapper<T &&>, Arg>)
+            requires constructible_from<fermat::ranges::reference_wrapper<T &&>, Arg>)
         semiregular_box(in_place_t, Arg && arg) noexcept //
-          : ranges::reference_wrapper<T &&>(static_cast<Arg &&>(arg))
+          : fermat::ranges::reference_wrapper<T &&>(static_cast<Arg &&>(arg))
         {}
-        using ranges::reference_wrapper<T &&>::get;
-        using ranges::reference_wrapper<T &&>::operator T &&;
-        using ranges::reference_wrapper<T &&>::operator();
+        using fermat::ranges::reference_wrapper<T &&>::get;
+        using fermat::ranges::reference_wrapper<T &&>::operator T &&;
+        using fermat::ranges::reference_wrapper<T &&>::operator();
 
 #if defined(_MSC_VER)
         template(typename U)(
             requires (!same_as<uncvref_t<U>, semiregular_box>) AND
-            constructible_from<ranges::reference_wrapper<T &&>, U>)
+            constructible_from<fermat::ranges::reference_wrapper<T &&>, U>)
         constexpr semiregular_box(U && u) noexcept(
-            std::is_nothrow_constructible<ranges::reference_wrapper<T &&>, U>::value)
-          : ranges::reference_wrapper<T &&>{static_cast<U &&>(u)}
+            std::is_nothrow_constructible<fermat::ranges::reference_wrapper<T &&>, U>::value)
+          : fermat::ranges::reference_wrapper<T &&>{static_cast<U &&>(u)}
         {}
 #else
-        using ranges::reference_wrapper<T &&>::reference_wrapper;
+        using fermat::ranges::reference_wrapper<T &&>::reference_wrapper;
 #endif
     };
 
@@ -326,7 +326,7 @@ namespace ranges
         semiregular_box_ref_or_val_t<T, IsConst>;
     /// \endcond
 
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

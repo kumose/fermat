@@ -28,7 +28,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-actions
     /// @{
@@ -50,8 +50,8 @@ namespace ranges
                     sortable<iterator_t<Rng>, C, P>)
             Rng operator()(Rng && rng, C pred = C{}, P proj = P{}) const
             {
-                auto it = ranges::unique(rng, std::move(pred), std::move(proj));
-                ranges::erase(rng, it, end(rng));
+                auto it = fermat::ranges::unique(rng, std::move(pred), std::move(proj));
+                fermat::ranges::erase(rng, it, end(rng));
                 return static_cast<Rng &&>(rng);
             }
         };
@@ -61,7 +61,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(action_closure<unique_fn>, unique)
     } // namespace actions
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

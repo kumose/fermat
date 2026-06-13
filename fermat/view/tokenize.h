@@ -32,7 +32,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -66,13 +66,13 @@ namespace ranges
         iterator_t<simple_view<Rng>()> begin()
         {
             meta::const_if_c<simple_view<Rng>(), Rng> & rng = rng_;
-            return {ranges::begin(rng), ranges::end(rng), rex_, subs_, flags_};
+            return {fermat::ranges::begin(rng), fermat::ranges::end(rng), rex_, subs_, flags_};
         }
         template(bool Const = true)(
             requires range<Rng const>)
         iterator_t<Const> begin() const
         {
-            return {ranges::begin(rng_), ranges::end(rng_), rex_, subs_, flags_};
+            return {fermat::ranges::begin(rng_), fermat::ranges::end(rng_), rex_, subs_, flags_};
         }
         iterator_t<simple_view<Rng>()> end()
         {
@@ -198,10 +198,10 @@ namespace ranges
         RANGES_INLINE_VARIABLE(tokenize_fn, tokenize)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::tokenize_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::tokenize_view)
 
 #endif

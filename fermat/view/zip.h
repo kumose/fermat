@@ -30,7 +30,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -179,10 +179,10 @@ namespace ranges
         RANGES_INLINE_VARIABLE(zip_fn, zip)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::zip_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::zip_view)
 
 #include <fermat/detail/epilogue.h>
 

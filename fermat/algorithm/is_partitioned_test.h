@@ -36,7 +36,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -70,10 +70,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::is_partitioned;
+        using fermat::ranges::is_partitioned;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

@@ -30,7 +30,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-actions
     /// @{
@@ -53,11 +53,11 @@ namespace ranges
                     erasable_range<Rng, iterator_t<Rng>, iterator_t<Rng>>)
             Rng operator()(Rng && rng, C pred, P proj = P{}) const
             {
-                auto it = ranges::unstable_remove_if(ranges::begin(rng),
-                                                     ranges::end(rng),
+                auto it = fermat::ranges::unstable_remove_if(fermat::ranges::begin(rng),
+                                                     fermat::ranges::end(rng),
                                                      std::move(pred),
                                                      std::move(proj));
-                ranges::erase(rng, it, ranges::end(rng));
+                fermat::ranges::erase(rng, it, fermat::ranges::end(rng));
                 return static_cast<Rng &&>(rng);
             }
         };
@@ -66,7 +66,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(unstable_remove_if_fn, unstable_remove_if)
     } // namespace actions
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

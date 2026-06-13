@@ -10,7 +10,7 @@ std::mt19937 gen;
 
 /// Test min_element on a range (iterator pair)
 void test_min_element_on_range(int* first, int* last) {
-    auto it = ranges::min_element(first, last);
+    auto it = fermat::ranges::min_element(first, last);
     if (first != last) {
         for (int* i = first; i != last; ++i)
             EXPECT_FALSE(*i < *it);
@@ -21,7 +21,7 @@ void test_min_element_on_range(int* first, int* last) {
 
 /// Test min_element with a custom comparator
 void test_min_element_comp(int* first, int* last) {
-    auto it = ranges::min_element(first, last, std::greater<int>());
+    auto it = fermat::ranges::min_element(first, last, std::greater<int>());
     if (first != last) {
         for (int* i = first; i != last; ++i)
             EXPECT_FALSE(std::greater<int>()(*i, *it));
@@ -51,11 +51,11 @@ TEST(MinElementTest, Basic) {
 TEST(MinElementTest, Projection) {
     struct S { int i; };
     S arr[] = {{1},{2},{3},{4},{-4},{5},{6},{7},{8},{9}};
-    const S* ps = ranges::min_element(arr, std::less<int>(), &S::i);
+    const S* ps = fermat::ranges::min_element(arr, std::less<int>(), &S::i);
     EXPECT_EQ(ps->i, -4);
 }
 
 TEST(MinElementTest, Constexpr) {
     constexpr std::array<int,10> a{{1,2,3,4,-4,5,6,7,8,9}};
-    static_assert(ranges::min_element(a) == a.begin() + 4, "");
+    static_assert(fermat::ranges::min_element(a) == a.begin() + 4, "");
 }

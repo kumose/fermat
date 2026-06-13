@@ -55,7 +55,7 @@ void has_type(Actual&&) {
 /// debug_input_view: minimal input view for testing
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : ranges::view_interface<debug_input_view<T>>
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>>
 {
     struct data
     {
@@ -81,7 +81,7 @@ debug_input_view<T> make_debug_input_view(const T (&arr)[N])
     return debug_input_view<T>{arr, static_cast<std::ptrdiff_t>(N)};
 }
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename T>
     inline constexpr bool enable_borrowed_range<::debug_input_view<T>> = true;
@@ -93,8 +93,8 @@ namespace ranges
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected)
 {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected)
     {
         EXPECT_NE(it, end);
@@ -108,8 +108,8 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected)
 template<typename Rng, typename U, typename V>
 void check_equal(Rng&& rng, std::initializer_list<std::pair<U, V>> expected)
 {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected)
     {
         EXPECT_NE(it, end);
@@ -127,7 +127,7 @@ void check_equal(Rng&& rng, std::initializer_list<std::pair<U, V>> expected)
 
 TEST(ConstViewTest, RawArray)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {1, 2, 3, 4};
     auto rng = rgi | views::const_;
@@ -147,7 +147,7 @@ TEST(ConstViewTest, RawArray)
 
 TEST(ConstViewTest, CountedForwardIterator)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {1, 2, 3, 4};
     // Use ForwardIterator to keep the original test semantics
@@ -168,7 +168,7 @@ TEST(ConstViewTest, CountedForwardIterator)
 
 TEST(ConstViewTest, ZipOfRawArray)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {1, 2, 3, 4};
     auto zip = views::zip(rgi, rgi);
@@ -192,7 +192,7 @@ TEST(ConstViewTest, ZipOfRawArray)
 
 TEST(ConstViewTest, MoveZipThenConst)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {1, 2, 3, 4};
     auto zip2 = views::zip(rgi, rgi) | views::move;
@@ -216,7 +216,7 @@ TEST(ConstViewTest, MoveZipThenConst)
 
 TEST(ConstViewTest, DebugInputView)
 {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int rgi[] = {1, 2, 3, 4};
     auto dv = make_debug_input_view(rgi);

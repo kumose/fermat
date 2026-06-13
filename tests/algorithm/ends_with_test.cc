@@ -15,7 +15,7 @@ namespace {
 } // namespace
 
 TEST(EndsWithTest, Basic) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     int ib[] = {5, 6, 7, 8, 9};
@@ -38,7 +38,7 @@ TEST(EndsWithTest, Basic) {
 }
 
 TEST(EndsWithTest, WithPredicateAndCount) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     int ib[] = {5, 6, 7, 8, 9};
@@ -59,9 +59,9 @@ TEST(EndsWithTest, WithPredicateAndCount) {
 TEST(EndsWithTest, Constexpr) {
 #if RANGES_CXX_CONSTEXPR >= RANGES_CXX_CONSTEXPR_14 && RANGES_CONSTEXPR_INVOKE
     using IL = std::initializer_list<int>;
-    static_assert(ranges::ends_with(IL{0, 1, 2, 3, 4}, IL{3, 4}), "");
-    static_assert(!ranges::ends_with(IL{0, 1, 2, 3, 4}, IL{2, 3}), "");
-    static_assert(ranges::ends_with(IL{0, 1, 2, 3, 4}, IL{}), "");
-    static_assert(ranges::ends_with(IL{}, IL{}), "");
+    static_assert(fermat::ranges::ends_with(IL{0, 1, 2, 3, 4}, IL{3, 4}), "");
+    static_assert(!fermat::ranges::ends_with(IL{0, 1, 2, 3, 4}, IL{2, 3}), "");
+    static_assert(fermat::ranges::ends_with(IL{0, 1, 2, 3, 4}, IL{}), "");
+    static_assert(fermat::ranges::ends_with(IL{}, IL{}), "");
 #endif
 }

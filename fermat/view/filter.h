@@ -24,53 +24,49 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
-{
+namespace fermat::ranges {
     /// \addtogroup group-views
     /// @{
     template<typename Rng, typename Pred>
-    struct filter_view : remove_if_view<Rng, logical_negate<Pred>>
-    {
+    struct filter_view : remove_if_view<Rng, logical_negate<Pred> > {
         filter_view() = default;
+
         constexpr filter_view(Rng rng, Pred pred)
-          : filter_view::remove_if_view{std::move(rng), not_fn(std::move(pred))}
-        {}
+            : filter_view::remove_if_view{std::move(rng), not_fn(std::move(pred))} {
+        }
     };
 
 #if RANGES_CXX_DEDUCTION_GUIDES >= RANGES_CXX_DEDUCTION_GUIDES_17
     template(typename Rng, typename Pred)(
         requires input_range<Rng> AND indirect_unary_predicate<Pred, iterator_t<Rng>> AND
-            view_<Rng> AND std::is_object<Pred>::value) //
-        filter_view(Rng &&, Pred)
-            ->filter_view<views::all_t<Rng>, Pred>;
+        view_<Rng> AND std::is_object<Pred>::value) //
+    filter_view(Rng &&, Pred)
+        -> filter_view<views::all_t<Rng>, Pred>;
 #endif
 
-    namespace views
-    {
+    namespace views {
         struct filter_fn;
 
         /// Given a source range and a unary predicate,
         /// present a view of the elements that satisfy the predicate.
-        struct cpp20_filter_base_fn
-        {
+        struct cpp20_filter_base_fn {
             template(typename Rng, typename Pred)(
                 requires viewable_range<Rng> AND input_range<Rng> AND
-                    indirect_unary_predicate<Pred, iterator_t<Rng>>)
-            constexpr filter_view<all_t<Rng>, Pred> operator()(Rng && rng, Pred pred) //
-                const
-            {
-                return filter_view<all_t<Rng>, Pred>{all(static_cast<Rng &&>(rng)),
-                                                     std::move(pred)};
+                indirect_unary_predicate<Pred, iterator_t<Rng>>)
+            constexpr filter_view<all_t<Rng>, Pred> operator()(Rng &&rng, Pred pred) //
+            const {
+                return filter_view<all_t<Rng>, Pred>{
+                    all(static_cast<Rng &&>(rng)),
+                    std::move(pred)
+                };
             }
         };
 
-        struct cpp20_filter_fn : cpp20_filter_base_fn
-        {
+        struct cpp20_filter_fn : cpp20_filter_base_fn {
             using cpp20_filter_base_fn::operator();
 
             template<typename Pred>
-            constexpr auto operator()(Pred pred) const
-            {
+            constexpr auto operator()(Pred pred) const {
                 return make_view_closure(
                     bind_back(cpp20_filter_base_fn{}, std::move(pred)));
             }
@@ -78,23 +74,22 @@ namespace ranges
 
         /// Given a source range, unary predicate, and optional projection,
         /// present a view of the elements that satisfy the predicate.
-        struct filter_base_fn : cpp20_filter_base_fn
-        {
+        struct filter_base_fn : cpp20_filter_base_fn {
             using cpp20_filter_base_fn::operator();
 
             template(typename Rng, typename Pred, typename Proj)(
                 requires viewable_range<Rng> AND input_range<Rng> AND
-                    indirect_unary_predicate<Pred, projected<iterator_t<Rng>, Proj>>)
-            constexpr filter_view<all_t<Rng>, composed<Pred, Proj>> //
-            operator()(Rng && rng, Pred pred, Proj proj) const
-            {
-                return filter_view<all_t<Rng>, composed<Pred, Proj>>{
+                indirect_unary_predicate<Pred, projected<iterator_t<Rng>, Proj>>)
+            constexpr filter_view<all_t<Rng>, composed<Pred, Proj> > //
+            operator()(Rng &&rng, Pred pred, Proj proj) const {
+                return filter_view<all_t<Rng>, composed<Pred, Proj> >{
                     all(static_cast<Rng &&>(rng)),
-                    compose(std::move(pred), std::move(proj))};
+                    compose(std::move(pred), std::move(proj))
+                };
             }
         };
 
-        /// # ranges::views::filter
+        /// # fermat::ranges::views::filter
         /// The filter view takes in a predicate function `T -> bool` and converts an
         /// input range of `T` into an output range of `T` by keeping all elements for
         /// which the predicate returns true.
@@ -107,7 +102,7 @@ namespace ranges
         ///
         /// ## Syntax
         /// ```cpp
-        /// auto output_range = input_range | ranges::views::filter(filter_func);
+        /// auto output_range = input_range | fermat::ranges::views::filter(filter_func);
         /// ```
         ///
         /// ## Parameters
@@ -126,20 +121,17 @@ namespace ranges
         ///     - Is not a `sized_range` or `borrowed_range`
         ///   - Reference type: `T`
         ///
-        struct filter_fn : filter_base_fn
-        {
+        struct filter_fn : filter_base_fn {
             using filter_base_fn::operator();
 
             template<typename Pred>
-            constexpr auto operator()(Pred pred) const
-            {
+            constexpr auto operator()(Pred pred) const {
                 return make_view_closure(bind_back(filter_base_fn{}, std::move(pred)));
             }
 
             template(typename Pred, typename Proj)(
                 requires (!range<Pred>))
-            constexpr auto operator()(Pred pred, Proj proj) const
-            {
+            constexpr auto operator()(Pred pred, Proj proj) const {
                 return make_view_closure(
                     bind_back(filter_base_fn{}, std::move(pred), std::move(proj)));
             }
@@ -150,22 +142,21 @@ namespace ranges
         RANGES_INLINE_VARIABLE(filter_fn, filter)
     } // namespace views
 
-    namespace cpp20
-    {
-        namespace views
-        {
-            RANGES_INLINE_VARIABLE(ranges::views::cpp20_filter_fn, filter)
+    namespace cpp20 {
+        namespace views {
+            RANGES_INLINE_VARIABLE(fermat::ranges::views::cpp20_filter_fn, filter)
         }
+
         template(typename V, typename Pred)(
             requires input_range<V> AND indirect_unary_predicate<Pred, iterator_t<V>> AND
-                view_<V> AND std::is_object<Pred>::value) //
-            using filter_view = ranges::filter_view<V, Pred>;
+            view_<V> AND std::is_object<Pred>::value) //
+        using filter_view = fermat::ranges::filter_view<V, Pred>;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::filter_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::filter_view)
 
 #endif

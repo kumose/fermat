@@ -17,7 +17,7 @@ void test_push_heap_basic(int N) {
     std::shuffle(data.begin(), data.end(), gen);
 
     for (int i = 0; i <= N; ++i) {
-        auto res = ranges::push_heap(data.begin(), data.begin() + i);
+        auto res = fermat::ranges::push_heap(data.begin(), data.begin() + i);
         EXPECT_EQ(res, data.begin() + i);
         EXPECT_TRUE(std::is_heap(data.begin(), data.begin() + i));
     }
@@ -30,7 +30,7 @@ void test_push_heap_comp(int N) {
     std::shuffle(data.begin(), data.end(), gen);
 
     for (int i = 0; i <= N; ++i) {
-        auto res = ranges::push_heap(data.begin(), data.begin() + i, std::greater<int>());
+        auto res = fermat::ranges::push_heap(data.begin(), data.begin() + i, std::greater<int>());
         EXPECT_EQ(res, data.begin() + i);
         EXPECT_TRUE(std::is_heap(data.begin(), data.begin() + i, std::greater<int>()));
     }
@@ -45,7 +45,7 @@ void test_push_heap_proj(int N) {
 
     std::vector<int> tmp(N);
     for (int i = 0; i <= N; ++i) {
-        auto res = ranges::push_heap(data.begin(), data.begin() + i,
+        auto res = fermat::ranges::push_heap(data.begin(), data.begin() + i,
                                      std::greater<int>(), &S::i);
         EXPECT_EQ(res, data.begin() + i);
         std::transform(data.begin(), data.begin() + i, tmp.begin(),
@@ -65,7 +65,7 @@ void test_push_heap_move_only(int N) {
     std::shuffle(data.begin(), data.end(), gen);
 
     for (int i = 0; i <= N; ++i) {
-        auto res = ranges::push_heap(data.begin(), data.begin() + i, indirect_less);
+        auto res = fermat::ranges::push_heap(data.begin(), data.begin() + i, indirect_less);
         EXPECT_EQ(res, data.begin() + i);
         EXPECT_TRUE(std::is_heap(data.begin(), data.begin() + i, indirect_less));
     }
@@ -96,8 +96,8 @@ TEST(PushHeapTest, RangeVersion) {
 
     std::vector<int> tmp(N);
     for (int i = 0; i <= N; ++i) {
-        auto rng = ranges::make_subrange(data.begin(), data.begin() + i);
-        auto res = ranges::push_heap(rng, std::greater<int>(), &S::i);
+        auto rng = fermat::ranges::make_subrange(data.begin(), data.begin() + i);
+        auto res = fermat::ranges::push_heap(rng, std::greater<int>(), &S::i);
         EXPECT_EQ(res, data.begin() + i);
         std::transform(data.begin(), data.begin() + i, tmp.begin(),
                        [](const S& s) { return s.i; });
@@ -111,7 +111,7 @@ TEST(PushHeapTest, ConstexprRuntime) {
     std::array<int, N> arr{};
     for (int i = 0; i < N; ++i) arr[i] = i;
     for (int i = 0; i <= N; ++i) {
-        auto res = ranges::push_heap(arr.begin(), arr.begin() + i, std::greater<int>());
+        auto res = fermat::ranges::push_heap(arr.begin(), arr.begin() + i, std::greater<int>());
         EXPECT_EQ(res, arr.begin() + i);
         EXPECT_TRUE(std::is_heap(arr.begin(), arr.begin() + i, std::greater<int>()));
     }

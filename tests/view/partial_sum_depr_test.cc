@@ -12,8 +12,8 @@
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng&& rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const& val : expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -27,7 +27,7 @@ void check_equal(Rng&& rng, std::initializer_list<T> expected) {
 // ------------------------------------------------------------------
 
 TEST(PartialSumTest, Basic) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     static int const some_ints[] = {0, 1, 2, 3, 4};
     auto rng = some_ints | views::partial_sum();

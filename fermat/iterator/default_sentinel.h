@@ -18,7 +18,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-iterator
     /// @{
@@ -30,11 +30,11 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::default_sentinel;
-        using ranges::default_sentinel_t;
+        using fermat::ranges::default_sentinel;
+        using fermat::ranges::default_sentinel_t;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

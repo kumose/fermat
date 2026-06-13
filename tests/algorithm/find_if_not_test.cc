@@ -6,8 +6,8 @@ constexpr bool is_three(int i) { return i == 3; }
 
 template<class Rng>
 constexpr bool contains_other_than_three(Rng r) {
-    auto it = ranges::find_if_not(r, is_three);
-    return it != ranges::end(r);
+    auto it = fermat::ranges::find_if_not(r, is_three);
+    return it != fermat::ranges::end(r);
 }
 
 TEST(FindIfNotTest, ConstexprInitializerList) {

@@ -20,7 +20,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -68,18 +68,18 @@ namespace ranges
     {
         namespace views
         {
-            using ranges::views::empty;
+            using fermat::ranges::views::empty;
         }
         template(typename T)(
             requires std::is_object<T>::value) //
-            using empty_view = ranges::empty_view<T>;
+            using empty_view = fermat::ranges::empty_view<T>;
     } // namespace cpp20
 
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::empty_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::empty_view)
 
 #endif

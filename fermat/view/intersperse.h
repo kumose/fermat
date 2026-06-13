@@ -33,7 +33,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -53,14 +53,14 @@ namespace ranges
         constexpr auto CPP_fun(size)()(const //
             requires sized_range<Rng const>)
         {
-            auto const n = ranges::size(this->base());
+            auto const n = fermat::ranges::size(this->base());
             return n ? n * 2 - 1 : 0;
         }
         CPP_auto_member
         constexpr auto CPP_fun(size)()(
             requires sized_range<Rng>)
         {
-            auto const n = ranges::size(this->base());
+            auto const n = fermat::ranges::size(this->base());
             return n ? n * 2 - 1 : 0;
         }
 
@@ -89,8 +89,8 @@ namespace ranges
             template<typename View>
             constexpr iterator_t<CRng> begin(View & view)
             {
-                auto first = ranges::begin(view.base());
-                toggle_ = first != ranges::end(view.base());
+                auto first = fermat::ranges::begin(view.base());
+                toggle_ = first != fermat::ranges::end(view.base());
                 return first;
             }
             constexpr range_value_t<Rng> read(iterator_t<CRng> const & it) const
@@ -135,7 +135,7 @@ namespace ranges
                 -> CPP_ret(void)(
                     requires random_access_range<CRng>)
             {
-                ranges::advance(it, n >= 0 ? (n + toggle_) / 2 : (n - !toggle_) / 2);
+                fermat::ranges::advance(it, n >= 0 ? (n + toggle_) / 2 : (n - !toggle_) / 2);
                 if(n % 2 != 0)
                     toggle_ = !toggle_;
             }
@@ -245,10 +245,10 @@ namespace ranges
         /// \ingroup group-views
         RANGES_INLINE_VARIABLE(intersperse_fn, intersperse)
     } // namespace views
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::intersperse_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::intersperse_view)
 
 #endif

@@ -53,7 +53,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \cond
     namespace detail
@@ -69,7 +69,7 @@ namespace ranges
                 auto tmpbuf = make_raw_buffer(buf);
                 if(len1 <= len2)
                 {
-                    auto p = ranges::move(first, middle, tmpbuf.begin()).out;
+                    auto p = fermat::ranges::move(first, middle, tmpbuf.begin()).out;
                     merge(make_move_iterator(buf),
                           make_move_iterator(p.base().base()),
                           make_move_iterator(std::move(middle)),
@@ -81,9 +81,9 @@ namespace ranges
                 }
                 else
                 {
-                    auto p = ranges::move(middle, last, tmpbuf.begin()).out;
-                    using RBi = ranges::reverse_iterator<I>;
-                    using Rv = ranges::reverse_iterator<iter_value_t<I> *>;
+                    auto p = fermat::ranges::move(middle, last, tmpbuf.begin()).out;
+                    using RBi = fermat::ranges::reverse_iterator<I>;
+                    using Rv = fermat::ranges::reverse_iterator<iter_value_t<I> *>;
                     merge(make_move_iterator(RBi{std::move(middle)}),
                           make_move_iterator(RBi{std::move(first)}),
                           make_move_iterator(Rv{p.base().base()}),
@@ -159,7 +159,7 @@ namespace ranges
                         if(len1 == 1)
                         { // len1 >= len2 && len2 > 0, therefore len2 == 1
                             // It is known *first > *middle
-                            ranges::iter_swap(first, middle);
+                            fermat::ranges::iter_swap(first, middle);
                             return;
                         }
                         // len1 >= 2, len2 >= 1
@@ -256,7 +256,7 @@ namespace ranges
             using value_type = iter_value_t<I>;
             auto len1 = distance(first, middle);
             auto len2_and_end = enumerate(middle, last);
-            auto buf_size = ranges::min(len1, len2_and_end.first);
+            auto buf_size = fermat::ranges::min(len1, len2_and_end.first);
             std::pair<value_type *, std::ptrdiff_t> buf{nullptr, 0};
             std::unique_ptr<value_type, detail::return_temporary_buffer> h;
             if(detail::is_trivially_copy_assignable_v<value_type> && 8 < buf_size)
@@ -293,10 +293,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::inplace_merge;
+        using fermat::ranges::inplace_merge;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

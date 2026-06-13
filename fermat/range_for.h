@@ -27,11 +27,11 @@
         for(auto && CPP_PP_CAT(_range_v3_rng, __LINE__) = (__VA_ARGS__);       \
             !CPP_PP_CAT(_range_v3_done, __LINE__);)                            \
             for(auto CPP_PP_CAT(_range_v3_begin, __LINE__) =                   \
-                    ranges::begin(CPP_PP_CAT(_range_v3_rng, __LINE__));        \
+                    fermat::ranges::begin(CPP_PP_CAT(_range_v3_rng, __LINE__));        \
                 !CPP_PP_CAT(_range_v3_done, __LINE__);                         \
                 CPP_PP_CAT(_range_v3_done, __LINE__) = true)                   \
                 for(auto CPP_PP_CAT(_range_v3_end, __LINE__) =                 \
-                        ranges::end(CPP_PP_CAT(_range_v3_rng, __LINE__));      \
+                        fermat::ranges::end(CPP_PP_CAT(_range_v3_rng, __LINE__));      \
                     !CPP_PP_CAT(_range_v3_done, __LINE__) &&                   \
                     CPP_PP_CAT(_range_v3_begin, __LINE__) !=                   \
                         CPP_PP_CAT(_range_v3_end, __LINE__);                   \

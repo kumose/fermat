@@ -21,7 +21,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     template<typename Fun>
     struct scope_exit
@@ -90,7 +90,7 @@ namespace ranges
     {
         return ScopeExit((Fun &&) fun);
     }
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

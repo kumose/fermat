@@ -29,7 +29,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-actions
     /// @{
@@ -81,8 +81,8 @@ namespace ranges
             {
                 RANGES_EXPECT(0 <= from && 0 <= to && from <= to);
                 RANGES_EXPECT(!sized_range<Rng> || to <= distance(rng));
-                ranges::actions::erase(rng, begin(rng), next(begin(rng), from));
-                ranges::actions::erase(rng, next(begin(rng), to - from), end(rng));
+                fermat::ranges::actions::erase(rng, begin(rng), next(begin(rng), from));
+                fermat::ranges::actions::erase(rng, next(begin(rng), to - from), end(rng));
                 return static_cast<Rng &&>(rng);
             }
 
@@ -94,11 +94,11 @@ namespace ranges
             {
                 RANGES_EXPECT(0 <= from && to.dist_ <= 0);
                 RANGES_EXPECT(!sized_range<Rng> || from - to.dist_ <= distance(rng));
-                ranges::actions::erase(rng, begin(rng), next(begin(rng), from));
+                fermat::ranges::actions::erase(rng, begin(rng), next(begin(rng), from));
                 if(to.dist_ != 0)
                 {
                     auto const last = next(begin(rng), end(rng));
-                    ranges::actions::erase(rng, prev(last, -to.dist_), last);
+                    fermat::ranges::actions::erase(rng, prev(last, -to.dist_), last);
                 }
                 return static_cast<Rng &&>(rng);
             }
@@ -112,9 +112,9 @@ namespace ranges
                 RANGES_EXPECT(from.dist_ <= 0 && to.dist_ <= 0 && from.dist_ <= to.dist_);
                 RANGES_EXPECT(!sized_range<Rng> || 0 <= distance(rng) + from.dist_);
                 auto last = next(begin(rng), end(rng));
-                ranges::actions::erase(rng, prev(last, -to.dist_), last);
+                fermat::ranges::actions::erase(rng, prev(last, -to.dist_), last);
                 last = next(begin(rng), end(rng));
-                ranges::actions::erase(
+                fermat::ranges::actions::erase(
                     rng, begin(rng), prev(last, to.dist_ - from.dist_));
                 return static_cast<Rng &&>(rng);
             }
@@ -125,7 +125,7 @@ namespace ranges
             {
                 RANGES_EXPECT(0 <= from);
                 RANGES_EXPECT(!sized_range<Rng> || from <= distance(rng));
-                ranges::actions::erase(rng, begin(rng), next(begin(rng), from));
+                fermat::ranges::actions::erase(rng, begin(rng), next(begin(rng), from));
                 return static_cast<Rng &&>(rng);
             }
 
@@ -138,7 +138,7 @@ namespace ranges
                 RANGES_EXPECT(from.dist_ <= 0);
                 RANGES_EXPECT(!sized_range<Rng> || 0 <= distance(rng) + from.dist_);
                 auto const last = next(begin(rng), end(rng));
-                ranges::actions::erase(rng, begin(rng), prev(last, -from.dist_));
+                fermat::ranges::actions::erase(rng, begin(rng), prev(last, -from.dist_));
                 return static_cast<Rng &&>(rng);
             }
         };
@@ -147,7 +147,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(slice_fn, slice)
     } // namespace actions
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

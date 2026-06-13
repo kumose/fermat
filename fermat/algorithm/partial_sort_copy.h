@@ -31,7 +31,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-algorithms
     /// @{
@@ -62,7 +62,7 @@ namespace ranges
             {
                 for(; first != last && r != out_end; ++first, ++r)
                     *r = *first;
-                make_heap(out_begin, r, ranges::ref(pred), ranges::ref(out_proj));
+                make_heap(out_begin, r, fermat::ranges::ref(pred), fermat::ranges::ref(out_proj));
                 auto len = r - out_begin;
                 for(; first != last; ++first)
                 {
@@ -73,11 +73,11 @@ namespace ranges
                         detail::sift_down_n(out_begin,
                                             len,
                                             out_begin,
-                                            ranges::ref(pred),
-                                            ranges::ref(out_proj));
+                                            fermat::ranges::ref(pred),
+                                            fermat::ranges::ref(out_proj));
                     }
                 }
-                sort_heap(out_begin, r, ranges::ref(pred), ranges::ref(out_proj));
+                sort_heap(out_begin, r, fermat::ranges::ref(pred), fermat::ranges::ref(out_proj));
             }
             return r;
         }
@@ -113,10 +113,10 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::partial_sort_copy;
+        using fermat::ranges::partial_sort_copy;
     }
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

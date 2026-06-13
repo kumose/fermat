@@ -14,7 +14,7 @@
 
 #include <fermat/range/access.h>
 #include <fermat/range/primitives.h>
-#include <fermat/range/conversion.h>       /// ranges::to
+#include <fermat/range/conversion.h>       /// fermat::ranges::to
 #include <fermat/view/join.h>               /// views::join
 #include <fermat/view/split.h>              /// views::split
 #include <fermat/view/generate_n.h>         /// views::generate_n
@@ -26,15 +26,15 @@
 #include <fermat/view/transform.h>          /// views::transform
 #include <fermat/view/filter.h>             /// views::filter
 
-using namespace ranges;
+using namespace fermat::ranges;
 
 /// ------------------------------------------------------------
 /// Helper: check_equal for ranges vs initializer_list
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng &&rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -66,9 +66,9 @@ void check_equal(const std::vector<T> &actual,
 /// ------------------------------------------------------------
 template<typename T>
 constexpr auto twice(T t) {
-    return ranges::views::concat(
-        ranges::views::single(t),
-        ranges::views::single(t));
+    return fermat::ranges::views::concat(
+        fermat::ranges::views::single(t),
+        fermat::ranges::views::single(t));
 }
 
 /// ------------------------------------------------------------
@@ -91,7 +91,7 @@ struct input_array {
 static int N = 0;
 
 auto make_input_rng() {
-    using namespace ranges;
+    using namespace fermat::ranges;
     return views::generate_n([]() {
         return views::generate_n([]() {
             return N++;
@@ -103,7 +103,7 @@ auto make_input_rng() {
 /// Issue #283: join vector of vectors
 /// ------------------------------------------------------------
 void test_issue_283() {
-    using namespace ranges;
+    using namespace fermat::ranges;
     const std::vector<std::vector<int> > nums = {{1, 2, 3}, {4, 5, 6}};
     auto flat_nums = views::join(nums) | to<std::vector>();
     check_equal(flat_nums, {1, 2, 3, 4, 5, 6});
@@ -113,7 +113,7 @@ void test_issue_283() {
 /// Issue #1414: join on forward_list
 /// ------------------------------------------------------------
 void test_issue_1414() {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::forward_list<char> u2;
     std::vector<char> i2;
     auto v2 = u2 | views::chunk(3) | views::join(i2);
@@ -125,21 +125,21 @@ void test_issue_1414() {
 // ------------------------------------------------------------------
 
 TEST(JoinTest, InputRangeOfInputRanges) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     N = 0;
     auto rng0 = make_input_rng() | views::join;
     check_equal(rng0, {0, 1, 2, 3, 4, 5, 6, 7, 8});
 }
 
 TEST(JoinTest, JoiningWithAValue) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     N = 0;
     auto rng1 = make_input_rng() | views::join(42);
     check_equal(rng1, {0, 1, 2, 42, 3, 4, 5, 42, 6, 7, 8});
 }
 
 TEST(JoinTest, JoiningWithARange) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     N = 0;
     int rgi[] = {42, 43};
     auto rng2 = make_input_rng() | views::join(rgi);
@@ -147,14 +147,14 @@ TEST(JoinTest, JoiningWithARange) {
 }
 
 TEST(JoinTest, SplitJoinToString) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::string str = "Now,is,the,time,for,all,good,men,to,come,to,the,aid,of,their,country";
     auto res = str | views::split(',') | views::join(' ') | to<std::string>();
     EXPECT_EQ(res, "Now is the time for all good men to come to the aid of their country");
 }
 
 TEST(JoinTest, VectorOfStrings) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::vector<std::string> vs{"This", "is", "his", "face"};
     auto rng3 = views::join(vs);
     EXPECT_EQ(to<std::string>(rng3), "Thisishisface");
@@ -164,7 +164,7 @@ TEST(JoinTest, VectorOfStrings) {
 }
 
 TEST(JoinTest, TwiceTwice) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto rng5 = views::join(twice(twice(42)));
     static_assert(range_cardinality<decltype(rng5)>::value == 4, "");
     EXPECT_EQ(rng5.size(), 4u);
@@ -172,15 +172,15 @@ TEST(JoinTest, TwiceTwice) {
 }
 
 TEST(JoinTest, JoinRepeatN) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto rng6 = views::join(twice(views::repeat_n(42, 2)));
-    static_assert(range_cardinality<decltype(rng6)>::value == ranges::finite, "");
+    static_assert(range_cardinality<decltype(rng6)>::value == fermat::ranges::finite, "");
     EXPECT_EQ(rng6.size(), 4u);
     check_equal(rng6, {42, 42, 42, 42});
 }
 
 TEST(JoinTest, InputArrayOfStrings) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     input_array<std::string, 4> some_strings{{"This", "is", "his", "face"}};
     auto rng = some_strings | views::join;
     EXPECT_EQ(to<std::string>(rng), "Thisishisface");
@@ -188,7 +188,7 @@ TEST(JoinTest, InputArrayOfStrings) {
 
 /// Fixed test: use a proper range-of-ranges (2D array) instead of a flat subrange.
 TEST(JoinTest, DebugInputViewOfPairs) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     // 2D array where each element is an array of 2 ints (a range)
     int const some_int_pairs[3][2] = {{0, 1}, {2, 3}, {4, 5}};
     auto rng = some_int_pairs | views::join;
@@ -196,14 +196,14 @@ TEST(JoinTest, DebugInputViewOfPairs) {
 }
 
 TEST(JoinTest, JoinViewOfVectorOfStrings) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::vector<std::string> vs{"this", "is", "his", "face"};
     join_view<ref_view<std::vector<std::string> > > jv{vs};
     check_equal(jv, {'t', 'h', 'i', 's', 'i', 's', 'h', 'i', 's', 'f', 'a', 'c', 'e'});
 }
 
 TEST(JoinTest, IotaTransformJoin) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto rng = views::iota(0, 4)
                | views::transform([](int i) { return views::iota(0, i); })
                | views::join;
@@ -211,7 +211,7 @@ TEST(JoinTest, IotaTransformJoin) {
 }
 
 TEST(JoinTest, IotaTransformFilterJoin) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto rng = views::iota(0, 4)
                | views::transform([](int i) { return views::iota(0, i); })
                | views::filter([](auto) { return true; })
@@ -220,7 +220,7 @@ TEST(JoinTest, IotaTransformFilterJoin) {
 }
 
 TEST(JoinTest, IotaTransformStringJoin) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto rng = views::iota(0, 4)
                | views::transform([](int i) { return std::string(static_cast<std::size_t>(i), char('a' + i)); })
                | views::join;
@@ -228,7 +228,7 @@ TEST(JoinTest, IotaTransformStringJoin) {
 }
 
 TEST(JoinTest, IotaTransformStringJoinWithSeparator) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto rng = views::iota(0, 4)
                | views::transform([](int i) { return std::string(static_cast<std::size_t>(i), char('a' + i)); })
                | views::join('-');
@@ -236,7 +236,7 @@ TEST(JoinTest, IotaTransformStringJoinWithSeparator) {
 }
 
 TEST(JoinTest, Issue1320) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     auto op = [](auto &input, int i, auto &ins) {
         return input | views::chunk(i) | views::join(ins);
     };
@@ -252,12 +252,12 @@ TEST(JoinTest, Issue1320) {
 }
 
 TEST(JoinTest, ThrowingTransform) {
-    using namespace ranges;
+    using namespace fermat::ranges;
     std::vector<int> v = {1, 2, 3};
     auto throws = [](auto &&) -> std::vector<std::vector<int> > & { throw 42; };
     auto rng = v | views::transform(throws) | views::join;
     try {
-        auto d = ranges::distance(rng);
+        auto d = fermat::ranges::distance(rng);
         (void) d;
         ADD_FAILURE() << "Expected exception not thrown";
     } catch (int) {

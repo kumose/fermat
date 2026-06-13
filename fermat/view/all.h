@@ -29,7 +29,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -52,7 +52,7 @@ namespace ranges
             static constexpr auto from_range_(T && t, std::false_type, std::true_type,
                                               detail::ignore_t)
             {
-                return ranges::views::ref(t);
+                return fermat::ranges::views::ref(t);
             }
 
             /// Not a view and not an lvalue? If it's a borrowed_range, then
@@ -79,7 +79,7 @@ namespace ranges
             RANGES_DEPRECATED("Passing a reference_wrapper to views::all is deprecated.")
             constexpr ref_view<T> operator()(std::reference_wrapper<T> r) const
             {
-                return ranges::views::ref(r.get());
+                return fermat::ranges::views::ref(r.get());
             }
         };
 
@@ -109,17 +109,17 @@ namespace ranges
     {
         namespace views
         {
-            using ranges::views::all;
-            using ranges::views::all_t;
+            using fermat::ranges::views::all;
+            using fermat::ranges::views::all_t;
         }
         template(typename Rng)(
             requires viewable_range<Rng>)
         using all_view RANGES_DEPRECATED(
-            "Please use ranges::cpp20::views::all_t instead.") =
-                ranges::views::all_t<Rng>;
+            "Please use fermat::ranges::cpp20::views::all_t instead.") =
+                fermat::ranges::views::all_t<Rng>;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

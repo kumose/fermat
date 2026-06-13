@@ -8,7 +8,7 @@
 #include <fermat/action/stride.h>
 #include <fermat/range/conversion.h>
 
-using namespace ranges;
+using namespace fermat::ranges;
 
 TEST(ActionStrideTest, Basic) {
     auto v = views::ints(0, 100) | to<std::vector>();

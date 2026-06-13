@@ -33,7 +33,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -222,7 +222,7 @@ namespace ranges
             {
                 using D = iter_difference_t<I>;
                 RANGES_EXPECT(n <= (size_type)std::numeric_limits<D>::max());
-                RANGES_EXPECT(ranges::next(first_(), (D)n) == last_());
+                RANGES_EXPECT(fermat::ranges::next(first_(), (D)n) == last_());
             }
         }
         template(typename I2)(
@@ -239,7 +239,7 @@ namespace ranges
                 detail::range_convertible_to_<R, I, S> AND
                 (!detail::store_size_<K, S, I>()))
         constexpr subrange(R && r)
-          : subrange{ranges::begin(r), ranges::end(r)}
+          : subrange{fermat::ranges::begin(r), fermat::ranges::end(r)}
         {}
 
         template(typename R)(
@@ -248,18 +248,18 @@ namespace ranges
                 (detail::store_size_<K, S, I>()) AND
                 sized_range<R>)
         constexpr subrange(R && r)
-          : subrange{ranges::begin(r), ranges::end(r), ranges::size(r)}
+          : subrange{fermat::ranges::begin(r), fermat::ranges::end(r), fermat::ranges::size(r)}
         {}
 
         template(typename R)(
             requires (K == subrange_kind::sized) AND
                 detail::range_convertible_to_<R, I, S>)
         constexpr subrange(R && r, size_type n) //
-          : subrange{ranges::begin(r), ranges::end(r), n}
+          : subrange{fermat::ranges::begin(r), fermat::ranges::end(r), n}
         {
             if(RANGES_CONSTEXPR_IF((bool)sized_range<R>))
             {
-                RANGES_EXPECT(n == ranges::size(r));
+                RANGES_EXPECT(n == fermat::ranges::size(r));
             }
         }
 
@@ -312,7 +312,7 @@ namespace ranges
 
         constexpr subrange & advance(iter_difference_t<I> n)
         {
-            set_size_(static_cast<size_type>(n - ranges::advance(first_(), n, last_())));
+            set_size_(static_cast<size_type>(n - fermat::ranges::advance(first_(), n, last_())));
             return *this;
         }
 
@@ -437,7 +437,7 @@ namespace ranges
 
     namespace cpp20
     {
-        using ranges::subrange_kind;
+        using fermat::ranges::subrange_kind;
 
         template(typename I,                                                //
                  typename S = I,                                            //
@@ -446,32 +446,32 @@ namespace ranges
                      detail::is_sized_sentinel_<S, I>()))(
             requires input_or_output_iterator<I> AND sentinel_for<S, I> AND
                 (K == subrange_kind::sized || !sized_sentinel_for<S, I>))   //
-        using subrange = ranges::subrange<I, S, K>;
+        using subrange = fermat::ranges::subrange<I, S, K>;
 
-        using ranges::borrowed_subrange_t;
+        using fermat::ranges::borrowed_subrange_t;
 
         template<typename R>
         using safe_subrange_t RANGES_DEPRECATED("Use borrowed_subrange_t instead.") =
             borrowed_subrange_t<R>;
     } // namespace cpp20
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 RANGES_DIAGNOSTIC_PUSH
 RANGES_DIAGNOSTIC_IGNORE_MISMATCHED_TAGS
 
 namespace std
 {
-    template<typename I, typename S, ::ranges::subrange_kind K>
-    struct tuple_size<::ranges::subrange<I, S, K>> : std::integral_constant<size_t, 2>
+    template<typename I, typename S, ::fermat::ranges::subrange_kind K>
+    struct tuple_size<::fermat::ranges::subrange<I, S, K>> : std::integral_constant<size_t, 2>
     {};
-    template<typename I, typename S, ::ranges::subrange_kind K>
-    struct tuple_element<0, ::ranges::subrange<I, S, K>>
+    template<typename I, typename S, ::fermat::ranges::subrange_kind K>
+    struct tuple_element<0, ::fermat::ranges::subrange<I, S, K>>
     {
         using type = I;
     };
-    template<typename I, typename S, ::ranges::subrange_kind K>
-    struct tuple_element<1, ::ranges::subrange<I, S, K>>
+    template<typename I, typename S, ::fermat::ranges::subrange_kind K>
+    struct tuple_element<1, ::fermat::ranges::subrange<I, S, K>>
     {
         using type = S;
     };

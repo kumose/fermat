@@ -2,7 +2,7 @@
 #include <fermat/algorithm/set_algorithm.h>
 
 TEST(IncludesTest, Basic) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     const unsigned sa = sizeof(ia)/sizeof(ia[0]);
@@ -30,7 +30,7 @@ TEST(IncludesTest, Basic) {
 }
 
 TEST(IncludesTest, WithComparator) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int ia[] = {1, 2, 2, 3, 3, 3, 4, 4, 4, 4};
     const unsigned sa = sizeof(ia)/sizeof(ia[0]);
@@ -56,7 +56,7 @@ TEST(IncludesTest, WithComparator) {
 }
 
 TEST(IncludesTest, WithProjection) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     struct S { int i; };
     struct T { int j; };
@@ -68,5 +68,5 @@ TEST(IncludesTest, WithProjection) {
 
 TEST(IncludesTest, Constexpr) {
     using IL = std::initializer_list<int>;
-    static_assert(ranges::includes(IL{1, 2, 2, 3, 3, 3, 4, 4, 4, 4}, IL{3, 3, 3}, std::less<int>()), "");
+    static_assert(fermat::ranges::includes(IL{1, 2, 2, 3, 3, 3, 4, 4, 4, 4}, IL{3, 3, 3}, std::less<int>()), "");
 }

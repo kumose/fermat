@@ -27,7 +27,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-actions
     /// @{
@@ -57,8 +57,8 @@ namespace ranges
                                               V const *>)
             Rng operator()(Rng && rng, V const & value, P proj = {}) const
             {
-                auto it = ranges::remove(rng, value, std::move(proj));
-                ranges::erase(rng, it, ranges::end(rng));
+                auto it = fermat::ranges::remove(rng, value, std::move(proj));
+                fermat::ranges::erase(rng, it, fermat::ranges::end(rng));
                 return static_cast<Rng &&>(rng);
             }
         };
@@ -67,7 +67,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(remove_fn, remove)
     } // namespace actions
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

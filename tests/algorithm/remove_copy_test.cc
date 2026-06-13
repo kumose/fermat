@@ -12,7 +12,7 @@ void test_remove_copy_iter() {
     constexpr std::size_t sa = sizeof(ia) / sizeof(ia[0]);
     int ib[sa] = {0};
 
-    auto res = ranges::remove_copy(ia, ia + sa, ib, 2);
+    auto res = fermat::ranges::remove_copy(ia, ia + sa, ib, 2);
     EXPECT_EQ(res.in, ia + sa);
     EXPECT_EQ(res.out, ib + (sa - 3));
     EXPECT_EQ(ib[0], 0);
@@ -29,8 +29,8 @@ void test_remove_copy_range() {
     constexpr std::size_t sa = sizeof(ia) / sizeof(ia[0]);
     int ib[sa] = {0};
 
-    auto rng = ranges::make_subrange(ia, ia + sa);
-    auto res = ranges::remove_copy(rng, ib, 2);
+    auto rng = fermat::ranges::make_subrange(ia, ia + sa);
+    auto res = fermat::ranges::remove_copy(rng, ib, 2);
     EXPECT_EQ(res.in, ia + sa);
     EXPECT_EQ(res.out, ib + (sa - 3));
     EXPECT_EQ(ib[0], 0);
@@ -57,7 +57,7 @@ TEST(RemoveCopyTest, Projection) {
     constexpr std::size_t sa = sizeof(ia) / sizeof(ia[0]);
     S ib[sa] = {{0}};
 
-    auto res = ranges::remove_copy(ia, ib, 2, &S::i);
+    auto res = fermat::ranges::remove_copy(ia, ib, 2, &S::i);
     EXPECT_EQ(res.in, ia + sa);
     EXPECT_EQ(res.out, ib + (sa - 3));
     EXPECT_EQ(ib[0].i, 0);
@@ -74,7 +74,7 @@ TEST(RemoveCopyTest, RvalueRange) {
     constexpr std::size_t sa = sizeof(ia) / sizeof(ia[0]);
     S ib[sa] = {{0}};
 
-    auto res = ranges::remove_copy(std::move(ia), ib, 2, &S::i);
+    auto res = fermat::ranges::remove_copy(std::move(ia), ib, 2, &S::i);
     // res.in is dangling; we ignore it.
     EXPECT_EQ(res.out, ib + (sa - 3));
     EXPECT_EQ(ib[0].i, 0);
@@ -86,7 +86,7 @@ TEST(RemoveCopyTest, RvalueRange) {
 
     std::fill(std::begin(ib), std::end(ib), S{0});
     std::vector<S> vec(std::begin(ia), std::end(ia));
-    auto res2 = ranges::remove_copy(std::move(vec), ib, 2, &S::i);
+    auto res2 = fermat::ranges::remove_copy(std::move(vec), ib, 2, &S::i);
     EXPECT_EQ(res2.out, ib + (sa - 3));
     EXPECT_EQ(ib[0].i, 0);
     EXPECT_EQ(ib[1].i, 1);
@@ -102,7 +102,7 @@ TEST(RemoveCopyTest, Constexpr) {
         int ia[] = {0, 1, 2, 3, 4, 2, 3, 4, 2};
         constexpr std::size_t sa = sizeof(ia) / sizeof(ia[0]);
         int ib[6] = {0};
-        auto r = ranges::remove_copy(ia, ib, 2);
+        auto r = fermat::ranges::remove_copy(ia, ib, 2);
         bool ok = (r.in == ia + sa) &&
                   (r.out == ib + (sa - 3)) &&
                   (ib[0] == 0) && (ib[1] == 1) &&

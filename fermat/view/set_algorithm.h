@@ -40,7 +40,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -70,10 +70,10 @@ namespace ranges
                 return {pred_,
                         proj1_,
                         proj2_,
-                        ranges::begin(rng1_),
-                        ranges::end(rng1_),
-                        ranges::begin(rng2_),
-                        ranges::end(rng2_)};
+                        fermat::ranges::begin(rng1_),
+                        fermat::ranges::end(rng1_),
+                        fermat::ranges::begin(rng2_),
+                        fermat::ranges::end(rng2_)};
             }
             CPP_member
             auto begin_cursor() const //
@@ -83,10 +83,10 @@ namespace ranges
                 return {pred_,
                         proj1_,
                         proj2_,
-                        ranges::begin(rng1_),
-                        ranges::end(rng1_),
-                        ranges::begin(rng2_),
-                        ranges::end(rng2_)};
+                        fermat::ranges::begin(rng1_),
+                        fermat::ranges::end(rng1_),
+                        fermat::ranges::begin(rng2_),
+                        fermat::ranges::end(rng2_)};
             }
 
         public:
@@ -883,7 +883,7 @@ namespace ranges
         RANGES_INLINE_VARIABLE(set_symmetric_difference_fn, set_symmetric_difference)
     } // namespace views
     /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 

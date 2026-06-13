@@ -39,7 +39,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
+namespace fermat::ranges
 {
     /// \addtogroup group-views
     /// @{
@@ -74,7 +74,7 @@ namespace ranges
 
             iterator get_end_(std::true_type, bool = false) const
             {
-                return ranges::end(rng_->rng_);
+                return fermat::ranges::end(rng_->rng_);
             }
             template<bool CanBeEmpty = false>
             iterator get_end_(std::false_type, meta::bool_<CanBeEmpty> = {}) const
@@ -82,7 +82,7 @@ namespace ranges
                 auto & end_ = static_cast<cache_t &>(*rng_);
                 RANGES_EXPECT(CanBeEmpty || end_);
                 if(CanBeEmpty && !end_)
-                    end_ = ranges::next(it_, ranges::end(rng_->rng_));
+                    end_ = fermat::ranges::next(it_, fermat::ranges::end(rng_->rng_));
                 return *end_;
             }
             void set_end_(std::true_type) const
@@ -98,7 +98,7 @@ namespace ranges
             cursor() = default;
             cursor(cycled_view_t * rng)
               : rng_(rng)
-              , it_(ranges::begin(rng->rng_))
+              , it_(fermat::ranges::begin(rng->rng_))
             {}
             template(bool Other)(
                 requires IsConst AND CPP_NOT(Other)) //
@@ -122,13 +122,13 @@ namespace ranges
             }
             void next()
             {
-                auto const last = ranges::end(rng_->rng_);
+                auto const last = fermat::ranges::end(rng_->rng_);
                 RANGES_EXPECT(it_ != last);
                 if(++it_ == last)
                 {
                     ++n_;
                     this->set_end_(meta::bool_<(bool)common_range<CRng>>{});
-                    it_ = ranges::begin(rng_->rng_);
+                    it_ = fermat::ranges::begin(rng_->rng_);
                 }
             }
             CPP_member
@@ -136,7 +136,7 @@ namespace ranges
                 -> CPP_ret(void)(
                     requires bidirectional_range<CRng>)
             {
-                if(it_ == ranges::begin(rng_->rng_))
+                if(it_ == fermat::ranges::begin(rng_->rng_))
                 {
                     RANGES_EXPECT(n_ > 0); // decrementing the begin iterator?!
                     --n_;
@@ -149,7 +149,7 @@ namespace ranges
                     detail::integer_like_<Diff>)
             void advance(Diff n)
             {
-                auto const first = ranges::begin(rng_->rng_);
+                auto const first = fermat::ranges::begin(rng_->rng_);
                 auto const last = this->get_end_(meta::bool_<(bool)common_range<CRng>>{},
                                                  meta::bool_<true>());
                 auto const dist = last - first;
@@ -165,7 +165,7 @@ namespace ranges
                 requires sized_sentinel_for<iterator, iterator>)
             {
                 RANGES_EXPECT(that.rng_ == rng_);
-                auto const first = ranges::begin(rng_->rng_);
+                auto const first = fermat::ranges::begin(rng_->rng_);
                 auto const last = this->get_end_(meta::bool_<(bool)common_range<Rng>>{},
                                                  meta::bool_<true>());
                 auto const dist = last - first;
@@ -198,7 +198,7 @@ namespace ranges
         explicit cycled_view(Rng rng)
           : rng_(std::move(rng))
         {
-            RANGES_EXPECT(!ranges::empty(rng_));
+            RANGES_EXPECT(!fermat::ranges::empty(rng_));
         }
     };
 
@@ -235,11 +235,11 @@ namespace ranges
         RANGES_INLINE_VARIABLE(view_closure<cycle_fn>, cycle)
     } // namespace views
       /// @}
-} // namespace ranges
+} // namespace fermat::ranges
 
 #include <fermat/detail/epilogue.h>
 
 #include <fermat/detail/satisfy_boost_range.h>
-RANGES_SATISFY_BOOST_RANGE(::ranges::cycled_view)
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::cycled_view)
 
 #endif

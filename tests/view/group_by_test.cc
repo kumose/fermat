@@ -66,8 +66,8 @@ public:
 /// ------------------------------------------------------------
 template<typename Rng, typename T>
 void check_equal(Rng &&rng, std::initializer_list<T> expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -79,8 +79,8 @@ void check_equal(Rng &&rng, std::initializer_list<T> expected) {
 /// Overload for ranges of pairs (use (*it).first to avoid operator-> issues)
 template<typename Rng, typename U, typename V>
 void check_equal(Rng &&rng, std::initializer_list<std::pair<U, V> > expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ((*it).first, val.first);
@@ -93,8 +93,8 @@ void check_equal(Rng &&rng, std::initializer_list<std::pair<U, V> > expected) {
 /// Overload for checking a range against a std::vector (for chunk sub‑ranges)
 template<typename Rng, typename T>
 void check_equal(Rng &&rng, const std::vector<T> &expected) {
-    auto it = ranges::begin(rng);
-    auto end = ranges::end(rng);
+    auto it = fermat::ranges::begin(rng);
+    auto end = fermat::ranges::end(rng);
     for (auto const &val: expected) {
         EXPECT_NE(it, end);
         EXPECT_EQ(*it, val);
@@ -109,7 +109,7 @@ void check_equal(Rng &&rng, const std::vector<T> &expected) {
 using P = std::pair<int, int>;
 
 TEST(GroupByTest, VectorWithPair) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<P> v = {
         {1, 1}, {1, 1}, {1, 2}, {1, 2}, {1, 2}, {1, 2},
@@ -118,7 +118,7 @@ TEST(GroupByTest, VectorWithPair) {
 
     {
         auto rng = v | views::group_by([](P p0, P p1) { return p0.second == p1.second; });
-        EXPECT_EQ(ranges::distance(rng), 3);
+        EXPECT_EQ(fermat::ranges::distance(rng), 3);
         check_equal(*rng.begin(), {P{1, 1}, P{1, 1}});
         auto it = rng.begin();
         ++it;
@@ -128,7 +128,7 @@ TEST(GroupByTest, VectorWithPair) {
     }
     {
         auto rng = v | views::group_by([](P p0, P p1) { return p0.first == p1.first; });
-        EXPECT_EQ(ranges::distance(rng), 2);
+        EXPECT_EQ(fermat::ranges::distance(rng), 2);
         check_equal(*rng.begin(), {P{1, 1}, P{1, 1}, P{1, 2}, P{1, 2}, P{1, 2}, P{1, 2}});
         auto it = rng.begin();
         ++it;
@@ -137,7 +137,7 @@ TEST(GroupByTest, VectorWithPair) {
 }
 
 TEST(GroupByTest, ForwardIteratorCounted) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<P> v = {
         {1, 1}, {1, 1}, {1, 2}, {1, 2}, {1, 2}, {1, 2},
@@ -147,7 +147,7 @@ TEST(GroupByTest, ForwardIteratorCounted) {
     Iter b{v.begin()};
     auto rng0 = views::counted(b, v.size())
                 | views::group_by([](P p0, P p1) { return p0.second == p1.second; });
-    EXPECT_EQ(ranges::distance(rng0), 3);
+    EXPECT_EQ(fermat::ranges::distance(rng0), 3);
     check_equal(*rng0.begin(), {P{1, 1}, P{1, 1}});
     auto it0 = rng0.begin();
     ++it0;
@@ -157,7 +157,7 @@ TEST(GroupByTest, ForwardIteratorCounted) {
 
     auto rng1 = views::counted(b, v.size())
                 | views::group_by([](P p0, P p1) { return p0.first == p1.first; });
-    EXPECT_EQ(ranges::distance(rng1), 2);
+    EXPECT_EQ(fermat::ranges::distance(rng1), 2);
     check_equal(*rng1.begin(), {P{1, 1}, P{1, 1}, P{1, 2}, P{1, 2}, P{1, 2}, P{1, 2}});
     auto it1 = rng1.begin();
     ++it1;
@@ -165,7 +165,7 @@ TEST(GroupByTest, ForwardIteratorCounted) {
 }
 
 TEST(GroupByTest, RemoveIfThenGroup) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     int a[] = {0, 1, 2, 3, 4, 5};
     auto rng = a | views::remove_if([](int n) { return n % 2 == 0; })
@@ -174,7 +174,7 @@ TEST(GroupByTest, RemoveIfThenGroup) {
 }
 
 TEST(GroupByTest, VectorWithPredicate) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v2{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     auto rng0 = views::group_by(v2, [](int i, int j) { return j - i < 3; });
@@ -186,11 +186,11 @@ TEST(GroupByTest, VectorWithPredicate) {
     check_equal(*it, {6, 7, 8});
     ++it;
     check_equal(*it, {9});
-    EXPECT_EQ(ranges::distance(rng0), 4);
+    EXPECT_EQ(fermat::ranges::distance(rng0), 4);
 }
 
 TEST(GroupByTest, AlwaysFalsePredicate) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v3{1, 2, 3, 4, 5};
     int count_invoc = 0;
@@ -199,7 +199,7 @@ TEST(GroupByTest, AlwaysFalsePredicate) {
         return false;
     });
 
-    EXPECT_EQ(ranges::distance(rng), 5);
+    EXPECT_EQ(fermat::ranges::distance(rng), 5);
     EXPECT_EQ(count_invoc, 4);
 
     auto it = rng.begin();
@@ -217,11 +217,11 @@ TEST(GroupByTest, AlwaysFalsePredicate) {
 }
 
 TEST(GroupByTest, StrictlyIncreasing) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v4 = {2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 6, 0, 1, 2, 3, 0};
     auto rng = v4 | views::group_by(std::less<>{});
-    EXPECT_EQ(ranges::distance(rng), 4);
+    EXPECT_EQ(fermat::ranges::distance(rng), 4);
     check_equal(*rng.begin(), {2, 3, 4, 5});
     auto it = rng.begin();
     ++it;
@@ -233,11 +233,11 @@ TEST(GroupByTest, StrictlyIncreasing) {
 }
 
 TEST(GroupByTest, CycleThenTake) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> v5 = {0, 1, 2};
     auto rng = views::cycle(v5) | views::take(6) | views::group_by(std::less<>{});
-    EXPECT_EQ(ranges::distance(rng), 2);
+    EXPECT_EQ(fermat::ranges::distance(rng), 2);
     check_equal(*rng.begin(), v5);
     auto it = rng.begin();
     ++it;
@@ -245,19 +245,19 @@ TEST(GroupByTest, CycleThenTake) {
 }
 
 TEST(GroupByTest, EmptyRange) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> e;
     auto rng = e | views::group_by(std::less<>{});
-    EXPECT_EQ(ranges::distance(rng), 0);
+    EXPECT_EQ(fermat::ranges::distance(rng), 0);
 }
 
 TEST(GroupByTest, SingleElement) {
-    using namespace ranges;
+    using namespace fermat::ranges;
 
     std::vector<int> single{2};
     auto rng = single | views::group_by([](int, int) -> bool { throw 0; });
-    EXPECT_EQ(ranges::distance(rng), 1);
+    EXPECT_EQ(fermat::ranges::distance(rng), 1);
     check_equal(*rng.begin(), {2});
 }
 

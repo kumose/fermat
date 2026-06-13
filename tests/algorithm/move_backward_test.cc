@@ -13,14 +13,14 @@ TEST(MoveBackwardTest, Basic) {
     for (int i = 0; i < N; ++i) src[i] = i;
     std::vector<int> dst(N, 0);
 
-    auto res = ranges::move_backward(src.begin(), src.end(), dst.end());
+    auto res = fermat::ranges::move_backward(src.begin(), src.end(), dst.end());
     EXPECT_EQ(res.in, src.end());
     EXPECT_EQ(res.out, dst.begin());
     for (int i = 0; i < N; ++i) EXPECT_EQ(src[i], dst[i]);
 
     // Range version
     std::fill(dst.begin(), dst.end(), 0);
-    res = ranges::move_backward(src, dst.end());
+    res = fermat::ranges::move_backward(src, dst.end());
     EXPECT_EQ(res.in, src.end());
     EXPECT_EQ(res.out, dst.begin());
     for (int i = 0; i < N; ++i) EXPECT_EQ(src[i], dst[i]);
@@ -33,7 +33,7 @@ TEST(MoveBackwardTest, MoveOnly) {
     for (int i = 0; i < N; ++i) src[i] = std::make_unique<int>(i);
     std::vector<std::unique_ptr<int>> dst(N);
 
-    auto res = ranges::move_backward(src.begin(), src.end(), dst.end());
+    auto res = fermat::ranges::move_backward(src.begin(), src.end(), dst.end());
     EXPECT_EQ(res.in, src.end());
     EXPECT_EQ(res.out, dst.begin());
     for (int i = 0; i < N; ++i) {
@@ -42,8 +42,8 @@ TEST(MoveBackwardTest, MoveOnly) {
     }
 
     // Move back to source
-    ranges::move_backward(dst.begin(), dst.end(), src.end());
-    res = ranges::move_backward(src.begin(), src.end(), dst.end());
+    fermat::ranges::move_backward(dst.begin(), dst.end(), src.end());
+    res = fermat::ranges::move_backward(src.begin(), src.end(), dst.end());
     EXPECT_EQ(res.in, src.end());
     EXPECT_EQ(res.out, dst.begin());
     for (int i = 0; i < N; ++i) {
@@ -59,7 +59,7 @@ TEST(MoveBackwardTest, Constexpr) {
         std::array<int, N> src{};
         for (int i = 0; i < N; ++i) src[i] = i;
         std::array<int, N> dst{};
-        auto res = ranges::move_backward(src.begin(), src.end(), dst.end());
+        auto res = fermat::ranges::move_backward(src.begin(), src.end(), dst.end());
         bool ok = (res.in == src.end()) && (res.out == dst.begin());
         for (int i = 0; i < N; ++i) ok = ok && (src[i] == dst[i]);
         return ok;
