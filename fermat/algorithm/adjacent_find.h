@@ -27,8 +27,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
-{
+namespace ranges {
     /// \addtogroup group-algorithms
     /// @{
     RANGES_FUNC_BEGIN(adjacent_find)
@@ -41,13 +40,12 @@ namespace ranges
         template(typename I, typename S, typename C = equal_to, typename P = identity)(
             requires forward_iterator<I> AND sentinel_for<S, I> AND
             indirect_relation<C, projected<I, P>>)
-        constexpr I RANGES_FUNC(adjacent_find)(I first, S last, C pred = C{}, P proj = P{})
-        {
-            if(first == last)
+        constexpr I RANGES_FUNC(adjacent_find)(I first, S last, C pred = C{}, P proj = P{}) {
+            if (first == last)
                 return first;
             auto inext = first;
-            for(; ++inext != last; first = inext)
-                if(invoke(pred, invoke(proj, *first), invoke(proj, *inext)))
+            for (; ++inext != last; first = inext)
+                if (invoke(pred, invoke(proj, *first), invoke(proj, *inext)))
                     return first;
             return inext;
         }
@@ -61,12 +59,13 @@ namespace ranges
         {
             return (*this)(begin(rng), end(rng), std::move(pred), std::move(proj));
         }
+
     RANGES_FUNC_END(adjacent_find)
 
-    namespace cpp20
-    {
+    namespace cpp20 {
         using ranges::adjacent_find;
     }
+
     /// @}
 } // namespace ranges
 

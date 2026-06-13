@@ -22,28 +22,23 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
-{
+namespace ranges {
     /// \addtogroup group-utility
     /// @{
-    namespace aux
-    {
-        struct copy_fn : copy_tag
-        {
+    namespace aux {
+        struct copy_fn : copy_tag {
             template(typename T)(
                 requires constructible_from<detail::decay_t<T>, T>)
-            constexpr auto operator()(T && t) const -> detail::decay_t<T>
-            {
+            constexpr auto operator()(T &&t) const -> detail::decay_t<T> {
                 return static_cast<T &&>(t);
             }
 
             /// \ingroup group-utility
             /// \sa `copy_fn`
             template<typename T>
-            friend constexpr auto operator|(T && t, copy_fn)
+            friend constexpr auto operator|(T &&t, copy_fn)
                 -> CPP_broken_friend_ret(detail::decay_t<T>)(
-                    requires constructible_from<detail::decay_t<T>, T>)
-            {
+                    requires constructible_from<detail::decay_t<T>, T>) {
                 return static_cast<T &&>(t);
             }
         };

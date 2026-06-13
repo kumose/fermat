@@ -33,8 +33,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace ranges
-{
+namespace ranges {
     /// \addtogroup group-algorithms
     /// @{
     RANGES_FUNC_BEGIN(adjacent_remove_if)
@@ -46,18 +45,15 @@ namespace ranges
         /// \pre `Pred` is a model of the `BinaryPredicate` concept.
         template(typename I, typename S, typename Pred, typename Proj = identity)(
             requires permutable<I> AND sentinel_for<S, I> AND
-                indirect_relation<Pred, projected<I, Proj>>)
-        constexpr I RANGES_FUNC(adjacent_remove_if)(I first, S last, Pred pred = {}, Proj proj = {})
-        {
+            indirect_relation<Pred, projected<I, Proj>>)
+        constexpr I RANGES_FUNC(adjacent_remove_if)(I first, S last, Pred pred = {}, Proj proj = {}) {
             first = adjacent_find(std::move(first), last, ranges::ref(pred), ranges::ref(proj));
-            if(first == last)
+            if (first == last)
                 return first;
 
             auto i = first;
-            for(auto j = ++i; ++j != last; ++i)
-            {
-                if(!invoke(pred, invoke(proj, *i), invoke(proj, *j)))
-                {
+            for (auto j = ++i; ++j != last; ++i) {
+                if (!invoke(pred, invoke(proj, *i), invoke(proj, *j))) {
                     *first = iter_move(i);
                     ++first;
                 }
@@ -78,12 +74,13 @@ namespace ranges
         {
             return (*this)(begin(rng), end(rng), std::move(pred), std::move(proj));
         }
+
     RANGES_FUNC_END(adjacent_remove_if)
 
-    namespace cpp20
-    {
+    namespace cpp20 {
         using ranges::adjacent_remove_if;
     }
+
     /// @}
 } // namespace ranges
 

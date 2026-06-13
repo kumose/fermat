@@ -31,12 +31,9 @@
 RANGES_DIAGNOSTIC_PUSH
 RANGES_DIAGNOSTIC_IGNORE_DEPRECATED_DECLARATIONS
 
-namespace ranges
-{
-    struct bad_any_cast : std::bad_cast
-    {
-        virtual const char * what() const noexcept override
-        {
+namespace ranges {
+    struct bad_any_cast : std::bad_cast {
+        virtual const char *what() const noexcept override {
             return "bad any_cast";
         }
     };
@@ -56,132 +53,134 @@ namespace ranges
     meta::if_c<std::is_reference<T>() || copyable<T>, T> any_cast(any &&);
 
     template<typename T>
-    T * any_cast(any *) noexcept;
+    T *any_cast(any *) noexcept;
 
     template<typename T>
-    T const * any_cast(any const *) noexcept;
+    T const *any_cast(any const *) noexcept;
 
-    namespace _any_
-    {
-        struct _base {};
+    namespace _any_ {
+        struct _base {
+        };
 
-        struct _interface
-        {
-            virtual ~_interface()
-            {}
-            virtual _interface * clone() const = 0;
-            virtual std::type_info const & type() const noexcept = 0;
+        struct _interface {
+            virtual ~_interface() {
+            }
+
+            virtual _interface *clone() const = 0;
+
+            virtual std::type_info const &type() const noexcept = 0;
         };
 
         template<typename T>
-        struct impl final : _interface
-        {
+        struct impl final : _interface {
         private:
             T obj;
 
         public:
             impl() = default;
+
             impl(T o)
-              : obj(std::move(o))
-            {}
-            T & get()
-            {
+                : obj(std::move(o)) {
+            }
+
+            T &get() {
                 return obj;
             }
-            T const & get() const
-            {
+
+            T const &get() const {
                 return obj;
             }
-            impl * clone() const override
-            {
+
+            impl *clone() const override {
                 return new impl{obj};
             }
-            std::type_info const & type() const noexcept override
-            {
+
+            std::type_info const &type() const noexcept override {
                 return typeid(T);
             }
         };
     } // namespace _any_
 
     struct any
-      #if RANGES_BROKEN_CPO_LOOKUP
-      : private _any_::_base
-      #endif
+#if RANGES_BROKEN_CPO_LOOKUP
+            : private _any_::_base
+#endif
     {
     private:
         template<typename T>
-        friend meta::if_c<std::is_reference<T>() || (bool)copyable<T>, T> any_cast(any &);
+        friend meta::if_c<std::is_reference<T>() || (bool) copyable<T>, T> any_cast(any &);
 
         template<typename T>
-        friend meta::if_c<std::is_reference<T>() || (bool)copyable<T>, T> any_cast(
+        friend meta::if_c<std::is_reference<T>() || (bool) copyable<T>, T> any_cast(
             any const &);
 
         template<typename T>
-        friend meta::if_c<std::is_reference<T>() || (bool)copyable<T>, T> any_cast(
+        friend meta::if_c<std::is_reference<T>() || (bool) copyable<T>, T> any_cast(
             any &&);
 
         template<typename T>
-        friend T * any_cast(any *) noexcept;
+        friend T *any_cast(any *) noexcept;
 
         template<typename T>
-        friend T const * any_cast(any const *) noexcept;
+        friend T const *any_cast(any const *) noexcept;
 
         std::unique_ptr<_any_::_interface> ptr_;
 
     public:
         any() noexcept = default;
+
         template(typename TRef, typename T = detail::decay_t<TRef>)(
             requires (!same_as<T, any>) AND copyable<T>) //
-        any(TRef && t)
-          : ptr_(new _any_::impl<T>(static_cast<TRef &&>(t)))
-        {}
+        any(TRef &&t)
+            : ptr_(new _any_::impl<T>(static_cast<TRef &&>(t))) {
+        }
+
         any(any &&) noexcept = default;
-        any(any const & that)
-          : ptr_{that.ptr_ ? that.ptr_->clone() : nullptr}
-        {}
-        any & operator=(any &&) noexcept = default;
-        any & operator=(any const & that)
-        {
+
+        any(any const &that)
+            : ptr_{that.ptr_ ? that.ptr_->clone() : nullptr} {
+        }
+
+        any &operator=(any &&) noexcept = default;
+
+        any &operator=(any const &that) {
             ptr_.reset(that.ptr_ ? that.ptr_->clone() : nullptr);
             return *this;
         }
+
         template(typename TRef, typename T = detail::decay_t<TRef>)(
             requires (!same_as<T, any>) AND copyable<T>) //
-        any & operator=(TRef && t)
-        {
+        any &operator=(TRef &&t) {
             any{static_cast<TRef &&>(t)}.swap(*this);
             return *this;
         }
-        void clear() noexcept
-        {
+
+        void clear() noexcept {
             ptr_.reset();
         }
-        bool empty() const noexcept
-        {
+
+        bool empty() const noexcept {
             return !ptr_;
         }
-        std::type_info const & type() const noexcept
-        {
+
+        std::type_info const &type() const noexcept {
             return ptr_ ? ptr_->type() : typeid(void);
         }
-        void swap(any & that) noexcept
-        {
+
+        void swap(any &that) noexcept {
             ptr_.swap(that.ptr_);
         }
 
 #if !RANGES_BROKEN_CPO_LOOKUP
-        friend void swap(any & x, any & y) noexcept
-        {
+        friend void swap(any &x, any &y) noexcept {
             x.swap(y);
         }
 #endif
     };
 
 #if RANGES_BROKEN_CPO_LOOKUP
-    namespace _any_
-    {
-        inline void swap(any & x, any & y) noexcept
-        {
+    namespace _any_ {
+        inline void swap(any &x, any &y) noexcept {
             x.swap(y);
         }
     } // namespace _any_
@@ -189,47 +188,42 @@ namespace ranges
 
     /// \throw bad_any_cast
     template<typename T>
-    meta::if_c<std::is_reference<T>() || copyable<T>, T> any_cast(any & x)
-    {
-        if(x.type() != typeid(detail::decay_t<T>))
+    meta::if_c<std::is_reference<T>() || copyable<T>, T> any_cast(any &x) {
+        if (x.type() != typeid(detail::decay_t<T>))
             throw bad_any_cast{};
-        return static_cast<_any_::impl<detail::decay_t<T>> *>(x.ptr_.get())->get();
+        return static_cast<_any_::impl<detail::decay_t<T> > *>(x.ptr_.get())->get();
     }
 
     /// \overload
     template<typename T>
-    meta::if_c<std::is_reference<T>() || copyable<T>, T> any_cast(any const & x)
-    {
-        if(x.type() != typeid(detail::decay_t<T>))
+    meta::if_c<std::is_reference<T>() || copyable<T>, T> any_cast(any const &x) {
+        if (x.type() != typeid(detail::decay_t<T>))
             throw bad_any_cast{};
-        return static_cast<_any_::impl<detail::decay_t<T>> const *>(x.ptr_.get())->get();
+        return static_cast<_any_::impl<detail::decay_t<T> > const *>(x.ptr_.get())->get();
     }
 
     /// \overload
     template<typename T>
-    meta::if_c<std::is_reference<T>() || copyable<T>, T> any_cast(any && x)
-    {
-        if(x.type() != typeid(detail::decay_t<T>))
+    meta::if_c<std::is_reference<T>() || copyable<T>, T> any_cast(any &&x) {
+        if (x.type() != typeid(detail::decay_t<T>))
             throw bad_any_cast{};
-        return static_cast<_any_::impl<detail::decay_t<T>> *>(x.ptr_.get())->get();
+        return static_cast<_any_::impl<detail::decay_t<T> > *>(x.ptr_.get())->get();
     }
 
     /// \overload
     template<typename T>
-    T * any_cast(any * p) noexcept
-    {
-        if(p && p->ptr_)
-            if(_any_::impl<T> * q = dynamic_cast<_any_::impl<T> *>(p->ptr_.get()))
+    T *any_cast(any *p) noexcept {
+        if (p && p->ptr_)
+            if (_any_::impl<T> *q = dynamic_cast<_any_::impl<T> *>(p->ptr_.get()))
                 return &q->get();
         return nullptr;
     }
 
     /// \overload
     template<typename T>
-    T const * any_cast(any const * p) noexcept
-    {
-        if(p && p->ptr_)
-            if(_any_::impl<T> const * q = dynamic_cast<_any_::impl<T> const *>(p->ptr_.get()))
+    T const *any_cast(any const *p) noexcept {
+        if (p && p->ptr_)
+            if (_any_::impl<T> const *q = dynamic_cast<_any_::impl<T> const *>(p->ptr_.get()))
                 return &q->get();
         return nullptr;
     }
