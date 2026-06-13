@@ -34,19 +34,15 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace fermat::ranges
-{
+namespace fermat::ranges {
     /// \addtogroup group-views
     /// @{
 
     /// \cond
-    namespace detail
-    {
-        namespace drop_last_view
-        {
+    namespace detail {
+        namespace drop_last_view {
             template<typename Rng>
-            range_size_t<Rng> get_size(Rng & rng, range_difference_t<Rng> n_)
-            {
+            range_size_t<Rng> get_size(Rng &rng, range_difference_t<Rng> n_) {
                 RANGES_EXPECT(n_ >= 0);
                 range_size_t<Rng> const initial_size = fermat::ranges::size(rng);
                 range_size_t<Rng> const n = static_cast<range_size_t<Rng>>(n_);
@@ -55,20 +51,18 @@ namespace fermat::ranges
 
             template(typename Rng)(
                 requires random_access_range<Rng> AND sized_range<Rng>)
-            iterator_t<Rng> get_end(Rng & rng, range_difference_t<Rng> n, int)
-            {
+            iterator_t<Rng> get_end(Rng &rng, range_difference_t<Rng> n, int) {
                 return begin(rng) + static_cast<range_difference_t<Rng>>(
-                                        drop_last_view::get_size(rng, n));
+                           drop_last_view::get_size(rng, n));
             }
+
             template(typename Rng)(
                 requires bidirectional_range<Rng> AND common_range<Rng>)
-            iterator_t<Rng> get_end(Rng & rng, range_difference_t<Rng> n, long)
-            {
+            iterator_t<Rng> get_end(Rng &rng, range_difference_t<Rng> n, long) {
                 return prev(end(rng), n, begin(rng));
             }
 
-            enum class mode_enum
-            {
+            enum class mode_enum {
                 bidi,
                 forward,
                 sized,
@@ -84,19 +78,18 @@ namespace fermat::ranges
             using mode_invalid = mode_t<mode_enum::invalid>;
 
             template<typename Rng>
-            constexpr mode_enum get_mode() noexcept
-            {
+            constexpr mode_enum get_mode() noexcept {
                 // keep range bound
                 // Sized Bidi O(N)
                 return (random_access_range<Rng> && view_<Rng> && sized_range<Rng>) ||
-                               (bidirectional_range<Rng> && view_<Rng> &&
-                                common_range<Rng>)
-                           ? mode_enum::bidi                        //
-                           : sized_range<Rng> && view_<Rng>         //
-                                 ? mode_enum::sized                 //
+                       (bidirectional_range<Rng> && view_<Rng> &&
+                        common_range<Rng>)
+                           ? mode_enum::bidi //
+                           : sized_range<Rng> && view_<Rng> //
+                                 ? mode_enum::sized //
                                  : forward_range<Rng> && view_<Rng> //
-                                       ? mode_enum::forward         //
-                                       : mode_enum::invalid;        //
+                                       ? mode_enum::forward //
+                                       : mode_enum::invalid; //
 
                 // max performance
                 // Sized Bidi O(1)
@@ -112,23 +105,25 @@ namespace fermat::ranges
             template<typename Rng>
             using mode_of = mode_t<drop_last_view::get_mode<Rng>()>;
         } // namespace drop_last_view
-    }     // namespace detail
+    } // namespace detail
     /// \endcond
 
-    template<typename Rng, typename = detail::drop_last_view::mode_of<Rng>>
-    struct drop_last_view
-    {};
+    template<typename Rng, typename = detail::drop_last_view::mode_of<Rng> >
+    struct drop_last_view {
+    };
 
     template<typename Rng>
     struct drop_last_view<Rng, detail::drop_last_view::mode_bidi>
-      : view_interface<drop_last_view<Rng, detail::drop_last_view::mode_bidi>,
-                       is_finite<Rng>::value
-                           ? finite
-                           : range_cardinality<Rng>::value> // finite at best
+            : view_interface<drop_last_view<Rng, detail::drop_last_view::mode_bidi>,
+                is_finite<Rng>::value
+                    ? finite
+                    : range_cardinality<Rng>::value> // finite at best
     {
-        CPP_assert(
-            (random_access_range<Rng> && view_<Rng> && sized_range<Rng>) ||
-            (bidirectional_range<Rng> && view_<Rng> && common_range<Rng>));
+        static_assert(static_cast<bool>(
+                          (random_access_range<Rng> && view_<Rng> && sized_range<Rng>) ||
+                          (bidirectional_range<Rng> && view_<Rng> && common_range<Rng>)),
+                      "Concept assertion failed : (random_access_range<Rng> && view_<Rng> && sized_range<Rng>) || (bidirectional_range<Rng> && view_<Rng> && common_range<Rng>)")
+        ;
 
     private:
         friend range_access;
@@ -136,143 +131,137 @@ namespace fermat::ranges
 
         Rng rng_;
         difference_t n_;
-        detail::non_propagating_cache<iterator_t<Rng>> end_;
+        detail::non_propagating_cache<iterator_t<Rng> > end_;
 
     public:
         drop_last_view() = default;
+
         constexpr drop_last_view(Rng rng, difference_t n)
-          : rng_(std::move(rng))
-          , n_(n)
-        {
+            : rng_(std::move(rng))
+              , n_(n) {
             RANGES_EXPECT(n >= 0);
         }
 
-        iterator_t<Rng> begin()
-        {
+        iterator_t<Rng> begin() {
             return fermat::ranges::begin(rng_);
         }
-        sentinel_t<Rng> end()
-        {
-            if(!end_)
+
+        sentinel_t<Rng> end() {
+            if (!end_)
                 end_ = detail::drop_last_view::get_end(rng_, n_, 0);
             return *end_;
         }
+
         template(typename CRng = Rng const)(
             requires random_access_range<CRng> AND sized_range<CRng>)
-        iterator_t<CRng> begin() const
-        {
+        iterator_t<CRng> begin() const {
             return fermat::ranges::begin(rng_);
         }
+
         template(typename CRng = Rng const)(
             requires random_access_range<CRng> AND sized_range<CRng>)
-        iterator_t<CRng> end() const
-        {
+        iterator_t<CRng> end() const {
             return detail::drop_last_view::get_end(rng_, n_, 0);
         }
 
         CPP_auto_member
         auto CPP_fun(size)()(
-            requires sized_range<Rng>)
-        {
-            return detail::drop_last_view::get_size(rng_, n_);
-        }
-        CPP_auto_member
-        auto CPP_fun(size)()(const //
-            requires sized_range<Rng const>)
-        {
+            requires sized_range<Rng>) {
             return detail::drop_last_view::get_size(rng_, n_);
         }
 
-        Rng & base()
-        {
+        CPP_auto_member
+        auto CPP_fun(size)()(const //
+            requires sized_range<Rng const>) {
+            return detail::drop_last_view::get_size(rng_, n_);
+        }
+
+        Rng &base() {
             return rng_;
         }
-        Rng const & base() const
-        {
+
+        Rng const &base() const {
             return rng_;
         }
     };
 
     template<typename Rng>
     struct drop_last_view<Rng, detail::drop_last_view::mode_forward>
-      : view_adaptor<drop_last_view<Rng, detail::drop_last_view::mode_forward>, Rng,
-                     is_finite<Rng>::value
-                         ? finite
-                         : range_cardinality<Rng>::value> // finite at best (but
-                                                          // unknown is expected)
+            : view_adaptor<drop_last_view<Rng, detail::drop_last_view::mode_forward>, Rng,
+                is_finite<Rng>::value
+                    ? finite
+                    : range_cardinality<Rng>::value> // finite at best (but
+            // unknown is expected)
     {
-        CPP_assert(forward_range<Rng> && view_<Rng>);
+        static_assert(static_cast<bool>(forward_range<Rng> && view_<Rng>),
+                      "Concept assertion failed : forward_range<Rng> && view_<Rng>");
 
     private:
         friend range_access;
 
         using difference_t = range_difference_t<Rng>;
         difference_t n_;
-        detail::non_propagating_cache<iterator_t<Rng>> probe_begin;
+        detail::non_propagating_cache<iterator_t<Rng> > probe_begin;
 
-        struct adaptor : adaptor_base
-        {
+        struct adaptor : adaptor_base {
             iterator_t<Rng> probe_;
 
             adaptor() = default;
+
             adaptor(iterator_t<Rng> probe_first)
-              : probe_(std::move(probe_first))
-            {}
-            void next(iterator_t<Rng> & it)
-            {
+                : probe_(std::move(probe_first)) {
+            }
+
+            void next(iterator_t<Rng> &it) {
                 ++it;
                 ++probe_;
             }
         };
 
-        struct sentinel_adaptor : adaptor_base
-        {
+        struct sentinel_adaptor : adaptor_base {
             template<typename I, typename S>
-            bool empty(I const &, adaptor const & ia, S const & s) const
-            {
+            bool empty(I const &, adaptor const &ia, S const &s) const {
                 return ia.probe_ == s;
             }
         };
 
-        adaptor begin_adaptor()
-        {
-            if(!probe_begin)
+        adaptor begin_adaptor() {
+            if (!probe_begin)
                 probe_begin = next(begin(this->base()), n_, end(this->base()));
             return {*probe_begin};
         }
-        sentinel_adaptor end_adaptor()
-        {
+
+        sentinel_adaptor end_adaptor() {
             return {};
         }
 
     public:
         drop_last_view() = default;
+
         constexpr drop_last_view(Rng rng, difference_t n)
-          : drop_last_view::view_adaptor(std::move(rng))
-          , n_(n)
-        {
+            : drop_last_view::view_adaptor(std::move(rng))
+              , n_(n) {
             RANGES_EXPECT(n >= 0);
         }
 
         CPP_auto_member
         auto CPP_fun(size)()(
-            requires sized_range<Rng>)
-        {
+            requires sized_range<Rng>) {
             return detail::drop_last_view::get_size(this->base(), n_);
         }
+
         CPP_auto_member
         auto CPP_fun(size)()(const //
-            requires sized_range<Rng const>)
-        {
+            requires sized_range<Rng const>) {
             return detail::drop_last_view::get_size(this->base(), n_);
         }
     };
 
     template<typename Rng>
     struct drop_last_view<Rng, detail::drop_last_view::mode_sized>
-      : view_interface<drop_last_view<Rng, detail::drop_last_view::mode_sized>, finite>
-    {
-        CPP_assert(sized_range<Rng> && view_<Rng>);
+            : view_interface<drop_last_view<Rng, detail::drop_last_view::mode_sized>, finite> {
+        static_assert(static_cast<bool>(sized_range<Rng> && view_<Rng>),
+                      "Concept assertion failed : sized_range<Rng> && view_<Rng>");
 
     private:
         friend range_access;
@@ -283,79 +272,72 @@ namespace fermat::ranges
 
     public:
         drop_last_view() = default;
+
         constexpr drop_last_view(Rng rng, difference_t n)
-          : rng_(std::move(rng))
-          , n_(n)
-        {
+            : rng_(std::move(rng))
+              , n_(n) {
             RANGES_EXPECT(n >= 0);
         }
 
-        counted_iterator<iterator_t<Rng>> begin()
-        {
+        counted_iterator<iterator_t<Rng> > begin() {
             return {fermat::ranges::begin(rng_), static_cast<difference_t>(size())};
         }
+
         template(typename CRng = Rng const)(
             requires sized_range<CRng>)
-        counted_iterator<iterator_t<CRng>> begin() const
-        {
+        counted_iterator<iterator_t<CRng> > begin() const {
             return {fermat::ranges::begin(rng_), static_cast<difference_t>(size())};
         }
-        default_sentinel_t end() const
-        {
+
+        default_sentinel_t end() const {
             return {};
         }
-        range_size_t<Rng> size()
-        {
-            return detail::drop_last_view::get_size(this->base(), n_);
-        }
-        CPP_auto_member
-        auto CPP_fun(size)()(const //
-            requires sized_range<Rng const>)
-        {
+
+        range_size_t<Rng> size() {
             return detail::drop_last_view::get_size(this->base(), n_);
         }
 
-        Rng & base()
-        {
+        CPP_auto_member
+        auto CPP_fun(size)()(const //
+            requires sized_range<Rng const>) {
+            return detail::drop_last_view::get_size(this->base(), n_);
+        }
+
+        Rng &base() {
             return rng_;
         }
-        Rng const & base() const
-        {
+
+        Rng const &base() const {
             return rng_;
         }
     };
 
     template<typename Rng, typename T>
-    inline constexpr bool enable_borrowed_range<drop_last_view<Rng, T>> = //
-        enable_borrowed_range<Rng>;
+    inline constexpr bool enable_borrowed_range<drop_last_view<Rng, T> > = //
+            enable_borrowed_range<Rng>;
 
 #if RANGES_CXX_DEDUCTION_GUIDES >= RANGES_CXX_DEDUCTION_GUIDES_17
     template<typename Rng>
     drop_last_view(Rng &&, range_difference_t<Rng>)
-        -> drop_last_view<views::all_t<Rng>>;
+        -> drop_last_view<views::all_t<Rng> >;
 #endif
 
-    namespace views
-    {
-        struct drop_last_base_fn
-        {
+    namespace views {
+        struct drop_last_base_fn {
             template(typename Rng)(
                 requires sized_range<Rng> || forward_range<Rng>)
-            constexpr auto operator()(Rng && rng, range_difference_t<Rng> n) const
-                -> drop_last_view<all_t<Rng>>
-            {
+            constexpr auto operator()(Rng &&rng, range_difference_t<Rng> n) const
+                -> drop_last_view<all_t<Rng> > {
                 return {all(static_cast<Rng &&>(rng)), n};
             }
         };
 
-        struct drop_last_fn : drop_last_base_fn
-        {
+        struct drop_last_fn : drop_last_base_fn {
             using drop_last_base_fn::operator();
 
             template(typename Int)(
                 requires detail::integer_like_<Int>)
-            constexpr auto operator()(Int n) const
-            {
+            constexpr auto operator()(Int n) const {
                 return make_view_closure(bind_back(drop_last_base_fn{}, n));
             }
         };

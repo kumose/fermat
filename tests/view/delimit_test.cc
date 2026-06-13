@@ -69,7 +69,7 @@ TEST(DelimitTest, IotaDelimit)
     auto rng0 = views::iota(10) | views::delimit(25);
     check_equal(rng0, {10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
 
-    // Concept checks omitted (original used CPP_assert)
+    // Concept checks omitted (original used static aSSEERR)
     // static_assert(view_<decltype(rng0)>);
     // static_assert(!common_range<decltype(rng0)>);
     // static_assert(random_access_iterator<decltype(rng0.begin())>);

@@ -30,18 +30,14 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace fermat::ranges
-{
+namespace fermat::ranges {
     /// \cond
-    namespace detail
-    {
-        struct indirect_zip_fn_
-        {
+    namespace detail {
+        struct indirect_zip_fn_ {
             // tuple value
             template(typename... Its)(
                 requires (sizeof...(Its) != 2) AND and_v<indirectly_readable<Its>...>)
-            std::tuple<iter_value_t<Its>...> operator()(copy_tag, Its...) const
-            {
+            std::tuple<iter_value_t<Its>...> operator()(copy_tag, Its...) const {
                 RANGES_EXPECT(false);
             }
 
@@ -50,8 +46,7 @@ namespace fermat::ranges
                 requires (sizeof...(Its) != 2) AND and_v<indirectly_readable<Its>...>)
             common_tuple<iter_reference_t<Its>...>
             operator()(Its const &... its) const //
-                noexcept(meta::and_c<noexcept(iter_reference_t<Its>(*its))...>::value)
-            {
+                noexcept(meta::and_c<noexcept(iter_reference_t<Its>(*its))...>::value) {
                 return common_tuple<iter_reference_t<Its>...>{*its...};
             }
 
@@ -61,40 +56,36 @@ namespace fermat::ranges
             common_tuple<iter_rvalue_reference_t<Its>...> //
             operator()(move_tag, Its const &... its) const //
                 noexcept(meta::and_c<noexcept(
-                             iter_rvalue_reference_t<Its>(iter_move(its)))...>::value)
-            {
+                    iter_rvalue_reference_t<Its>(iter_move(its)))...>::value) {
                 return common_tuple<iter_rvalue_reference_t<Its>...>{iter_move(its)...};
             }
 
             // pair value
             template(typename It1, typename It2)(
                 requires indirectly_readable<It1> AND indirectly_readable<It2>)
-            std::pair<iter_value_t<It1>, iter_value_t<It2>> //
-            operator()(copy_tag, It1, It2) const
-            {
+            std::pair<iter_value_t<It1>, iter_value_t<It2> > //
+            operator()(copy_tag, It1, It2) const {
                 RANGES_EXPECT(false);
             }
 
             // pair reference
             template(typename It1, typename It2)(
                 requires indirectly_readable<It1> AND indirectly_readable<It2>)
-            common_pair<iter_reference_t<It1>, iter_reference_t<It2>>
-            operator()(It1 const & it1, It2 const & it2) const //
+            common_pair<iter_reference_t<It1>, iter_reference_t<It2> >
+            operator()(It1 const &it1, It2 const &it2) const //
                 noexcept( //
                     noexcept(iter_reference_t<It1>(*it1)) && //
-                    noexcept(iter_reference_t<It2>(*it2)))
-            {
+                    noexcept(iter_reference_t<It2>(*it2))) {
                 return {*it1, *it2};
             }
 
             // pair rvalue reference
             template(typename It1, typename It2)(
                 requires indirectly_readable<It1> AND indirectly_readable<It2>)
-            common_pair<iter_rvalue_reference_t<It1>, iter_rvalue_reference_t<It2>>
-            operator()(move_tag, It1 const & it1, It2 const & it2) const
+            common_pair<iter_rvalue_reference_t<It1>, iter_rvalue_reference_t<It2> >
+            operator()(move_tag, It1 const &it1, It2 const &it2) const
                 noexcept(noexcept(iter_rvalue_reference_t<It1>(iter_move(it1))) &&
-                         noexcept(iter_rvalue_reference_t<It2>(iter_move(it2))))
-            {
+                         noexcept(iter_rvalue_reference_t<It2>(iter_move(it2)))) {
                 return {iter_move(it1), iter_move(it2)};
             }
         };
@@ -104,21 +95,23 @@ namespace fermat::ranges
     /// \addtogroup group-views
     /// @{
     template<typename... Rngs>
-    struct zip_view : iter_zip_with_view<detail::indirect_zip_fn_, Rngs...>
-    {
-        CPP_assert(sizeof...(Rngs) != 0);
+    struct zip_view : iter_zip_with_view<detail::indirect_zip_fn_, Rngs...> {
+        static_assert(static_cast<bool>(sizeof...(Rngs) != 0),
+                      "Concept assertion failed : sizeof...(Rngs) != 0");
 
         zip_view() = default;
+
         explicit zip_view(Rngs... rngs)
-          : iter_zip_with_view<detail::indirect_zip_fn_, Rngs...>{
+            : iter_zip_with_view<detail::indirect_zip_fn_, Rngs...>{
                 detail::indirect_zip_fn_{},
-                std::move(rngs)...}
-        {}
+                std::move(rngs)...
+            } {
+        }
     };
 
     template<typename... Rng>
-    inline constexpr bool enable_borrowed_range<zip_view<Rng...>> =
-        and_v<enable_borrowed_range<Rng>...>;
+    inline constexpr bool enable_borrowed_range<zip_view<Rng...> > =
+            and_v<enable_borrowed_range<Rng>...>;
 
 #if RANGES_CXX_DEDUCTION_GUIDES >= RANGES_CXX_DEDUCTION_GUIDES_17
     template<typename... Rng>
@@ -126,50 +119,48 @@ namespace fermat::ranges
         -> zip_view<views::all_t<Rng>...>;
 #endif
 
-    namespace views
-    {
-        struct zip_fn
-        {
-            constexpr empty_view<std::tuple<>> operator()() const noexcept
-            {
+    namespace views {
+        struct zip_fn {
+            constexpr empty_view<std::tuple<> > operator()() const noexcept {
                 return {};
             }
+
             template(typename... Rngs)(
                 requires and_v<viewable_range<Rngs>...> AND
                 and_v<input_range<Rngs>...> AND
                 (sizeof...(Rngs) != 0)) //
-            zip_view<all_t<Rngs>...> operator()(Rngs &&... rngs) const
-            {
+            zip_view<all_t<Rngs>...> operator()(Rngs &&... rngs) const {
                 return zip_view<all_t<Rngs>...>{all(static_cast<Rngs &&>(rngs))...};
             }
 #if defined(_MSC_VER)
             template(typename Rng0)(
                 requires input_range<Rng0> AND viewable_range<Rng0>)
-            constexpr zip_view<all_t<Rng0>> operator()(Rng0 && rng0) const
-            {
-                return zip_view<all_t<Rng0>>{all(static_cast<Rng0 &&>(rng0))};
+            constexpr zip_view<all_t<Rng0> > operator()(Rng0 &&rng0) const {
+                return zip_view<all_t<Rng0> >{all(static_cast<Rng0 &&>(rng0))};
             }
             template(typename Rng0, typename Rng1)(
                 requires input_range<Rng0> AND viewable_range<Rng0> AND
-                    input_range<Rng1> AND viewable_range<Rng1>)
-            constexpr zip_view<all_t<Rng0>, all_t<Rng1>> //
-            operator()(Rng0 && rng0, Rng1 && rng1) const
-            {
-                return zip_view<all_t<Rng0>, all_t<Rng1>>{ //
-                    all(static_cast<Rng0 &&>(rng0)),       //
-                    all(static_cast<Rng1 &&>(rng1))};
+                input_range<Rng1> AND viewable_range<Rng1>)
+            constexpr zip_view<all_t<Rng0>, all_t<Rng1> > //
+            operator()(Rng0 &&rng0, Rng1 &&rng1) const {
+                return zip_view<all_t<Rng0>, all_t<Rng1> >{
+                    //
+                    all(static_cast<Rng0 &&>(rng0)), //
+                    all(static_cast<Rng1 &&>(rng1))
+                };
             }
             template(typename Rng0, typename Rng1, typename Rng2)(
                 requires input_range<Rng0> AND viewable_range<Rng0> AND
-                    input_range<Rng1> AND viewable_range<Rng1> AND
-                    input_range<Rng2> AND viewable_range<Rng2>)
-            constexpr zip_view<all_t<Rng0>, all_t<Rng1>, all_t<Rng2>> //
-            operator()(Rng0 && rng0, Rng1 && rng1, Rng2 && rng2) const
-            {
-                return zip_view<all_t<Rng0>, all_t<Rng1>, all_t<Rng2>>{ //
-                    all(static_cast<Rng0 &&>(rng0)),                    //
-                    all(static_cast<Rng1 &&>(rng1)),                    //
-                    all(static_cast<Rng2 &&>(rng2))};
+                input_range<Rng1> AND viewable_range<Rng1> AND
+                input_range<Rng2> AND viewable_range<Rng2>)
+            constexpr zip_view<all_t<Rng0>, all_t<Rng1>, all_t<Rng2> > //
+            operator()(Rng0 &&rng0, Rng1 &&rng1, Rng2 &&rng2) const {
+                return zip_view<all_t<Rng0>, all_t<Rng1>, all_t<Rng2> >{
+                    //
+                    all(static_cast<Rng0 &&>(rng0)), //
+                    all(static_cast<Rng1 &&>(rng1)), //
+                    all(static_cast<Rng2 &&>(rng2))
+                };
             }
 #endif
         };

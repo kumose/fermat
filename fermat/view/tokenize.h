@@ -32,60 +32,61 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace fermat::ranges
-{
+namespace fermat::ranges {
     /// \addtogroup group-views
     /// @{
     template<typename Rng, typename Regex, typename SubMatchRange>
     struct tokenize_view
-      : view_interface<tokenize_view<Rng, Regex, SubMatchRange>,
-                       is_finite<Rng>::value ? finite : range_cardinality<Rng>::value>
-    {
+            : view_interface<tokenize_view<Rng, Regex, SubMatchRange>,
+                is_finite<Rng>::value ? finite : range_cardinality<Rng>::value> {
     private:
-        CPP_assert(bidirectional_range<Rng> && view_<Rng> && common_range<Rng>);
-        CPP_assert(semiregular<Regex>);
-        CPP_assert(semiregular<SubMatchRange>);
-
+        static_assert(static_cast<bool>(bidirectional_range<Rng> && view_<Rng> && common_range<Rng>),
+                      "Concept assertion failed : bidirectional_range<Rng> && view_<Rng> && common_range<Rng>");
+        static_assert(static_cast<bool>(semiregular<Regex>),
+                      "Concept assertion failed : semiregular<Regex>");
+        static_assert(static_cast<bool>(semiregular<SubMatchRange>),
+                      "Concept assertion failed : semiregular<SubMatchRange>");
         Rng rng_;
         Regex rex_;
         SubMatchRange subs_;
         std::regex_constants::match_flag_type flags_;
         template<bool Const>
         using iterator_t =
-            std::regex_token_iterator<iterator_t<meta::const_if_c<Const, Rng>>>;
+        std::regex_token_iterator<iterator_t<meta::const_if_c<Const, Rng> > >;
 
     public:
         tokenize_view() = default;
+
         tokenize_view(Rng rng, Regex rex, SubMatchRange subs,
                       std::regex_constants::match_flag_type flags)
-          : rng_(std::move(rng))
-          , rex_(std::move(rex))
-          , subs_(std::move(subs))
-          , flags_(flags)
-        {}
-        iterator_t<simple_view<Rng>()> begin()
-        {
-            meta::const_if_c<simple_view<Rng>(), Rng> & rng = rng_;
+            : rng_(std::move(rng))
+              , rex_(std::move(rex))
+              , subs_(std::move(subs))
+              , flags_(flags) {
+        }
+
+        iterator_t<simple_view<Rng>()> begin() {
+            meta::const_if_c<simple_view<Rng>(), Rng> &rng = rng_;
             return {fermat::ranges::begin(rng), fermat::ranges::end(rng), rex_, subs_, flags_};
         }
+
         template(bool Const = true)(
             requires range<Rng const>)
-        iterator_t<Const> begin() const
-        {
+        iterator_t<Const> begin() const {
             return {fermat::ranges::begin(rng_), fermat::ranges::end(rng_), rex_, subs_, flags_};
         }
-        iterator_t<simple_view<Rng>()> end()
-        {
+
+        iterator_t<simple_view<Rng>()> end() {
             return {};
         }
+
         template(bool Const = true)(
             requires range<Rng const>)
-        iterator_t<Const> end() const
-        {
+        iterator_t<Const> end() const {
             return {};
         }
-        Rng base() const
-        {
+
+        Rng base() const {
             return rng_;
         }
     };
@@ -93,89 +94,90 @@ namespace fermat::ranges
 #if RANGES_CXX_DEDUCTION_GUIDES >= RANGES_CXX_DEDUCTION_GUIDES_17
     template(typename Rng, typename Regex, typename SubMatchRange)(
         requires copy_constructible<Regex> AND copy_constructible<SubMatchRange>)
-        tokenize_view(Rng &&, Regex, SubMatchRange)
-            ->tokenize_view<views::all_t<Rng>, Regex, SubMatchRange>;
+    tokenize_view(Rng &&, Regex, SubMatchRange)
+        -> tokenize_view<views::all_t<Rng>, Regex, SubMatchRange>;
 #endif
 
-    namespace views
-    {
-        struct tokenize_base_fn
-        {
+    namespace views {
+        struct tokenize_base_fn {
             template(typename Rng, typename Regex)(
                 requires bidirectional_range<Rng> AND common_range<Rng> AND
-                    same_as< //
-                        range_value_t<Rng>, //
-                        typename detail::decay_t<Regex>::value_type>)
+                same_as< //
+                range_value_t<Rng>, //
+                typename detail::decay_t<Regex>::value_type>)
             tokenize_view<all_t<Rng>, detail::decay_t<Regex>, int> //
-            operator()(Rng && rng,
-                       Regex && rex,
+            operator()(Rng &&rng,
+                       Regex &&rex,
                        int sub = 0,
                        std::regex_constants::match_flag_type flags =
-                            std::regex_constants::match_default) const //
+                               std::regex_constants::match_default) const //
             {
-                return {all(static_cast<Rng &&>(rng)),
-                        static_cast<Regex &&>(rex),
-                        sub,
-                        flags};
+                return {
+                    all(static_cast<Rng &&>(rng)),
+                    static_cast<Regex &&>(rex),
+                    sub,
+                    flags
+                };
             }
 
             template(typename Rng, typename Regex)(
                 requires bidirectional_range<Rng> AND common_range<Rng> AND
-                    same_as<range_value_t<Rng>,
-                            typename detail::decay_t<Regex>::value_type>)
-            tokenize_view<all_t<Rng>, detail::decay_t<Regex>, std::vector<int>> //
-            operator()(Rng && rng,
-                       Regex && rex,
+                same_as<range_value_t<Rng>,
+                typename detail::decay_t<Regex>::value_type>)
+            tokenize_view<all_t<Rng>, detail::decay_t<Regex>, std::vector<int> > //
+            operator()(Rng &&rng,
+                       Regex &&rex,
                        std::vector<int> subs,
                        std::regex_constants::match_flag_type flags =
-                           std::regex_constants::match_default) const //
+                               std::regex_constants::match_default) const //
             {
-                return {all(static_cast<Rng &&>(rng)),
-                        static_cast<Regex &&>(rex),
-                        std::move(subs),
-                        flags};
+                return {
+                    all(static_cast<Rng &&>(rng)),
+                    static_cast<Regex &&>(rex),
+                    std::move(subs),
+                    flags
+                };
             }
 
             template(typename Rng, typename Regex)(
                 requires bidirectional_range<Rng> AND common_range<Rng> AND
-                    same_as<range_value_t<Rng>,
-                            typename detail::decay_t<Regex>::value_type>)
+                same_as<range_value_t<Rng>,
+                typename detail::decay_t<Regex>::value_type>)
             tokenize_view<all_t<Rng>,
-                          detail::decay_t<Regex>,
-                          std::initializer_list<int>> //
-            operator()(Rng && rng,
-                       Regex && rex,
+                detail::decay_t<Regex>,
+                std::initializer_list<int> > //
+            operator()(Rng &&rng,
+                       Regex &&rex,
                        std::initializer_list<int> subs,
                        std::regex_constants::match_flag_type flags =
-                           std::regex_constants::match_default) const //
+                               std::regex_constants::match_default) const //
             {
-                return {all(static_cast<Rng &&>(rng)),
-                        static_cast<Regex &&>(rex),
-                        std::move(subs),
-                        flags};
+                return {
+                    all(static_cast<Rng &&>(rng)),
+                    static_cast<Regex &&>(rex),
+                    std::move(subs),
+                    flags
+                };
             }
         };
 
-        struct tokenize_fn : tokenize_base_fn
-        {
+        struct tokenize_fn : tokenize_base_fn {
             using tokenize_base_fn::operator();
 
             template<typename Regex>
-            constexpr auto operator()(Regex && rex,
+            constexpr auto operator()(Regex &&rex,
                                       int sub = 0,
                                       std::regex_constants::match_flag_type flags =
-                                          std::regex_constants::match_default) const
-            {
+                                              std::regex_constants::match_default) const {
                 return make_view_closure(bind_back(
                     tokenize_base_fn{}, static_cast<Regex &&>(rex), sub, flags));
             }
 
             template<typename Regex>
-            auto operator()(Regex && rex,
+            auto operator()(Regex &&rex,
                             std::vector<int> subs,
                             std::regex_constants::match_flag_type flags =
-                                std::regex_constants::match_default) const
-            {
+                                    std::regex_constants::match_default) const {
                 return bind_back(tokenize_base_fn{},
                                  static_cast<Regex &&>(rex),
                                  std::move(subs),
@@ -183,11 +185,10 @@ namespace fermat::ranges
             }
 
             template<typename Regex>
-            constexpr auto operator()(Regex && rex,
+            constexpr auto operator()(Regex &&rex,
                                       std::initializer_list<int> subs,
                                       std::regex_constants::match_flag_type flags =
-                                          std::regex_constants::match_default) const
-            {
+                                              std::regex_constants::match_default) const {
                 return make_view_closure(bind_back(
                     tokenize_base_fn{}, static_cast<Regex &&>(rex), subs, flags));
             }

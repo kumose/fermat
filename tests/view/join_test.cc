@@ -2,7 +2,7 @@
 /// Google Test conversion of range-v3 join view test.
 /// All comments in English, using /// Doxygen style.
 /// No C++20 `requires` syntax. Uses only C++17 and below.
-/// All concept checks (CPP_assert) are omitted; only runtime behavior is tested.
+/// All concept checks  are omitted; only runtime behavior is tested.
 
 #include <gtest/gtest.h>
 

@@ -194,10 +194,15 @@ namespace fermat::ranges
                            : K == subrange_kind::sized ? finite : unknown>
       , private _subrange_::adl_hook
     {
-        CPP_assert(input_or_output_iterator<I>);
-        CPP_assert(sentinel_for<S, I>);
-        CPP_assert(K == subrange_kind::sized || !sized_sentinel_for<S, I>);
-        CPP_assert(K != subrange_kind::sized || !same_as<S, unreachable_sentinel_t>);
+        static_assert(static_cast<bool>(input_or_output_iterator<I>),
+            "Concept assertion failed : input_or_output_iterator<I>");
+        static_assert(static_cast<bool>(sentinel_for<S, I>),
+            "Concept assertion failed : sentinel_for<S, I>");
+        static_assert(static_cast<bool>(K == subrange_kind::sized || !sized_sentinel_for<S, I>),
+            "Concept assertion failed : K == subrange_kind::sized || !sized_sentinel_for<S, I>");
+        static_assert(static_cast<bool>(K != subrange_kind::sized || !same_as<S, unreachable_sentinel_t>),
+            "Concept assertion failed : K != subrange_kind::sized || !same_as<S, unreachable_sentinel_t>");
+
 
         using size_type = detail::iter_size_t<I>;
         using iterator = I;

@@ -40,82 +40,73 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace fermat::ranges
-{
+namespace fermat::ranges {
     /// \cond
-    namespace detail
-    {
-        struct equal_to_
-        {
+    namespace detail {
+        struct equal_to_ {
             template<typename T, typename U>
-            bool operator()(T const & t, U const & u) const
-            {
+            bool operator()(T const &t, U const &u) const {
                 return static_cast<bool>(t == u);
             }
         };
+
         RANGES_INLINE_VARIABLE(equal_to_, equal_to)
 
-        struct dec_
-        {
+        struct dec_ {
             template<typename T>
-            void operator()(T & t) const
-            {
+            void operator()(T &t) const {
                 --t;
             }
         };
+
         RANGES_INLINE_VARIABLE(dec_, dec)
 
-        struct inc_
-        {
+        struct inc_ {
             template<typename T>
-            void operator()(T & t) const
-            {
+            void operator()(T &t) const {
                 ++t;
             }
         };
+
         RANGES_INLINE_VARIABLE(inc_, inc)
 
-        struct _advance_
-        {
+        struct _advance_ {
             template(typename I, typename Diff)(
                 requires input_or_output_iterator<I> AND integer_like_<Diff>)
-            void operator()(I & i, Diff n) const
-            {
+            void operator()(I &i, Diff n) const {
                 advance(i, static_cast<iter_difference_t<I>>(n));
             }
         };
+
         RANGES_INLINE_VARIABLE(_advance_, advance_)
 
-        struct distance_to_
-        {
+        struct distance_to_ {
             template<typename T>
-            constexpr auto operator()(T const & t, T const & u) const -> decltype(u - t)
-            {
+            constexpr auto operator()(T const &t, T const &u) const -> decltype(u - t) {
                 return u - t;
             }
         };
+
         RANGES_INLINE_VARIABLE(distance_to_, distance_to)
 
-        struct _min_
-        {
+        struct _min_ {
             template<typename T, typename U>
-            constexpr auto operator()(T const & t, U const & u) const
-                -> decltype(true ? t : u)
-            {
+            constexpr auto operator()(T const &t, U const &u) const
+                -> decltype(true ? t : u) {
                 return u < t ? u : t;
             }
         };
+
         RANGES_INLINE_VARIABLE(_min_, min_)
 
-        struct _max_
-        {
+        struct _max_ {
             template<typename T, typename U>
-            constexpr auto operator()(T const & t, U const & u) const
-                -> decltype(true ? u : t)
-            {
+            constexpr auto operator()(T const &t, U const &u) const
+                -> decltype(true ? u : t) {
                 return u < t ? t : u;
             }
         };
+
         RANGES_INLINE_VARIABLE(_max_, max_)
 
         template<typename State, typename Value>
@@ -123,20 +114,19 @@ namespace fermat::ranges
             cardinality,
             State::value >= 0 && Value::value >= 0
                 ? min_(State::value, Value::value)
-                : State::value >=0 && Value::value == infinite
-                    ? State::value
-                    : State::value == infinite && Value::value >= 0
-                        ? Value::value
-                        : State::value == finite || Value::value == finite
-                            ? finite
-                            : State::value == unknown || Value::value == unknown
-                                    ? unknown
-                                    : infinite>;
+                : State::value >= 0 && Value::value == infinite
+                      ? State::value
+                      : State::value == infinite && Value::value >= 0
+                            ? Value::value
+                            : State::value == finite || Value::value == finite
+                                  ? finite
+                                  : State::value == unknown || Value::value == unknown
+                                        ? unknown
+                                        : infinite>;
     } // namespace detail
     /// \endcond
 
-    namespace views
-    {
+    namespace views {
         // clang-format off
         /// \concept zippable_with_
         /// \brief The \c zippable_with_ concept
@@ -160,13 +150,13 @@ namespace fermat::ranges
     /// @{
     template<typename Fun, typename... Rngs>
     struct iter_zip_with_view
-      : view_facade<iter_zip_with_view<Fun, Rngs...>,
-                    meta::fold<meta::list<range_cardinality<Rngs>...>,
-                               std::integral_constant<cardinality, cardinality::infinite>,
-                               meta::quote<detail::zip_cardinality>>::value>
-    {
+            : view_facade<iter_zip_with_view<Fun, Rngs...>,
+                meta::fold<meta::list<range_cardinality<Rngs>...>,
+                    std::integral_constant<cardinality, cardinality::infinite>,
+                    meta::quote<detail::zip_cardinality> >::value> {
     private:
-        CPP_assert(sizeof...(Rngs) != 0);
+        static_assert(static_cast<bool>(sizeof...(Rngs) != 0),
+                      "Concept assertion failed : sizeof...(Rngs) != 0");
         friend range_access;
 
         semiregular_box_t<Fun> fun_;
@@ -177,72 +167,74 @@ namespace fermat::ranges
         struct cursor;
 
         template<bool Const>
-        struct sentinel
-        {
+        struct sentinel {
         private:
             friend struct cursor<Const>;
             friend struct sentinel<!Const>;
-            std::tuple<sentinel_t<meta::const_if_c<Const, Rngs>>...> ends_;
+            std::tuple<sentinel_t<meta::const_if_c<Const, Rngs> >...> ends_;
 
         public:
             sentinel() = default;
+
             sentinel(detail::ignore_t,
-                     std::tuple<sentinel_t<meta::const_if_c<Const, Rngs>>...> ends)
-              : ends_(std::move(ends))
-            {}
+                     std::tuple<sentinel_t<meta::const_if_c<Const, Rngs> >...> ends)
+                : ends_(std::move(ends)) {
+            }
+
             template(bool Other)(
                 requires Const AND CPP_NOT(Other)) //
             sentinel(sentinel<Other> that)
-              : ends_(std::move(that.ends_))
-            {}
+                : ends_(std::move(that.ends_)) {
+            }
         };
 
         template<bool Const>
-        struct cursor
-        {
+        struct cursor {
         private:
             friend struct cursor<!Const>;
             using fun_ref_ = semiregular_box_ref_or_val_t<Fun, Const>;
             fun_ref_ fun_;
-            std::tuple<iterator_t<meta::const_if_c<Const, Rngs>>...> its_;
+            std::tuple<iterator_t<meta::const_if_c<Const, Rngs> >...> its_;
 
         public:
             using difference_type =
-                common_type_t<range_difference_t<meta::const_if_c<Const, Rngs>>...>;
+            common_type_t<range_difference_t<meta::const_if_c<Const, Rngs> >...>;
             using single_pass = meta::or_c<(
-                bool)single_pass_iterator_<iterator_t<meta::const_if_c<Const, Rngs>>>...>;
+                bool) single_pass_iterator_<iterator_t<meta::const_if_c<Const, Rngs> > >...>;
             using value_type = detail::decay_t<invoke_result_t<
-                fun_ref_ &, copy_tag, iterator_t<meta::const_if_c<Const, Rngs>>...>>;
+                fun_ref_ &, copy_tag, iterator_t<meta::const_if_c<Const, Rngs> >...> >;
 
             cursor() = default;
+
             cursor(fun_ref_ fun,
-                   std::tuple<iterator_t<meta::const_if_c<Const, Rngs>>...> its)
-              : fun_(std::move(fun))
-              , its_(std::move(its))
-            {}
+                   std::tuple<iterator_t<meta::const_if_c<Const, Rngs> >...> its)
+                : fun_(std::move(fun))
+                  , its_(std::move(its)) {
+            }
+
             template(bool Other)(
                 requires Const AND CPP_NOT(Other)) //
             cursor(cursor<Other> that)
-              : fun_(std::move(that.fun_))
-              , its_(std::move(that.its_))
-            {}
+                : fun_(std::move(that.fun_))
+                  , its_(std::move(that.its_)) {
+            }
+
             // clang-format off
             auto CPP_auto_fun(read)()(const)
             (
                 return tuple_apply(fun_, its_)
             )
             // clang-format on
-            void next()
-            {
+            void next() {
                 tuple_for_each(its_, detail::inc);
             }
+
             CPP_member
-            auto equal(cursor const & that) const //
+            auto equal(cursor const &that) const //
                 -> CPP_ret(bool)(
                     requires and_v<
-                        sentinel_for<iterator_t<meta::const_if_c<Const, Rngs>>,
-                                    iterator_t<meta::const_if_c<Const, Rngs>>>...>)
-            {
+                    sentinel_for<iterator_t<meta::const_if_c<Const, Rngs>>,
+                    iterator_t<meta::const_if_c<Const, Rngs>>>...>) {
                 // By returning true if *any* of the iterators are equal, we allow
                 // zipped ranges to be of different lengths, stopping when the first
                 // one reaches the last.
@@ -250,8 +242,8 @@ namespace fermat::ranges
                                    false,
                                    [](bool a, bool b) { return a || b; });
             }
-            bool equal(sentinel<Const> const & s) const
-            {
+
+            bool equal(sentinel<Const> const &s) const {
                 // By returning true if *any* of the iterators are equal, we allow
                 // zipped ranges to be of different lengths, stopping when the first
                 // one reaches the last.
@@ -259,34 +251,34 @@ namespace fermat::ranges
                                    false,
                                    [](bool a, bool b) { return a || b; });
             }
+
             CPP_member
             auto prev() //
                 -> CPP_ret(void)(
-                    requires and_v<bidirectional_range<meta::const_if_c<Const, Rngs>>...>)
-            {
+                    requires and_v<bidirectional_range<meta::const_if_c<Const, Rngs>>...>) {
                 tuple_for_each(its_, detail::dec);
             }
+
             CPP_member
             auto advance(difference_type n) //
                 -> CPP_ret(void)(
-                    requires and_v<random_access_range<meta::const_if_c<Const, Rngs>>...>)
-            {
+                    requires and_v<random_access_range<meta::const_if_c<Const, Rngs>>...>) {
                 tuple_for_each(its_, bind_back(detail::advance_, n));
             }
+
             CPP_member
-            auto distance_to(cursor const & that) const //
+            auto distance_to(cursor const &that) const //
                 -> CPP_ret(difference_type)(
                     requires and_v<
-                        sized_sentinel_for<iterator_t<meta::const_if_c<Const, Rngs>>,
-                                           iterator_t<meta::const_if_c<Const, Rngs>>>...>)
-            {
+                    sized_sentinel_for<iterator_t<meta::const_if_c<Const, Rngs>>,
+                    iterator_t<meta::const_if_c<Const, Rngs>>>...>) {
                 // Return the smallest distance (in magnitude) of any of the iterator
                 // pairs. This is to accommodate zippers of sequences of different length.
                 auto first_size = std::get<0>(that.its_) - std::get<0>(its_);
-                if(first_size == 0)
+                if (first_size == 0)
                     return static_cast<difference_type>(0);
 
-                if(0 < first_size)
+                if (0 < first_size)
                     return tuple_foldl(
                         tuple_transform(its_, that.its_, detail::distance_to),
                         (std::numeric_limits<difference_type>::max)(),
@@ -297,71 +289,74 @@ namespace fermat::ranges
                         (std::numeric_limits<difference_type>::min)(),
                         detail::max_);
             }
+
             // clang-format off
             template<std::size_t... Is>
             auto CPP_auto_fun(move_)(meta::index_sequence<Is...>)(const)
             (
                 return invoke(fun_, move_tag{}, std::get<Is>(its_)...)
             )
-                // clang-format on
-                auto move() const noexcept(noexcept(std::declval<cursor const &>().move_(
-                    meta::make_index_sequence<sizeof...(Rngs)>{})))
-                    -> decltype(std::declval<cursor const &>().move_(
-                        meta::make_index_sequence<sizeof...(Rngs)>{}))
-            {
+            // clang-format on
+            auto move() const noexcept(noexcept(std::declval<cursor const &>().move_(
+                meta::make_index_sequence<sizeof...(Rngs)>{})))
+                -> decltype(std::declval<cursor const &>().move_(
+                    meta::make_index_sequence<sizeof...(Rngs)>{})) {
                 return move_(meta::make_index_sequence<sizeof...(Rngs)>{});
             }
         };
 
         template<bool Const>
         using end_cursor_t =
-            meta::if_c<concepts::and_v<(bool)common_range<Rngs>...,
-                                       !(bool)single_pass_iterator_<iterator_t<Rngs>>...>,
-                       cursor<Const>, sentinel<Const>>;
+        meta::if_c<concepts::and_v<(bool) common_range<Rngs>...,
+                !(bool) single_pass_iterator_<iterator_t<Rngs> >...>,
+            cursor<Const>, sentinel<Const> >;
 
-        cursor<false> begin_cursor()
-        {
+        cursor<false> begin_cursor() {
             return {fun_, tuple_transform(rngs_, fermat::ranges::begin)};
         }
-        end_cursor_t<false> end_cursor()
-        {
+
+        end_cursor_t<false> end_cursor() {
             return {fun_, tuple_transform(rngs_, fermat::ranges::end)};
         }
+
         template(bool Const = true)(
             requires Const AND and_v<range<Rngs const>...> AND
-                views::zippable_with<Fun, meta::if_c<Const, Rngs const>...>)
-        cursor<Const> begin_cursor() const
-        {
+            views::zippable_with<Fun, meta::if_c<Const, Rngs const>...>)
+        cursor<Const> begin_cursor() const {
             return {fun_, tuple_transform(rngs_, fermat::ranges::begin)};
         }
+
         template(bool Const = true)(
             requires Const AND and_v<range<Rngs const>...> AND
-                views::zippable_with<Fun, meta::if_c<Const, Rngs const>...>)
-        end_cursor_t<Const> end_cursor() const
-        {
+            views::zippable_with<Fun, meta::if_c<Const, Rngs const>...>)
+        end_cursor_t<Const> end_cursor() const {
             return {fun_, tuple_transform(rngs_, fermat::ranges::end)};
         }
 
     public:
         iter_zip_with_view() = default;
+
         explicit iter_zip_with_view(Rngs... rngs)
-          : fun_(Fun{})
-          , rngs_{std::move(rngs)...}
-        {}
+            : fun_(Fun{})
+              , rngs_{std::move(rngs)...} {
+        }
+
         explicit iter_zip_with_view(Fun fun, Rngs... rngs)
-          : fun_(std::move(fun))
-          , rngs_{std::move(rngs)...}
-        {}
+            : fun_(std::move(fun))
+              , rngs_{std::move(rngs)...} {
+        }
+
         CPP_auto_member
         constexpr auto CPP_fun(size)()(const //
-            requires and_v<sized_range<Rngs const>...>)
-        {
+            requires and_v<sized_range<Rngs const>...>) {
             using size_type = common_type_t<range_size_t<Rngs const>...>;
             return range_cardinality<iter_zip_with_view>::value >= 0
-                       ? size_type{(
-                             std::size_t)range_cardinality<iter_zip_with_view>::value}
+                       ? size_type{
+                           (
+                               std::size_t) range_cardinality<iter_zip_with_view>::value
+                       }
                        : tuple_foldl(tuple_transform(rngs_,
-                                                     [](auto && r) -> size_type {
+                                                     [](auto &&r) -> size_type {
                                                          return fermat::ranges::size(r);
                                                      }),
                                      (std::numeric_limits<size_type>::max)(),
@@ -370,18 +365,22 @@ namespace fermat::ranges
     };
 
     template<typename Fun, typename... Rngs>
-    struct zip_with_view : iter_zip_with_view<indirected<Fun>, Rngs...>
-    {
-        CPP_assert(sizeof...(Rngs) != 0);
+    struct zip_with_view : iter_zip_with_view<indirected<Fun>, Rngs...> {
+        static_assert(static_cast<bool>(sizeof...(Rngs) != 0),
+                      "Concept assertion failed : sizeof...(Rngs) != 0");
 
         zip_with_view() = default;
+
         explicit zip_with_view(Rngs... rngs)
-          : iter_zip_with_view<indirected<Fun>, Rngs...>{{Fun{}}, std::move(rngs)...}
-        {}
+            : iter_zip_with_view<indirected<Fun>, Rngs...>{{Fun{}}, std::move(rngs)...} {
+        }
+
         explicit zip_with_view(Fun fun, Rngs... rngs)
-          : iter_zip_with_view<indirected<Fun>, Rngs...>{{std::move(fun)},
-                                                         std::move(rngs)...}
-        {}
+            : iter_zip_with_view<indirected<Fun>, Rngs...>{
+                {std::move(fun)},
+                std::move(rngs)...
+            } {
+        }
     };
 
 #if RANGES_CXX_DEDUCTION_GUIDES >= RANGES_CXX_DEDUCTION_GUIDES_17
@@ -391,25 +390,22 @@ namespace fermat::ranges
         -> zip_with_view<Fun, views::all_t<Rng>...>;
 #endif
 
-    namespace views
-    {
-        struct iter_zip_with_fn
-        {
+    namespace views {
+        struct iter_zip_with_fn {
             template(typename... Rngs, typename Fun)(
                 requires and_v<viewable_range<Rngs>...> AND
-                    zippable_with<Fun, Rngs...> AND (sizeof...(Rngs) != 0)) //
+                zippable_with<Fun, Rngs...> AND (sizeof...(Rngs) != 0)) //
             iter_zip_with_view<Fun, all_t<Rngs>...> //
-            operator()(Fun fun, Rngs &&... rngs) const
-            {
+            operator()(Fun fun, Rngs &&... rngs) const {
                 return iter_zip_with_view<Fun, all_t<Rngs>...>{
-                    std::move(fun), all(static_cast<Rngs &&>(rngs))...};
+                    std::move(fun), all(static_cast<Rngs &&>(rngs))...
+                };
             }
 
             template(typename Fun)(
                 requires zippable_with<Fun>) //
-                constexpr empty_view<detail::decay_t<invoke_result_t<Fun &>>>
-                operator()(Fun) const noexcept
-            {
+            constexpr empty_view<detail::decay_t<invoke_result_t<Fun &> > >
+            operator()(Fun) const noexcept {
                 return {};
             }
         };
@@ -418,24 +414,22 @@ namespace fermat::ranges
         /// \ingroup group-views
         RANGES_INLINE_VARIABLE(iter_zip_with_fn, iter_zip_with)
 
-        struct zip_with_fn
-        {
+        struct zip_with_fn {
             template(typename... Rngs, typename Fun)(
                 requires and_v<viewable_range<Rngs>...> AND
-                    and_v<input_range<Rngs>...> AND copy_constructible<Fun> AND
-                    invocable<Fun &, range_reference_t<Rngs>...> AND
-                    (sizeof...(Rngs) != 0)) //
-            zip_with_view<Fun, all_t<Rngs>...> operator()(Fun fun, Rngs &&... rngs) const
-            {
+                and_v<input_range<Rngs>...> AND copy_constructible<Fun> AND
+                invocable<Fun &, range_reference_t<Rngs>...> AND
+                (sizeof...(Rngs) != 0)) //
+            zip_with_view<Fun, all_t<Rngs>...> operator()(Fun fun, Rngs &&... rngs) const {
                 return zip_with_view<Fun, all_t<Rngs>...>{
-                    std::move(fun), all(static_cast<Rngs &&>(rngs))...};
+                    std::move(fun), all(static_cast<Rngs &&>(rngs))...
+                };
             }
 
             template(typename Fun)(
                 requires copy_constructible<Fun> AND invocable<Fun &>) //
-                constexpr empty_view<detail::decay_t<invoke_result_t<Fun &>>>
-                operator()(Fun) const noexcept
-            {
+            constexpr empty_view<detail::decay_t<invoke_result_t<Fun &> > >
+            operator()(Fun) const noexcept {
                 return {};
             }
         };
@@ -451,6 +445,7 @@ namespace fermat::ranges
 
 #include <fermat/detail/satisfy_boost_range.h>
 RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::iter_zip_with_view)
+
 RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::zip_with_view)
 
 #endif

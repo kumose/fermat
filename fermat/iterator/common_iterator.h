@@ -68,9 +68,12 @@ namespace fermat::ranges
 #endif
     {
     private:
-        CPP_assert(input_or_output_iterator<I>);
-        CPP_assert(sentinel_for<S, I>);
-        CPP_assert(!same_as<I, S>);
+        static_assert(static_cast<bool>(input_or_output_iterator<I>),
+            "Concept assertion failed : input_or_output_iterator<I>");
+        static_assert(static_cast<bool>(sentinel_for<S, I>),
+            "Concept assertion failed : sentinel_for<S, I>");
+        static_assert(static_cast<bool>(!same_as<I, S>),
+            "Concept assertion failed : !same_as<I, S>");
         variant<I, S> data_;
 
         friend variant<I, S> & detail::cidata<>(common_iterator<I, S> &);

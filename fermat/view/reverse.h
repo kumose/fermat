@@ -36,34 +36,32 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace fermat::ranges
-{
+namespace fermat::ranges {
     /// \addtogroup group-views
     /// @{
     template<typename Rng>
     struct RANGES_EMPTY_BASES reverse_view
-      : view_interface<reverse_view<Rng>, range_cardinality<Rng>::value>
-      , private detail::non_propagating_cache<iterator_t<Rng>, reverse_view<Rng>,
-                                              !common_range<Rng>>
-    {
+            : view_interface<reverse_view<Rng>, range_cardinality<Rng>::value>
+              , private detail::non_propagating_cache<iterator_t<Rng>, reverse_view<Rng>,
+                  !common_range<Rng>> {
     private:
-        CPP_assert(bidirectional_range<Rng>);
+        static_assert(static_cast<bool>(bidirectional_range<Rng>),
+                      "Concept assertion failed : bidirectional_range<Rng>");
         Rng rng_;
-        constexpr reverse_iterator<iterator_t<Rng>> begin_(std::true_type)
-        {
+
+        constexpr reverse_iterator<iterator_t<Rng> > begin_(std::true_type) {
             return make_reverse_iterator(fermat::ranges::end(rng_));
         }
-        constexpr reverse_iterator<iterator_t<Rng>> begin_(std::false_type)
-        {
+
+        constexpr reverse_iterator<iterator_t<Rng> > begin_(std::false_type) {
             using cache_t =
-                detail::non_propagating_cache<iterator_t<Rng>, reverse_view<Rng>>;
-            auto & end_ = static_cast<cache_t &>(*this);
-            if(!end_)
-            {
+                    detail::non_propagating_cache<iterator_t<Rng>, reverse_view<Rng> >;
+            auto &end_ = static_cast<cache_t &>(*this);
+            if (!end_) {
 #if defined(_MSC_VER)
                 auto tmp = fermat::ranges::begin(rng_);
                 auto e = fermat::ranges::end(rng_);
-                while(tmp != e)
+                while (tmp != e)
                     ++tmp;
 #else
                 auto tmp = fermat::ranges::next(fermat::ranges::begin(rng_), fermat::ranges::end(rng_));
@@ -75,89 +73,87 @@ namespace fermat::ranges
 
     public:
         reverse_view() = default;
+
         constexpr explicit reverse_view(Rng rng)
-          : rng_(detail::move(rng))
-        {}
-        Rng base() const
-        {
+            : rng_(detail::move(rng)) {
+        }
+
+        Rng base() const {
             return rng_;
         }
-        constexpr reverse_iterator<iterator_t<Rng>> begin()
-        {
-            return begin_(meta::bool_<(bool)common_range<Rng>>{});
+
+        constexpr reverse_iterator<iterator_t<Rng> > begin() {
+            return begin_(meta::bool_<(bool) common_range<Rng>>{});
         }
+
         template(bool Const = true)(
             requires Const AND common_range<meta::const_if_c<Const, Rng>>)
-        constexpr reverse_iterator<iterator_t<meta::const_if_c<Const, Rng>>> begin() const
-        {
+        constexpr reverse_iterator<iterator_t<meta::const_if_c<Const, Rng> > > begin() const {
             return make_reverse_iterator(fermat::ranges::end(rng_));
         }
-        constexpr reverse_iterator<iterator_t<Rng>> end()
-        {
+
+        constexpr reverse_iterator<iterator_t<Rng> > end() {
             return make_reverse_iterator(fermat::ranges::begin(rng_));
         }
+
         template(bool Const = true)(
             requires Const AND common_range<meta::const_if_c<Const, Rng>>)
-        constexpr reverse_iterator<iterator_t<meta::const_if_c<Const, Rng>>> end() const
-        {
+        constexpr reverse_iterator<iterator_t<meta::const_if_c<Const, Rng> > > end() const {
             return make_reverse_iterator(fermat::ranges::begin(rng_));
         }
+
         CPP_auto_member
         constexpr auto CPP_fun(size)()(
-            requires sized_range<Rng>)
-        {
+            requires sized_range<Rng>) {
             return fermat::ranges::size(rng_);
         }
+
         CPP_auto_member
         constexpr auto CPP_fun(size)()(const //
-            requires sized_range<Rng const>)
-        {
+            requires sized_range<Rng const>) {
             return fermat::ranges::size(rng_);
         }
     };
 
     template<typename Rng>
-    struct reverse_view<reverse_view<Rng>> : Rng
-    {
-        CPP_assert(bidirectional_range<Rng>);
-        CPP_assert(
-            same_as<detail::decay_t<decltype(std::declval<reverse_view<Rng>>().base())>,
-                    Rng>);
+    struct reverse_view<reverse_view<Rng> > : Rng {
+        static_assert(static_cast<bool>(bidirectional_range<Rng>),
+                      "Concept assertion failed : bidirectional_range<Rng>");
+        static_assert(static_cast<bool>(
+                          same_as<detail::decay_t<decltype(std::declval<reverse_view<Rng> >().base())>,
+                              Rng>),
+                      "Concept assertion failed : same_as<detail::decay_t<decltype(std::declval<reverse_view<Rng>>().base())>, Rng>")
+        ;
 
         reverse_view() = default;
-        constexpr explicit reverse_view(reverse_view<Rng> rng)
-          : Rng(rng.base())
-        {}
 
-        constexpr reverse_view<Rng> base() const
-        {
+        constexpr explicit reverse_view(reverse_view<Rng> rng)
+            : Rng(rng.base()) {
+        }
+
+        constexpr reverse_view<Rng> base() const {
             return reverse_view<Rng>{*this};
         }
     };
 
     template<typename Rng>
-    inline constexpr bool enable_borrowed_range<reverse_view<Rng>> =
-        enable_borrowed_range<Rng>;
+    inline constexpr bool enable_borrowed_range<reverse_view<Rng> > =
+            enable_borrowed_range<Rng>;
 
-#if RANGES_CXX_DEDUCTION_GUIDES >= RANGES_CXX_DEDUCTION_GUIDES_17
     template<typename Rng>
     reverse_view(Rng &&) //
-        -> reverse_view<views::all_t<Rng>>;
+        -> reverse_view<views::all_t<Rng> >;
 
     template<typename Rng>
     reverse_view(reverse_view<Rng>)
-        -> reverse_view<reverse_view<Rng>>;
-#endif
+        -> reverse_view<reverse_view<Rng> >;
 
-    namespace views
-    {
-        struct reverse_fn
-        {
+    namespace views {
+        struct reverse_fn {
             template(typename Rng)(
                 requires viewable_range<Rng> AND bidirectional_range<Rng>)
-            constexpr reverse_view<all_t<Rng>> operator()(Rng && rng) const
-            {
-                return reverse_view<all_t<Rng>>{all(static_cast<Rng &&>(rng))};
+            constexpr reverse_view<all_t<Rng> > operator()(Rng &&rng) const {
+                return reverse_view<all_t<Rng> >{all(static_cast<Rng &&>(rng))};
             }
         };
 
@@ -166,12 +162,11 @@ namespace fermat::ranges
         RANGES_INLINE_VARIABLE(view_closure<reverse_fn>, reverse)
     } // namespace views
 
-    namespace cpp20
-    {
-        namespace views
-        {
+    namespace cpp20 {
+        namespace views {
             using fermat::ranges::views::reverse;
         }
+
         template(typename Rng)(
             requires view_<Rng> AND bidirectional_range<Rng>)
         using reverse_view = fermat::ranges::reverse_view<Rng>;

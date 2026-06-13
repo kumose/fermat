@@ -26,71 +26,65 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace fermat::ranges
-{
+namespace fermat::ranges {
     /// \addtogroup group-iterator
     /// @{
 
     /// \cond
-    namespace _counted_iterator_
-    {
-        struct access
-        {
+    namespace _counted_iterator_ {
+        struct access {
             template<typename I>
-            static constexpr iter_difference_t<counted_iterator<I>> & count(
-                counted_iterator<I> & ci) noexcept
-            {
+            static constexpr iter_difference_t<counted_iterator<I> > &count(
+                counted_iterator<I> &ci) noexcept {
                 return ci.cnt_;
             }
 
             template<typename I>
-            static constexpr I & current(counted_iterator<I> & ci) noexcept
-            {
+            static constexpr I &current(counted_iterator<I> &ci) noexcept {
                 return ci.current_;
             }
 
             template<typename I>
-            static constexpr I const & current(counted_iterator<I> const & ci) noexcept
-            {
+            static constexpr I const &current(counted_iterator<I> const &ci) noexcept {
                 return ci.current_;
             }
         };
 
         template<bool>
-        struct contiguous_iterator_concept_base
-        {};
+        struct contiguous_iterator_concept_base {
+        };
 
         template<>
-        struct contiguous_iterator_concept_base<true>
-        {
+        struct contiguous_iterator_concept_base<true> {
             using iterator_concept = fermat::ranges::contiguous_iterator_tag;
         };
     } // namespace _counted_iterator_
     /// \endcond
 
     template<typename I>
-        // requires input_or_output_iterator<I>
+    // requires input_or_output_iterator<I>
     struct counted_iterator
-      : _counted_iterator_::contiguous_iterator_concept_base<(bool)contiguous_iterator<I>>
-    {
+            : _counted_iterator_::contiguous_iterator_concept_base<(bool) contiguous_iterator<I>> {
     private:
         friend advance_fn;
-        CPP_assert(input_or_output_iterator<I>);
+        static_assert(static_cast<bool>(input_or_output_iterator<I>),
+                      "Concept assertion failed : input_or_output_iterator<I>");
         friend _counted_iterator_::access;
 
         I current_{};
         iter_difference_t<I> cnt_{0};
 
-        constexpr void post_increment_(std::true_type)
-        {
-            CPP_assert(std::is_void<decltype(current_++)>());
+        constexpr void post_increment_(std::true_type) {
+            static_assert(static_cast<bool>(std::is_void<decltype(current_++)>()),
+                          "Concept assertion failed : std::is_void<decltype(current_++)>()");
             ++current_;
             --cnt_;
         }
-        constexpr auto post_increment_(std::false_type) -> decltype(current_++)
-        {
-            CPP_assert(!std::is_void<decltype(current_++)>());
-            auto && tmp = current_++;
+
+        constexpr auto post_increment_(std::false_type) -> decltype(current_++) {
+            static_assert(static_cast<bool>(!std::is_void<decltype(current_++)>()),
+                          "Concept assertion failed : !std::is_void<decltype(current_++)>()");
+            auto &&tmp = current_++;
             --cnt_;
             return static_cast<decltype(tmp) &&>(tmp);
         }
@@ -102,54 +96,48 @@ namespace fermat::ranges
         counted_iterator() = default;
 
         constexpr counted_iterator(I x, iter_difference_t<I> n)
-          : current_(std::move(x))
-          , cnt_(n)
-        {
+            : current_(std::move(x))
+              , cnt_(n) {
             RANGES_EXPECT(n >= 0);
         }
 
         template(typename I2)(
             requires convertible_to<I2, I>)
-        constexpr counted_iterator(counted_iterator<I2> const & i)
-          : current_(_counted_iterator_::access::current(i))
-          , cnt_(i.count())
-        {}
+        constexpr counted_iterator(counted_iterator<I2> const &i)
+            : current_(_counted_iterator_::access::current(i))
+              , cnt_(i.count()) {
+        }
 
         template(typename I2)(
             requires convertible_to<I2, I>)
-        constexpr counted_iterator & operator=(counted_iterator<I2> const & i)
-        {
+        constexpr counted_iterator &operator=(counted_iterator<I2> const &i) {
             current_ = _counted_iterator_::access::current(i);
             cnt_ = i.count();
         }
 
-        constexpr I base() const
-        {
+        constexpr I base() const {
             return current_;
         }
 
-        constexpr iter_difference_t<I> count() const
-        {
+        constexpr iter_difference_t<I> count() const {
             return cnt_;
         }
 
         constexpr iter_reference_t<I> operator*() noexcept(
-            noexcept(iter_reference_t<I>(*current_)))
-        {
-            RANGES_EXPECT(cnt_ > 0);
-            return *current_;
-        }
-        template(typename I2 = I)(
-            requires indirectly_readable<I2 const>)
-        constexpr iter_reference_t<I2> operator*() const //
-            noexcept(noexcept(iter_reference_t<I>(*current_)))
-        {
+            noexcept(iter_reference_t<I>(*current_))) {
             RANGES_EXPECT(cnt_ > 0);
             return *current_;
         }
 
-        constexpr counted_iterator & operator++()
-        {
+        template(typename I2 = I)(
+            requires indirectly_readable<I2 const>)
+        constexpr iter_reference_t<I2> operator*() const //
+            noexcept(noexcept(iter_reference_t<I>(*current_))) {
+            RANGES_EXPECT(cnt_ > 0);
+            return *current_;
+        }
+
+        constexpr counted_iterator &operator++() {
             RANGES_EXPECT(cnt_ > 0);
             ++current_;
             --cnt_;
@@ -174,8 +162,7 @@ namespace fermat::ranges
         CPP_member
         constexpr auto operator++(int) //
             -> CPP_ret(counted_iterator)(
-                requires forward_iterator<I>)
-        {
+                requires forward_iterator<I>) {
             auto tmp(*this);
             ++*this;
             return tmp;
@@ -184,8 +171,7 @@ namespace fermat::ranges
         CPP_member
         constexpr auto operator--() //
             -> CPP_ret(counted_iterator &)(
-                requires bidirectional_iterator<I>)
-        {
+                requires bidirectional_iterator<I>) {
             --current_;
             ++cnt_;
             return *this;
@@ -194,8 +180,7 @@ namespace fermat::ranges
         CPP_member
         constexpr auto operator--(int) //
             -> CPP_ret(counted_iterator)(
-                requires bidirectional_iterator<I>)
-        {
+                requires bidirectional_iterator<I>) {
             auto tmp(*this);
             --*this;
             return tmp;
@@ -204,8 +189,7 @@ namespace fermat::ranges
         CPP_member
         constexpr auto operator+=(difference_type n) //
             -> CPP_ret(counted_iterator &)(
-                requires random_access_iterator<I>)
-        {
+                requires random_access_iterator<I>) {
             RANGES_EXPECT(cnt_ >= n);
             current_ += n;
             cnt_ -= n;
@@ -215,8 +199,7 @@ namespace fermat::ranges
         CPP_member
         constexpr auto operator+(difference_type n) const //
             -> CPP_ret(counted_iterator)(
-                requires random_access_iterator<I>)
-        {
+                requires random_access_iterator<I>) {
             auto tmp(*this);
             tmp += n;
             return tmp;
@@ -225,8 +208,7 @@ namespace fermat::ranges
         CPP_member
         constexpr auto operator-=(difference_type n) //
             -> CPP_ret(counted_iterator &)(
-                requires random_access_iterator<I>)
-        {
+                requires random_access_iterator<I>) {
             RANGES_EXPECT(cnt_ >= -n);
             current_ -= n;
             cnt_ += n;
@@ -236,8 +218,7 @@ namespace fermat::ranges
         CPP_member
         constexpr auto operator-(difference_type n) const //
             -> CPP_ret(counted_iterator)(
-                requires random_access_iterator<I>)
-        {
+                requires random_access_iterator<I>) {
             auto tmp(*this);
             tmp -= n;
             return tmp;
@@ -246,28 +227,26 @@ namespace fermat::ranges
         CPP_member
         constexpr auto operator[](difference_type n) const //
             -> CPP_ret(iter_reference_t<I>)(
-                requires random_access_iterator<I>)
-        {
+                requires random_access_iterator<I>) {
             RANGES_EXPECT(cnt_ >= n);
             return current_[n];
         }
 
 #if !RANGES_BROKEN_CPO_LOOKUP
         CPP_broken_friend_member
-        friend constexpr auto iter_move(counted_iterator const & i) //
+        friend constexpr auto iter_move(counted_iterator const &i) //
             noexcept(detail::has_nothrow_iter_move_v<I>)
             -> CPP_broken_friend_ret(iter_rvalue_reference_t<I>)(
-                requires input_iterator<I>)
-        {
+                requires input_iterator<I>) {
             return fermat::ranges::iter_move(i.current_);
         }
+
         template<typename I2, typename S2>
-        friend constexpr auto iter_swap(counted_iterator const & x,
-                                        counted_iterator<I2> const & y) //
+        friend constexpr auto iter_swap(counted_iterator const &x,
+                                        counted_iterator<I2> const &y) //
             noexcept(is_nothrow_indirectly_swappable<I, I2>::value)
             -> CPP_broken_friend_ret(void)(
-                requires indirectly_swappable<I2, I>)
-        {
+                requires indirectly_swappable<I2, I>) {
             return fermat::ranges::iter_swap(x.current_, _counted_iterator_::access::current(y));
         }
 #endif
@@ -275,26 +254,24 @@ namespace fermat::ranges
 
     /// \cond
 #if RANGES_BROKEN_CPO_LOOKUP
-    namespace _counted_iterator_
-    {
+    namespace _counted_iterator_ {
         template<typename I>
-        constexpr auto iter_move(counted_iterator<I> const & i) noexcept(
+        constexpr auto iter_move(counted_iterator<I> const &i) noexcept(
             detail::has_nothrow_iter_move_v<I>)
             -> CPP_broken_friend_ret(iter_rvalue_reference_t<I>)(
-                requires input_iterator<I>)
-        {
+                requires input_iterator<I>) {
             return fermat::ranges::iter_move(_counted_iterator_::access::current(i));
         }
+
         template<typename I1, typename I2>
         constexpr auto iter_swap(
-            counted_iterator<I1> const & x,
+            counted_iterator<I1> const &x,
             counted_iterator<I2> const &
-                y) noexcept(is_nothrow_indirectly_swappable<I1, I2>::value)
+            y) noexcept(is_nothrow_indirectly_swappable<I1, I2>::value)
             -> CPP_broken_friend_ret(void)(
-                requires indirectly_swappable<I2, I1>)
-        {
+                requires indirectly_swappable<I2, I1>) {
             return fermat::ranges::iter_swap(_counted_iterator_::access::current(x),
-                                     _counted_iterator_::access::current(y));
+                                             _counted_iterator_::access::current(y));
         }
     } // namespace _counted_iterator_
 #endif
@@ -302,146 +279,127 @@ namespace fermat::ranges
 
     template(typename I1, typename I2)(
         requires common_with<I1, I2>)
-    constexpr bool operator==(counted_iterator<I1> const & x,
-                              counted_iterator<I2> const & y)
-    {
+    constexpr bool operator==(counted_iterator<I1> const &x,
+                              counted_iterator<I2> const &y) {
         return x.count() == y.count();
     }
 
     template<typename I>
-    constexpr bool operator==(counted_iterator<I> const & x, default_sentinel_t)
-    {
+    constexpr bool operator==(counted_iterator<I> const &x, default_sentinel_t) {
         return x.count() == 0;
     }
 
     template<typename I>
-    constexpr bool operator==(default_sentinel_t, counted_iterator<I> const & x)
-    {
+    constexpr bool operator==(default_sentinel_t, counted_iterator<I> const &x) {
         return x.count() == 0;
     }
 
     template(typename I1, typename I2)(
         requires common_with<I1, I2>)
-    constexpr bool operator!=(counted_iterator<I1> const & x,
-                              counted_iterator<I2> const & y)
-    {
+    constexpr bool operator!=(counted_iterator<I1> const &x,
+                              counted_iterator<I2> const &y) {
         return !(x == y);
     }
 
     template<typename I>
-    constexpr bool operator!=(counted_iterator<I> const & x, default_sentinel_t y)
-    {
+    constexpr bool operator!=(counted_iterator<I> const &x, default_sentinel_t y) {
         return !(x == y);
     }
 
     template<typename I>
-    constexpr bool operator!=(default_sentinel_t x, counted_iterator<I> const & y)
-    {
+    constexpr bool operator!=(default_sentinel_t x, counted_iterator<I> const &y) {
         return !(x == y);
     }
 
     template(typename I1, typename I2)(
         requires common_with<I1, I2>)
-    constexpr bool operator<(counted_iterator<I1> const & x,
-                             counted_iterator<I2> const & y)
-    {
+    constexpr bool operator<(counted_iterator<I1> const &x,
+                             counted_iterator<I2> const &y) {
         return y.count() < x.count();
     }
 
     template(typename I1, typename I2)(
         requires common_with<I1, I2>)
-    constexpr bool operator<=(counted_iterator<I1> const & x,
-                              counted_iterator<I2> const & y)
-    {
+    constexpr bool operator<=(counted_iterator<I1> const &x,
+                              counted_iterator<I2> const &y) {
         return !(y < x);
     }
 
     template(typename I1, typename I2)(
         requires common_with<I1, I2>)
-    constexpr bool operator>(counted_iterator<I1> const & x,
-                             counted_iterator<I2> const & y)
-    {
+    constexpr bool operator>(counted_iterator<I1> const &x,
+                             counted_iterator<I2> const &y) {
         return y < x;
     }
 
     template(typename I1, typename I2)(
         requires common_with<I1, I2>)
-    constexpr bool operator>=(counted_iterator<I1> const & x,
-                              counted_iterator<I2> const & y)
-    {
+    constexpr bool operator>=(counted_iterator<I1> const &x,
+                              counted_iterator<I2> const &y) {
         return !(x < y);
     }
 
     template(typename I1, typename I2)(
         requires common_with<I1, I2>)
-    constexpr iter_difference_t<I2> operator-(counted_iterator<I1> const & x,
-                                              counted_iterator<I2> const & y)
-    {
+    constexpr iter_difference_t<I2> operator-(counted_iterator<I1> const &x,
+                                              counted_iterator<I2> const &y) {
         return y.count() - x.count();
     }
 
     template<typename I>
-    constexpr iter_difference_t<I> operator-(counted_iterator<I> const & x,
-                                             default_sentinel_t)
-    {
+    constexpr iter_difference_t<I> operator-(counted_iterator<I> const &x,
+                                             default_sentinel_t) {
         return -x.count();
     }
 
     template<typename I>
     constexpr iter_difference_t<I> operator-(default_sentinel_t,
-                                             counted_iterator<I> const & y)
-    {
+                                             counted_iterator<I> const &y) {
         return y.count();
     }
 
     template(typename I)(
         requires random_access_iterator<I>)
     constexpr counted_iterator<I> operator+(iter_difference_t<I> n,
-                                            counted_iterator<I> const & x)
-    {
+                                            counted_iterator<I> const &x) {
         return x + n;
     }
 
     template(typename I)(
         requires input_or_output_iterator<I>)
-    constexpr counted_iterator<I> make_counted_iterator(I i, iter_difference_t<I> n)
-    {
+    constexpr counted_iterator<I> make_counted_iterator(I i, iter_difference_t<I> n) {
         return {std::move(i), n};
     }
 
     template<typename I>
-    struct indirectly_readable_traits<counted_iterator<I>>
-      : meta::conditional_t<
-            (bool)indirectly_readable<I>,
-            indirectly_readable_traits<I>,
-            meta::nil_>
-    {};
+    struct indirectly_readable_traits<counted_iterator<I> >
+            : meta::conditional_t<
+                (bool) indirectly_readable<I>,
+                indirectly_readable_traits<I>,
+                meta::nil_> {
+    };
 
     CPP_template_def(typename I)(
         requires input_or_output_iterator<I>)
-    constexpr void advance_fn::operator()(counted_iterator<I> & i,
-                                          iter_difference_t<I> n) const
-    {
+    constexpr void advance_fn::operator()(counted_iterator<I> &i,
+                                          iter_difference_t<I> n) const {
         RANGES_EXPECT(n <= i.cnt_);
         advance(i.current_, n);
         i.cnt_ -= n;
     }
 
-    namespace cpp20
-    {
+    namespace cpp20 {
         using fermat::ranges::counted_iterator;
     }
+
     /// @}
 } // namespace fermat::ranges
 
 /// \cond
-namespace fermat::ranges
-{
-    namespace _counted_iterator_
-    {
+namespace fermat::ranges {
+    namespace _counted_iterator_ {
         template<typename I, typename = void>
-        struct iterator_traits_
-        {
+        struct iterator_traits_ {
             using difference_type = iter_difference_t<I>;
             using value_type = void;
             using reference = void;
@@ -450,20 +408,18 @@ namespace fermat::ranges
         };
 
         template<typename I>
-        struct iterator_traits_<I, meta::if_c<input_iterator<I>>>
-          : std::iterator_traits<I>
-        {
+        struct iterator_traits_<I, meta::if_c<input_iterator<I> > >
+                : std::iterator_traits<I> {
             using pointer = void;
         };
     } // namespace _counted_iterator_
 } // namespace fermat::ranges
 
-namespace std
-{
+namespace std {
     template<typename I>
-    struct iterator_traits<::fermat::ranges::counted_iterator<I>>
-      : ::fermat::ranges::_counted_iterator_::iterator_traits_<I>
-    {};
+    struct iterator_traits<::fermat::ranges::counted_iterator<I> >
+            : ::fermat::ranges::_counted_iterator_::iterator_traits_<I> {
+    };
 } // namespace std
 /// \endcond
 

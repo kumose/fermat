@@ -180,12 +180,6 @@
 #define CPP_NOT(...) (!(__VA_ARGS__))
 #endif
 
-#define CPP_assert(...)                                                         \
-    static_assert(static_cast<bool>(__VA_ARGS__),                               \
-        "Concept assertion failed : " #__VA_ARGS__)
-
-#define CPP_assert_msg static_assert
-
 #if CPP_CXX_CONCEPTS || defined(CPP_DOXYGEN_INVOKED)
 #define CPP_concept META_CONCEPT
 #define CPP_and &&

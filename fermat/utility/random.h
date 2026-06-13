@@ -71,8 +71,7 @@
 RANGES_DIAGNOSTIC_PUSH
 RANGES_DIAGNOSTIC_IGNORE_CXX17_COMPAT
 
-namespace fermat::ranges
-{
+namespace fermat::ranges {
     /// \addtogroup group-numerics
     /// @{
     // clang-format off
@@ -104,12 +103,9 @@ namespace fermat::ranges
     /// @}
 
     /// \cond
-    namespace detail
-    {
-        namespace randutils
-        {
-            inline std::array<std::uint32_t, 8> get_entropy()
-            {
+    namespace detail {
+        namespace randutils {
+            inline std::array<std::uint32_t, 8> get_entropy() {
                 std::array<std::uint32_t, 8> seeds;
 
                 // Hopefully high-quality entropy from random_device.
@@ -126,12 +122,11 @@ namespace fermat::ranges
 
             template(typename I)(
                 requires unsigned_integral<I>)
-            constexpr I fast_exp(I x, I power, I result = I{1})
-            {
+            constexpr I fast_exp(I x, I power, I result = I{1}) {
                 return power == I{0}
                            ? result
                            : randutils::fast_exp(
-                                 x * x, power >> 1, result * (power & I{1} ? x : 1));
+                               x * x, power >> 1, result * (power & I{1} ? x : 1));
             }
 
             //////////////////////////////////////////////////////////////////////////////
@@ -203,10 +198,10 @@ namespace fermat::ranges
              */
 
             template<std::size_t count, typename IntRep = std::uint32_t>
-            struct seed_seq_fe
-            {
+            struct seed_seq_fe {
             public:
-                CPP_assert(unsigned_integral<IntRep>);
+                static_assert(static_cast<bool>(unsigned_integral<IntRep>),
+                              "Concept assertion failed : unsigned_integral<IntRep>");
                 typedef IntRep result_type;
 
             private:
@@ -226,9 +221,8 @@ namespace fermat::ranges
 
                 template(typename I, typename S)(
                     requires input_iterator<I> AND sentinel_for<S, I> AND
-                        convertible_to<iter_reference_t<I>, IntRep>)
-                void mix_entropy(I first, S last)
-                {
+                    convertible_to<iter_reference_t<I>, IntRep>)
+                void mix_entropy(I first, S last) {
                     auto hash_const = INIT_A;
                     auto hash = [&](IntRep value) RANGES_INTENDED_MODULAR_ARITHMETIC {
                         value ^= hash_const;
@@ -243,41 +237,37 @@ namespace fermat::ranges
                         return result;
                     };
 
-                    for(auto & elem : mixer_)
-                    {
-                        if(first != last)
-                        {
+                    for (auto &elem: mixer_) {
+                        if (first != last) {
                             elem = hash(static_cast<IntRep>(*first));
                             ++first;
-                        }
-                        else
+                        } else
                             elem = hash(IntRep{0});
                     }
-                    for(auto & src : mixer_)
-                        for(auto & dest : mixer_)
-                            if(&src != &dest)
+                    for (auto &src: mixer_)
+                        for (auto &dest: mixer_)
+                            if (&src != &dest)
                                 dest = mix(dest, hash(src));
-                    for(; first != last; ++first)
-                        for(auto & dest : mixer_)
+                    for (; first != last; ++first)
+                        for (auto &dest: mixer_)
                             dest = mix(dest, hash(static_cast<IntRep>(*first)));
                 }
 
             public:
                 seed_seq_fe(const seed_seq_fe &) = delete;
+
                 void operator=(const seed_seq_fe &) = delete;
 
                 template(typename T)(
                     requires convertible_to<T const &, IntRep>)
-                seed_seq_fe(std::initializer_list<T> init)
-                {
+                seed_seq_fe(std::initializer_list<T> init) {
                     seed(init.begin(), init.end());
                 }
 
                 template(typename I, typename S)(
                     requires input_iterator<I> AND sentinel_for<S, I> AND
-                        convertible_to<iter_reference_t<I>, IntRep>)
-                seed_seq_fe(I first, S last)
-                {
+                    convertible_to<iter_reference_t<I>, IntRep>)
+                seed_seq_fe(I first, S last) {
                     seed(first, last);
                 }
 
@@ -285,16 +275,14 @@ namespace fermat::ranges
                 template(typename I, typename S)(
                     requires random_access_iterator<I> AND sentinel_for<S, I>)
                 RANGES_INTENDED_MODULAR_ARITHMETIC //
-                void generate(I first, S const last) const
-                {
+                void generate(I first, S const last) const {
                     auto src_begin = mixer_.begin();
                     auto src_end = mixer_.end();
                     auto src = src_begin;
                     auto hash_const = INIT_B;
-                    for(; first != last; ++first)
-                    {
+                    for (; first != last; ++first) {
                         auto dataval = *src;
-                        if(++src == src_end)
+                        if (++src == src_end)
                             src = src_begin;
                         dataval ^= hash_const;
                         hash_const *= MULT_B;
@@ -304,34 +292,30 @@ namespace fermat::ranges
                     }
                 }
 
-                constexpr std::size_t size() const
-                {
+                constexpr std::size_t size() const {
                     return count;
                 }
 
                 template(typename O)(
                     requires weakly_incrementable<O> AND
-                        indirectly_copyable<decltype(mixer_.begin()), O>)
-                RANGES_INTENDED_MODULAR_ARITHMETIC void param(O dest) const
-                {
+                    indirectly_copyable<decltype(mixer_.begin()), O>)
+                RANGES_INTENDED_MODULAR_ARITHMETIC void param(O dest) const {
                     constexpr IntRep INV_A = randutils::fast_exp(MULT_A, IntRep(-1));
                     constexpr IntRep MIX_INV_L =
-                        randutils::fast_exp(MIX_MULT_L, IntRep(-1));
+                            randutils::fast_exp(MIX_MULT_L, IntRep(-1));
 
                     auto mixer_copy = mixer_;
-                    for(std::size_t round = 0; round < mix_rounds; ++round)
-                    {
+                    for (std::size_t round = 0; round < mix_rounds; ++round) {
                         // Advance to the final value.  We'll backtrack from that.
                         auto hash_const =
-                            INIT_A * randutils::fast_exp(MULT_A, IntRep(count * count));
+                                INIT_A * randutils::fast_exp(MULT_A, IntRep(count * count));
 
-                        for(auto src = mixer_copy.rbegin(); src != mixer_copy.rend();
-                            ++src)
-                            for(auto rdest = mixer_copy.rbegin();
-                                rdest != mixer_copy.rend();
-                                ++rdest)
-                                if(src != rdest)
-                                {
+                        for (auto src = mixer_copy.rbegin(); src != mixer_copy.rend();
+                             ++src)
+                            for (auto rdest = mixer_copy.rbegin();
+                                 rdest != mixer_copy.rend();
+                                 ++rdest)
+                                if (src != rdest) {
                                     IntRep revhashed = *src;
                                     auto mult_const = hash_const;
                                     hash_const *= INV_A;
@@ -345,8 +329,7 @@ namespace fermat::ranges
                                     *rdest = unmixed;
                                 }
 
-                        for(auto i = mixer_copy.rbegin(); i != mixer_copy.rend(); ++i)
-                        {
+                        for (auto i = mixer_copy.rbegin(); i != mixer_copy.rend(); ++i) {
                             IntRep unhashed = *i;
                             unhashed ^= unhashed >> XSHIFT;
                             unhashed *= randutils::fast_exp(hash_const, IntRep(-1));
@@ -360,18 +343,16 @@ namespace fermat::ranges
 
                 template(typename I, typename S)(
                     requires input_iterator<I> AND sentinel_for<S, I> AND
-                        convertible_to<iter_reference_t<I>, IntRep>)
-                void seed(I first, S last)
-                {
+                    convertible_to<iter_reference_t<I>, IntRep>)
+                void seed(I first, S last) {
                     mix_entropy(first, last);
                     // For very small sizes, we do some additional mixing.  For normal
                     // sizes, this loop never performs any iterations.
-                    for(std::size_t i = 1; i < mix_rounds; ++i)
+                    for (std::size_t i = 1; i < mix_rounds; ++i)
                         stir();
                 }
 
-                seed_seq_fe & stir()
-                {
+                seed_seq_fe &stir() {
                     mix_entropy(mixer_.begin(), mixer_.end());
                     return *this;
                 }
@@ -406,23 +387,23 @@ namespace fermat::ranges
              */
 
             template<typename SeedSeq>
-            struct auto_seeded : public SeedSeq
-            {
+            struct auto_seeded : public SeedSeq {
                 auto_seeded()
-                  : auto_seeded(randutils::get_entropy())
-                {}
+                    : auto_seeded(randutils::get_entropy()) {
+                }
+
                 template<std::size_t N>
-                auto_seeded(std::array<std::uint32_t, N> const & seeds)
-                  : SeedSeq(seeds.begin(), seeds.end())
-                {}
+                auto_seeded(std::array<std::uint32_t, N> const &seeds)
+                    : SeedSeq(seeds.begin(), seeds.end()) {
+                }
+
                 using SeedSeq::SeedSeq;
 
-                const SeedSeq & base() const
-                {
+                const SeedSeq &base() const {
                     return *this;
                 }
-                SeedSeq & base()
-                {
+
+                SeedSeq &base() {
                     return *this;
                 }
             };
@@ -432,23 +413,25 @@ namespace fermat::ranges
         } // namespace randutils
 
         using default_URNG = meta::if_c<(sizeof(void *) >= sizeof(long long)),
-                                        std::mt19937_64, std::mt19937>;
+            std::mt19937_64, std::mt19937>;
 
 #if !RANGES_CXX_THREAD_LOCAL
         template<typename URNG>
-        class sync_URNG : private URNG
-        {
+        class sync_URNG : private URNG {
             mutable std::mutex mtx_;
 
         public:
             using URNG::URNG;
+
             sync_URNG() = default;
+
             using typename URNG::result_type;
-            result_type operator()()
-            {
+
+            result_type operator()() {
                 std::lock_guard<std::mutex> guard{mtx_};
                 return static_cast<URNG &>(*this)();
             }
+
             using URNG::max;
             using URNG::min;
         };
@@ -458,11 +441,10 @@ namespace fermat::ranges
 #endif
 
         template<typename T = void>
-        default_random_engine & get_random_engine()
-        {
+        default_random_engine &get_random_engine() {
             using Seeder = meta::if_c<(sizeof(default_URNG) > 16),
-                                      randutils::auto_seed_256,
-                                      randutils::auto_seed_128>;
+                randutils::auto_seed_256,
+                randutils::auto_seed_128>;
 
 #if RANGES_CXX_THREAD_LOCAL >= RANGES_CXX_THREAD_LOCAL_11
             static thread_local default_random_engine engine{Seeder{}.base()};
@@ -470,16 +452,15 @@ namespace fermat::ranges
 #elif RANGES_CXX_THREAD_LOCAL
             static __thread bool initialized = false;
             static __thread meta::_t<std::aligned_storage<sizeof(default_random_engine),
-                                                          alignof(default_random_engine)>>
-                storage;
+                        alignof(default_random_engine)> >
+                    storage;
 
-            if(!initialized)
-            {
+            if (!initialized) {
                 ::new(static_cast<void *>(&storage))
-                    default_random_engine{Seeder{}.base()};
+                        default_random_engine{Seeder{}.base()};
                 initialized = true;
             }
-            auto & engine = reinterpret_cast<default_random_engine &>(storage);
+            auto &engine = reinterpret_cast<default_random_engine &>(storage);
 #else
             static default_random_engine engine{Seeder{}.base()};
 #endif // RANGES_CXX_THREAD_LOCAL

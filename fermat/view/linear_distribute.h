@@ -27,17 +27,15 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace fermat::ranges
-{
-    namespace views
-    {
+namespace fermat::ranges {
+    namespace views {
         /// \addtogroup group-views
         /// @{
 
         template<typename T>
-        struct linear_distribute_view : view_facade<linear_distribute_view<T>, finite>
-        {
-            CPP_assert(std::is_arithmetic<T>());
+        struct linear_distribute_view : view_facade<linear_distribute_view<T>, finite> {
+            static_assert(static_cast<bool>(std::is_arithmetic<T>()),
+                          "Concept assertion failed : std::is_arithmetic<T>()");
 
         private:
             friend range_access;
@@ -47,16 +45,15 @@ namespace fermat::ranges
             Calc delta_;
             std::ptrdiff_t n_;
 
-            constexpr T read() const noexcept
-            {
+            constexpr T read() const noexcept {
                 return from_;
             }
-            constexpr bool equal(default_sentinel_t) const noexcept
-            {
+
+            constexpr bool equal(default_sentinel_t) const noexcept {
                 return n_ == 0;
             }
-            constexpr bool equal(linear_distribute_view const & other) const noexcept
-            {
+
+            constexpr bool equal(linear_distribute_view const &other) const noexcept {
                 bool const eq = n_ == other.n_;
                 RANGES_DIAGNOSTIC_PUSH
                 RANGES_DIAGNOSTIC_IGNORE_FLOAT_EQUAL
@@ -65,33 +62,30 @@ namespace fermat::ranges
                 RANGES_DIAGNOSTIC_POP
                 return eq;
             }
-            constexpr void next() noexcept
-            {
+
+            constexpr void next() noexcept {
                 RANGES_EXPECT(n_ > 0);
                 --n_;
-                if(n_ == 0)
-                {
+                if (n_ == 0) {
                     from_ = to_;
-                }
-                else
-                {
+                } else {
                     from_ = T(to_ - (delta_ * Calc(n_ - 1)));
                 }
             }
 
         public:
             constexpr linear_distribute_view() = default;
+
             constexpr linear_distribute_view(T from, T to, std::ptrdiff_t n) noexcept
-              : from_(from)
-              , to_(to)
-              , delta_(n > 1 ? (to - from) / Calc(n - 1) : 0)
-              , n_(n)
-            {
+                : from_(from)
+                  , to_(to)
+                  , delta_(n > 1 ? (to - from) / Calc(n - 1) : 0)
+                  , n_(n) {
                 RANGES_EXPECT(n_ > 0);
                 RANGES_EXPECT(to_ >= from_);
             }
-            constexpr std::size_t size() const noexcept
-            {
+
+            constexpr std::size_t size() const noexcept {
                 return static_cast<std::size_t>(n_);
             }
         };
@@ -102,12 +96,10 @@ namespace fermat::ranges
         ///
         /// If `from == to`, returns n-times `to`.
         /// If `n == 1` returns `to`.
-        struct linear_distribute_fn
-        {
+        struct linear_distribute_fn {
             template(typename T)(
                 requires std::is_arithmetic<T>::value)
-            constexpr auto operator()(T from, T to, std::ptrdiff_t n) const
-            {
+            constexpr auto operator()(T from, T to, std::ptrdiff_t n) const {
                 return linear_distribute_view<T>{from, to, n};
             }
         };

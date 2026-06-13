@@ -36,13 +36,10 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace fermat::ranges
-{
+namespace fermat::ranges {
     /// \cond
-    namespace sliding_view_detail
-    {
-        enum class cache
-        {
+    namespace sliding_view_detail {
+        enum class cache {
             none,
             first,
             last
@@ -52,43 +49,43 @@ namespace fermat::ranges
         using caching = std::integral_constant<
             cache, random_access_range<Rng> && sized_range<Rng>
                        ? cache::none
-                       : bidirectional_range<Rng> && common_range<Rng> ? cache::last
-                                                                       : cache::first>;
+                       : bidirectional_range<Rng> && common_range<Rng>
+                             ? cache::last
+                             : cache::first>;
     } // namespace sliding_view_detail
     /// \endcond
 
     template<typename Rng,
-             sliding_view_detail::cache = sliding_view_detail::caching<Rng>::value>
+        sliding_view_detail::cache = sliding_view_detail::caching<Rng>::value>
     struct sliding_view;
 
     /// \cond
-    namespace sliding_view_detail
-    {
+    namespace sliding_view_detail {
         template<typename Rng>
         using uncounted_t =
-            decltype(fermat::ranges::uncounted(std::declval<iterator_t<Rng> &>()));
+        decltype(fermat::ranges::uncounted(std::declval<iterator_t<Rng> &>()));
 
-        template<typename Rng, bool = (bool)random_access_range<Rng>>
-        struct trailing
-        {
+        template<typename Rng, bool = (bool) random_access_range<Rng> >
+        struct trailing {
             trailing() = default;
-            constexpr trailing(Rng & rng)
-              : it_{uncounted(fermat::ranges::begin(rng))}
-            {}
+
+            constexpr trailing(Rng &rng)
+                : it_{uncounted(fermat::ranges::begin(rng))} {
+            }
+
             constexpr uncounted_t<Rng> get(iterator_t<Rng> const &,
-                                           range_difference_t<Rng>) const
-            {
+                                           range_difference_t<Rng>) const {
                 return it_;
             }
-            void next()
-            {
+
+            void next() {
                 ++it_;
             }
+
             CPP_member
             auto prev() //
                 -> CPP_ret(void)(
-                    requires bidirectional_range<Rng>)
-            {
+                    requires bidirectional_range<Rng>) {
                 --it_;
             }
 
@@ -97,49 +94,52 @@ namespace fermat::ranges
         };
 
         template<typename Rng>
-        struct trailing<Rng, true>
-        {
+        struct trailing<Rng, true> {
             trailing() = default;
-            constexpr trailing(Rng &) noexcept
-            {}
-            constexpr uncounted_t<Rng> get(iterator_t<Rng> const & it,
-                                           range_difference_t<Rng> n) const
-            {
+
+            constexpr trailing(Rng &) noexcept {
+            }
+
+            constexpr uncounted_t<Rng> get(iterator_t<Rng> const &it,
+                                           range_difference_t<Rng> n) const {
                 return uncounted(it - (n - 1));
             }
-            void next()
-            {}
-            void prev()
-            {}
+
+            void next() {
+            }
+
+            void prev() {
+            }
         };
 
         template<typename Rng>
         struct RANGES_EMPTY_BASES sv_base
-          : view_adaptor<sliding_view<Rng>, Rng,
-                         is_finite<Rng>::value ? finite : range_cardinality<Rng>::value>
-          , private detail::non_propagating_cache<iterator_t<Rng>, sv_base<Rng>,
-                                                  caching<Rng>::value != cache::none>
-        {
-            CPP_assert(forward_range<Rng>);
+                : view_adaptor<sliding_view<Rng>, Rng,
+                      is_finite<Rng>::value ? finite : range_cardinality<Rng>::value>
+                  , private detail::non_propagating_cache<iterator_t<Rng>, sv_base<Rng>,
+                      caching<Rng>::value != cache::none> {
+            static_assert(static_cast<bool>(forward_range<Rng>),
+                          "Concept assertion failed : forward_range<Rng>");
+
             sv_base() = default;
+
             sv_base(Rng rng, range_difference_t<Rng> n)
-              : sv_base::view_adaptor(std::move(rng))
-              , n_(n)
-            {
+                : sv_base::view_adaptor(std::move(rng))
+                  , n_(n) {
                 RANGES_ASSERT(0 < n_);
             }
+
             CPP_auto_member
             auto CPP_fun(size)()(const //
-                requires sized_range<Rng const>)
-            {
+                requires sized_range<Rng const>) {
                 auto const count = fermat::ranges::size(this->base());
                 auto const n = static_cast<range_size_t<Rng const>>(n_);
                 return count < n ? 0 : count - n + 1;
             }
+
             CPP_auto_member
             auto CPP_fun(size)()(
-                requires sized_range<Rng>)
-            {
+                requires sized_range<Rng>) {
                 auto const count = fermat::ranges::size(this->base());
                 auto const n = static_cast<range_size_t<Rng>>(n_);
                 return count < n ? 0 : count - n + 1;
@@ -148,17 +148,16 @@ namespace fermat::ranges
         protected:
             range_difference_t<Rng> n_;
 
-            optional<iterator_t<Rng>> & cache() &
-            {
+            optional<iterator_t<Rng> > &cache() & {
                 return static_cast<cache_t &>(*this);
             }
-            optional<iterator_t<Rng>> const & cache() const &
-            {
+
+            optional<iterator_t<Rng> > const &cache() const & {
                 return static_cast<cache_t const &>(*this);
             }
 
         private:
-            using cache_t = detail::non_propagating_cache<iterator_t<Rng>, sv_base<Rng>>;
+            using cache_t = detail::non_propagating_cache<iterator_t<Rng>, sv_base<Rng> >;
         };
     } // namespace sliding_view_detail
     /// \endcond
@@ -167,16 +166,13 @@ namespace fermat::ranges
     /// @{
     template<typename Rng>
     struct sliding_view<Rng, sliding_view_detail::cache::first>
-      : sliding_view_detail::sv_base<Rng>
-    {
+            : sliding_view_detail::sv_base<Rng> {
     private:
         friend range_access;
 
-        iterator_t<Rng> get_first()
-        {
-            auto & first = this->cache();
-            if(!first)
-            {
+        iterator_t<Rng> get_first() {
+            auto &first = this->cache();
+            if (!first) {
                 first = fermat::ranges::next(
                     fermat::ranges::begin(this->base()), this->n_ - 1, fermat::ranges::end(this->base()));
             }
@@ -184,56 +180,55 @@ namespace fermat::ranges
         }
 
         struct RANGES_EMPTY_BASES adaptor
-          : adaptor_base
-          , sliding_view_detail::trailing<Rng>
-        {
+                : adaptor_base
+                  , sliding_view_detail::trailing<Rng> {
         private:
             using base_t = sliding_view_detail::trailing<Rng>;
             range_difference_t<Rng> n_ = {};
 
         public:
             adaptor() = default;
-            adaptor(sliding_view * v)
-              : base_t{v->base()}
-              , n_{v->n_}
-            {}
-            iterator_t<Rng> begin(sliding_view & v)
-            {
+
+            adaptor(sliding_view *v)
+                : base_t{v->base()}
+                  , n_{v->n_} {
+            }
+
+            iterator_t<Rng> begin(sliding_view &v) {
                 return v.get_first();
             }
-            auto read(iterator_t<Rng> const & it) const
-                -> decltype(views::counted(uncounted(it), n_))
-            {
+
+            auto read(iterator_t<Rng> const &it) const
+                -> decltype(views::counted(uncounted(it), n_)) {
                 return views::counted(base_t::get(it, n_), n_);
             }
-            void next(iterator_t<Rng> & it)
-            {
+
+            void next(iterator_t<Rng> &it) {
                 ++it;
                 base_t::next();
             }
+
             CPP_member
-            auto prev(iterator_t<Rng> & it) //
+            auto prev(iterator_t<Rng> &it) //
                 -> CPP_ret(void)(
-                    requires bidirectional_range<Rng>)
-            {
+                    requires bidirectional_range<Rng>) {
                 base_t::prev();
                 --it;
             }
+
             CPP_member
-            auto advance(iterator_t<Rng> & it, range_difference_t<Rng> n)
+            auto advance(iterator_t<Rng> &it, range_difference_t<Rng> n)
                 -> CPP_ret(void)(
-                    requires random_access_range<Rng>)
-            {
+                    requires random_access_range<Rng>) {
                 it += n;
             }
         };
 
-        adaptor begin_adaptor()
-        {
+        adaptor begin_adaptor() {
             return {this};
         }
-        meta::if_c<common_range<Rng>, adaptor, adaptor_base> end_adaptor()
-        {
+
+        meta::if_c<common_range<Rng>, adaptor, adaptor_base> end_adaptor() {
             return {this};
         }
 
@@ -243,49 +238,45 @@ namespace fermat::ranges
 
     template<typename Rng>
     struct sliding_view<Rng, sliding_view_detail::cache::last>
-      : sliding_view_detail::sv_base<Rng>
-    {
+            : sliding_view_detail::sv_base<Rng> {
     private:
         friend range_access;
 
-        iterator_t<Rng> get_last()
-        {
-            auto & last = this->cache();
-            if(!last)
-            {
+        iterator_t<Rng> get_last() {
+            auto &last = this->cache();
+            if (!last) {
                 last = fermat::ranges::prev(
                     fermat::ranges::end(this->base()), this->n_ - 1, fermat::ranges::begin(this->base()));
             }
             return *last;
         }
 
-        struct adaptor : adaptor_base
-        {
+        struct adaptor : adaptor_base {
         private:
             range_difference_t<Rng> n_ = {};
 
         public:
             adaptor() = default;
-            adaptor(sliding_view * v)
-              : n_{v->n_}
-            {}
-            iterator_t<Rng> end(sliding_view & v)
-            {
+
+            adaptor(sliding_view *v)
+                : n_{v->n_} {
+            }
+
+            iterator_t<Rng> end(sliding_view &v) {
                 return v.get_last();
             }
-            auto read(iterator_t<Rng> const & it) const
-                -> decltype(views::counted(uncounted(it), n_))
-            {
+
+            auto read(iterator_t<Rng> const &it) const
+                -> decltype(views::counted(uncounted(it), n_)) {
                 return views::counted(uncounted(it), n_);
             }
         };
 
-        adaptor begin_adaptor()
-        {
+        adaptor begin_adaptor() {
             return {this};
         }
-        adaptor end_adaptor()
-        {
+
+        adaptor end_adaptor() {
             return {this};
         }
 
@@ -295,14 +286,12 @@ namespace fermat::ranges
 
     template<typename Rng>
     struct sliding_view<Rng, sliding_view_detail::cache::none>
-      : sliding_view_detail::sv_base<Rng>
-    {
+            : sliding_view_detail::sv_base<Rng> {
     private:
         friend range_access;
 
         template<bool Const>
-        struct adaptor : adaptor_base
-        {
+        struct adaptor : adaptor_base {
         private:
             friend adaptor<!Const>;
             using CRng = meta::const_if_c<Const, Rng>;
@@ -310,47 +299,48 @@ namespace fermat::ranges
 
         public:
             adaptor() = default;
+
             adaptor(range_difference_t<Rng> n)
-              : n_(n)
-            {}
+                : n_(n) {
+            }
+
             template(bool Other)(
                 requires Const AND CPP_NOT(Other)) //
             adaptor(adaptor<Other> that)
-              : n_(that.n_)
-            {}
-            iterator_t<CRng> end(meta::const_if_c<Const, sliding_view> & v) const
-            {
+                : n_(that.n_) {
+            }
+
+            iterator_t<CRng> end(meta::const_if_c<Const, sliding_view> &v) const {
                 auto const sz = fermat::ranges::distance(v.base());
                 auto const offset = n_ - 1 < sz ? n_ - 1 : sz;
                 return fermat::ranges::begin(v.base()) + (sz - offset);
             }
-            auto read(iterator_t<CRng> const & it) const
-                -> decltype(views::counted(uncounted(it), n_))
-            {
+
+            auto read(iterator_t<CRng> const &it) const
+                -> decltype(views::counted(uncounted(it), n_)) {
                 return views::counted(uncounted(it), n_);
             }
         };
 
-        adaptor<simple_view<Rng>()> begin_adaptor()
-        {
+        adaptor<simple_view<Rng>()> begin_adaptor() {
             return {this->n_};
         }
+
         CPP_member
         auto begin_adaptor() const //
             -> CPP_ret(adaptor<true>)(
-                requires range<Rng const>)
-        {
+                requires range<Rng const>) {
             return {this->n_};
         }
-        adaptor<simple_view<Rng>()> end_adaptor()
-        {
+
+        adaptor<simple_view<Rng>()> end_adaptor() {
             return {this->n_};
         }
+
         CPP_member
         auto end_adaptor() const //
             -> CPP_ret(adaptor<true>)(
-                requires range<Rng const>)
-        {
+                requires range<Rng const>) {
             return {this->n_};
         }
 
@@ -359,38 +349,33 @@ namespace fermat::ranges
     };
 
     template<typename Rng>
-    inline constexpr bool enable_borrowed_range<sliding_view<Rng>> = //
-        enable_borrowed_range<Rng>;
+    inline constexpr bool enable_borrowed_range<sliding_view<Rng> > = //
+            enable_borrowed_range<Rng>;
 
 #if RANGES_CXX_DEDUCTION_GUIDES >= RANGES_CXX_DEDUCTION_GUIDES_17
     template<typename Rng>
     sliding_view(Rng &&, range_difference_t<Rng>)
-        -> sliding_view<views::all_t<Rng>>;
+        -> sliding_view<views::all_t<Rng> >;
 #endif
 
-    namespace views
-    {
+    namespace views {
         // In:  range<T>
         // Out: range<range<T>>, where each inner range has $n$ elements.
-        struct sliding_base_fn
-        {
+        struct sliding_base_fn {
             template(typename Rng)(
                 requires viewable_range<Rng> AND forward_range<Rng>)
-            constexpr sliding_view<all_t<Rng>> //
-            operator()(Rng && rng, range_difference_t<Rng> n) const
-            {
+            constexpr sliding_view<all_t<Rng> > //
+            operator()(Rng &&rng, range_difference_t<Rng> n) const {
                 return {all(static_cast<Rng &&>(rng)), n};
             }
         };
 
-        struct sliding_fn : sliding_base_fn
-        {
+        struct sliding_fn : sliding_base_fn {
             using sliding_base_fn::operator();
 
             template<typename Int>
             constexpr auto CPP_fun(operator())(Int n)(const //
-                                                      requires detail::integer_like_<Int>)
-            {
+                                                         requires detail::integer_like_<Int>) {
                 return make_view_closure(bind_back(sliding_base_fn{}, n));
             }
         };

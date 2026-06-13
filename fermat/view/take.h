@@ -37,7 +37,8 @@ namespace fermat::ranges {
     template<typename Rng>
     struct take_view : view_interface<take_view<Rng>, finite> {
     private:
-        CPP_assert(view_<Rng>);
+        static_assert(static_cast<bool>(view_<Rng>),
+                      "Concept assertion failed : view_<Rng>");
         Rng base_ = Rng();
         range_difference_t<Rng> count_ = 0;
 
@@ -69,12 +70,14 @@ namespace fermat::ranges {
 #ifdef RANGES_WORKAROUND_MSVC_756601
             template<typename = void>
 
+
 #endif // RANGES_WORKAROUND_MSVC_756601
             friend constexpr bool operator==(sentinel const &x, CI const &y) {
                 return y.count() == 0 || y.base() == x.end_;
             }
 #ifdef RANGES_WORKAROUND_MSVC_756601
             template<typename = void>
+
 
 #endif // RANGES_WORKAROUND_MSVC_756601
             friend constexpr bool operator==(CI const &y, sentinel const &x) {
@@ -83,12 +86,14 @@ namespace fermat::ranges {
 #ifdef RANGES_WORKAROUND_MSVC_756601
             template<typename = void>
 
+
 #endif // RANGES_WORKAROUND_MSVC_756601
             friend constexpr bool operator!=(sentinel const &x, CI const &y) {
                 return y.count() != 0 && y.base() != x.end_;
             }
 #ifdef RANGES_WORKAROUND_MSVC_756601
             template<typename = void>
+
 
 #endif // RANGES_WORKAROUND_MSVC_756601
             friend constexpr bool operator!=(CI const &y, sentinel const &x) {

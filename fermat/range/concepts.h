@@ -44,8 +44,7 @@
 
 #include <fermat/detail/prologue.h>
 
-namespace fermat::ranges
-{
+namespace fermat::ranges {
     /// \addtogroup group-range-concepts
     /// @{
 
@@ -142,15 +141,14 @@ namespace fermat::ranges
     // clang-format on
 
     /// \cond
-    namespace detail
-    {
+    namespace detail {
         template<typename Rng>
         using data_t = decltype(fermat::ranges::data(std::declval<Rng &>()));
 
         template<typename Rng>
-        using element_t = meta::_t<std::remove_pointer<data_t<Rng>>>;
+        using element_t = meta::_t<std::remove_pointer<data_t<Rng> > >;
     } // namespace detail
-      /// \endcond
+    /// \endcond
 
     // clang-format off
     /// \concept contiguous_range_
@@ -213,32 +211,31 @@ namespace fermat::ranges
     // clang-format on
 
     /// \cond
-    namespace ext
-    {
+    namespace ext {
         template<typename T>
         struct enable_view
-          : std::is_base_of<view_base, T>
-        {};
+                : std::is_base_of<view_base, T> {
+        };
     } // namespace detail
     /// \endcond
 
     // Specialize this if the default is wrong.
     template<typename T>
     inline constexpr bool enable_view =
-        ext::enable_view<T>::value;
+            ext::enable_view<T>::value;
 
 #if defined(__cpp_lib_string_view) && __cpp_lib_string_view >= 201603L
     template<typename Char, typename Traits>
-    inline constexpr bool enable_view<std::basic_string_view<Char, Traits>> =
-        true;
+    inline constexpr bool enable_view<std::basic_string_view<Char, Traits> > =
+            true;
 #endif
 
-// libstdc++'s <span> header only defines std::span when concepts
-// are also enabled. https://gcc.gnu.org/bugzilla/show_bug.cgi?id=97869
+    // libstdc++'s <span> header only defines std::span when concepts
+    // are also enabled. https://gcc.gnu.org/bugzilla/show_bug.cgi?id=97869
 #if defined(__cpp_lib_span) && __cpp_lib_span >= 202002L && \
     (!defined(__GLIBCXX__) || defined(__cpp_lib_concepts))
     template<typename T, std::size_t N>
-    inline constexpr bool enable_view<std::span<T, N>> = true;
+    inline constexpr bool enable_view<std::span<T, N> > = true;
 #endif
 
     //
@@ -264,66 +261,69 @@ namespace fermat::ranges
 
     //////////////////////////////////////////////////////////////////////////////////////
     // range_tag
-    struct range_tag
-    {};
+    struct range_tag {
+    };
 
-    struct input_range_tag : range_tag
-    {};
-    struct forward_range_tag : input_range_tag
-    {};
-    struct bidirectional_range_tag : forward_range_tag
-    {};
-    struct random_access_range_tag : bidirectional_range_tag
-    {};
-    struct contiguous_range_tag : random_access_range_tag
-    {};
+    struct input_range_tag : range_tag {
+    };
+
+    struct forward_range_tag : input_range_tag {
+    };
+
+    struct bidirectional_range_tag : forward_range_tag {
+    };
+
+    struct random_access_range_tag : bidirectional_range_tag {
+    };
+
+    struct contiguous_range_tag : random_access_range_tag {
+    };
 
     template<typename Rng>
-    using range_tag_of =                          //
-        std::enable_if_t<                         //
-            range<Rng>,                           //
-            meta::conditional_t<                    //
-                contiguous_range<Rng>,            //
-                contiguous_range_tag,             //
-                meta::conditional_t<                //
-                    random_access_range<Rng>,     //
-                    random_access_range_tag,      //
-                    meta::conditional_t<            //
-                        bidirectional_range<Rng>, //
-                        bidirectional_range_tag,  //
-                        meta::conditional_t<        //
-                            forward_range<Rng>,   //
-                            forward_range_tag,    //
-                            meta::conditional_t<    //
-                                input_range<Rng>, //
-                                input_range_tag,  //
-                                range_tag>>>>>>;
+    using range_tag_of = //
+    std::enable_if_t< //
+        range<Rng>, //
+        meta::conditional_t< //
+            contiguous_range<Rng>, //
+            contiguous_range_tag, //
+            meta::conditional_t< //
+                random_access_range<Rng>, //
+                random_access_range_tag, //
+                meta::conditional_t< //
+                    bidirectional_range<Rng>, //
+                    bidirectional_range_tag, //
+                    meta::conditional_t< //
+                        forward_range<Rng>, //
+                        forward_range_tag, //
+                        meta::conditional_t< //
+                            input_range<Rng>, //
+                            input_range_tag, //
+                            range_tag> > > > > >;
 
     //////////////////////////////////////////////////////////////////////////////////////
     // common_range_tag_of
-    struct common_range_tag : range_tag
-    {};
+    struct common_range_tag : range_tag {
+    };
 
     template<typename Rng>
     using common_range_tag_of = //
-        std::enable_if_t<       //
-            range<Rng>,         //
-            meta::conditional_t<common_range<Rng>, common_range_tag, range_tag>>;
+    std::enable_if_t< //
+        range<Rng>, //
+        meta::conditional_t<common_range<Rng>, common_range_tag, range_tag> >;
 
     //////////////////////////////////////////////////////////////////////////////////////
     // sized_range_concept
-    struct sized_range_tag : range_tag
-    {};
+    struct sized_range_tag : range_tag {
+    };
 
     template<typename Rng>
     using sized_range_tag_of = //
-        std::enable_if_t<      //
-            range<Rng>,        //
-            meta::conditional_t<sized_range<Rng>, sized_range_tag, range_tag>>;
+    std::enable_if_t< //
+        range<Rng>, //
+        meta::conditional_t<sized_range<Rng>, sized_range_tag, range_tag> >;
 
     /// \cond
-    namespace view_detail_
-    {
+    namespace view_detail_ {
         // clang-format off
         /// \concept view
         /// \brief The \c view concept
@@ -334,8 +334,7 @@ namespace fermat::ranges
     } // namespace view_detail_
     /// \endcond
 
-    namespace cpp20
-    {
+    namespace cpp20 {
         using fermat::ranges::borrowed_range;
         using fermat::ranges::bidirectional_range;
         using fermat::ranges::common_range;

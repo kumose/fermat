@@ -25,7 +25,7 @@
 /// debug_input_view: minimal input view for testing (borrowed range)
 /// ------------------------------------------------------------
 template<typename T>
-struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>> {
+struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T> > {
     struct data {
         const T *first_;
         std::ptrdiff_t size_;
@@ -46,7 +46,7 @@ struct debug_input_view : fermat::ranges::view_interface<debug_input_view<T>> {
 
 namespace fermat::ranges {
     template<typename T>
-    inline constexpr bool enable_borrowed_range<::debug_input_view<T>> = true;
+    inline constexpr bool enable_borrowed_range<::debug_input_view<T> > = true;
 }
 
 /// ------------------------------------------------------------
@@ -98,9 +98,12 @@ TEST(TakeWhileViewTest, IotaTakeWhile) {
     using namespace fermat::ranges;
 
     auto rng0 = views::iota(10) | views::take_while([](int i) { return i != 25; });
-    // CPP_assert(view_<decltype(rng0)>);
-    // CPP_assert(!common_range<decltype(rng0)>);
-    // CPP_assert(random_access_iterator<decltype(rng0.begin())>);
+    static_assert(static_cast<bool>(view_<decltype(rng0)>),
+                  "Concept assertion failed : view_<decltype(rng0)>");
+    static_assert(static_cast<bool>(!common_range<decltype(rng0)>),
+                  "Concept assertion failed : !common_range<decltype(rng0)>");
+    static_assert(static_cast<bool>(random_access_iterator<decltype(rng0.begin())>),
+                  "Concept assertion failed : random_access_iterator<decltype(rng0.begin())>");
     check_equal(rng0, {10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24});
 }
 
@@ -110,8 +113,10 @@ TEST(TakeWhileViewTest, VectorTakeWhile) {
 
     std::vector<int> vi{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     auto rng1 = vi | views::take_while([](int i) { return i != 50; });
-    // CPP_assert(view_<decltype(rng1)>);
-    // CPP_assert(random_access_range<decltype(rng1)>);
+    static_assert(static_cast<bool>(view_<decltype(rng1)>),
+                  "Concept assertion failed : view_<decltype(rng1)>");
+    static_assert(static_cast<bool>(random_access_range<decltype(rng1)>),
+                  "Concept assertion failed : random_access_range<decltype(rng1)>");
     check_equal(rng1, {0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
 }
 
@@ -123,8 +128,10 @@ TEST(TakeWhileViewTest, MutablePredicate) {
     int cnt = 0;
     auto mutable_only = views::take_while(rgi, [cnt](int) mutable { return ++cnt <= 5; });
     check_equal(mutable_only, {0, 1, 2, 3, 4});
-    // CPP_assert(view_<decltype(mutable_only)>);
-    // CPP_assert(!view_<decltype(mutable_only) const>);
+    static_assert(static_cast<bool>(view_<decltype(mutable_only)>),
+                  "Concept assertion failed : view_<decltype(mutable_only)>");
+    static_assert(static_cast<bool>(!view_<decltype(mutable_only) const>),
+                  "Concept assertion failed : !view_<decltype(mutable_only) const>");
 }
 
 /// Test take_while on generate view with const predicate
