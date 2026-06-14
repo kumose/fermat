@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include <fermat/uri/ada_idna.h>
+#include <fermat/uri/idna.h>
 #include <fermat/uri/character_sets-inl.h>
 #include <fermat/uri/checkers-inl.h>
 #include <fermat/uri/common_defs.h>
@@ -37,5 +37,5 @@
 #include <fermat/uri/url_search_params-inl.h>
 
 // Public API
-#include <fermat/uri/ada_version.h>
+#include <fermat/uri/version.h>
 #include <fermat/uri/implementation.h>

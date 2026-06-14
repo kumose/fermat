@@ -1,20 +1,32 @@
-/**
- * @file character_sets-inl.h
- * @brief Definitions of the character sets used by unicode functions.
- * @author Node.js
- * @see https://github.com/nodejs/node/blob/main/src/node_url_tables.cc
- */
-#ifndef ADA_CHARACTER_SETS_INL_H
-#define ADA_CHARACTER_SETS_INL_H
+// Copyright (C) 2026 Kumo inc. and its affiliates. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// @file character_sets-inl.h
+/// @brief Definitions of the character sets used by unicode functions.
+/// @author Node.js
+/// @see https://github.com/nodejs/node/blob/main/src/node_url_tables.cc
+
+#pragma once
 
 #include <fermat/uri/character_sets.h>
 
-/**
- * These functions are not part of our public API and may
- * change at any time.
- * @private
- */
-namespace ada::character_sets {
+/// These functions are not part of our public API and may
+/// change at any time.
+/// @private
+namespace fermat::uri::character_sets {
     constexpr char hex[1024] =
             "%00\0%01\0%02\0%03\0%04\0%05\0%06\0%07\0"
             "%08\0%09\0%0A\0%0B\0%0C\0%0D\0%0E\0%0F\0"
@@ -518,9 +530,7 @@ namespace ada::character_sets {
         0x01 | 0x02 | 0x04 | 0x08 | 0x10 | 0x20 | 0x40 | 0x80
     };
 
-ada_really_inline bool bit_at(const uint8_t a[], const uint8_t i) {
+    TURBO_FORCE_INLINE bool bit_at(const uint8_t a[], const uint8_t i) {
         return !!(a[i >> 3] & (1 << (i & 7)));
     }
-} // namespace ada::character_sets
-
-#endif  // ADA_CHARACTER_SETS_INL_H
+} // namespace fermat::uri::character_sets

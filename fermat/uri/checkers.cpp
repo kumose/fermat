@@ -2,8 +2,8 @@
 
 #include <algorithm>
 
-namespace ada::checkers {
-    ada_really_inline constexpr bool is_ipv4(std::string_view view) noexcept {
+namespace fermat::uri::checkers {
+    TURBO_FORCE_INLINE constexpr bool is_ipv4(std::string_view view) noexcept {
         // The string is not empty and does not contain upper case ASCII characters.
         //
         // Optimization. To be considered as a possible ipv4, the string must end
@@ -34,7 +34,7 @@ namespace ada::checkers {
         /** Optimization opportunity: we have basically identified the last number of
            the ipv4 if we return true here. We might as well parse it and have at
            least one number parsed when we get to parse_ipv4. */
-        if (std::all_of(view.begin(), view.end(), ada::checkers::is_digit)) {
+        if (std::all_of(view.begin(), view.end(), fermat::uri::checkers::is_digit)) {
             return true;
         }
         // It could be hex (0x), but not if there is a single character.
@@ -52,7 +52,7 @@ namespace ada::checkers {
         // We have 0x followed by some characters, we need to check that they are
         // hexadecimals.
         return std::all_of(view.begin() + 2, view.end(),
-                           ada::unicode::is_lowercase_hex);
+                           fermat::uri::unicode::is_lowercase_hex);
     }
 
     // for use with path_signature, we include all characters that need percent
@@ -77,7 +77,7 @@ namespace ada::checkers {
                 return result;
             }();
 
-    ada_really_inline constexpr uint8_t path_signature(
+    TURBO_FORCE_INLINE constexpr uint8_t path_signature(
         std::string_view input) noexcept {
         // The path percent-encode set is the query percent-encode set and U+003F (?),
         // U+0060 (`), U+007B ({), and U+007D (}). The query percent-encode set is the
@@ -102,7 +102,7 @@ namespace ada::checkers {
         return accumulator;
     }
 
-    ada_really_inline constexpr bool verify_dns_length(
+    TURBO_FORCE_INLINE constexpr bool verify_dns_length(
         std::string_view input) noexcept {
         if (input.back() == '.') {
             if (input.size() > 254) return false;
@@ -123,4 +123,4 @@ namespace ada::checkers {
 
         return true;
     }
-} // namespace ada::checkers
+} // namespace fermat::uri::checkers

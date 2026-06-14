@@ -1,8 +1,8 @@
 #include <fermat/uri.h>
 #include <gtest/gtest.h>
 
-TEST(url_search_params, append) {
-  auto search_params = ada::url_search_params();
+TEST(UrlSearchParams, append) {
+  auto search_params = fermat::uri::UrlSearchParams();
   search_params.append("key", "value");
   ASSERT_EQ(search_params.size(), 1);
   ASSERT_TRUE(search_params.has("key"));
@@ -12,8 +12,8 @@ TEST(url_search_params, append) {
   SUCCEED();
 }
 
-TEST(url_search_params, to_string) {
-  auto search_params = ada::url_search_params();
+TEST(UrlSearchParams, to_string) {
+  auto search_params = fermat::uri::UrlSearchParams();
   search_params.append("key1", "value1");
   search_params.append("key2", "value2");
   ASSERT_EQ(search_params.size(), 2);
@@ -21,8 +21,8 @@ TEST(url_search_params, to_string) {
   SUCCEED();
 }
 
-TEST(url_search_params, with_accents) {
-  auto search_params = ada::url_search_params();
+TEST(UrlSearchParams, with_accents) {
+  auto search_params = fermat::uri::UrlSearchParams();
   search_params.append("key1", "été");
   search_params.append("key2", "Céline Dion++");
   ASSERT_EQ(search_params.size(), 2);
@@ -37,8 +37,8 @@ TEST(url_search_params, with_accents) {
  * @see
  * https://github.com/web-platform-tests/wpt/blob/master/url/urlsearchparams-stringifier.any.js
  */
-TEST(url_search_params, to_string_serialize_space) {
-  auto params = ada::url_search_params();
+TEST(UrlSearchParams, to_string_serialize_space) {
+  auto params = fermat::uri::UrlSearchParams();
   params.append("a", "b c");
   ASSERT_EQ(params.to_string(), "a=b+c");
   ASSERT_EQ(params.get("a").value(), "b c");
@@ -56,8 +56,8 @@ TEST(url_search_params, to_string_serialize_space) {
   SUCCEED();
 }
 
-TEST(url_search_params, to_string_serialize_plus) {
-  auto params = ada::url_search_params();
+TEST(UrlSearchParams, to_string_serialize_plus) {
+  auto params = fermat::uri::UrlSearchParams();
   params.append("a", "b+c");
   ASSERT_EQ(params.to_string(), "a=b%2Bc");
   params.remove("a");
@@ -66,8 +66,8 @@ TEST(url_search_params, to_string_serialize_plus) {
   SUCCEED();
 }
 
-TEST(url_search_params, to_string_serialize_ampersand) {
-  auto params = ada::url_search_params();
+TEST(UrlSearchParams, to_string_serialize_ampersand) {
+  auto params = fermat::uri::UrlSearchParams();
   params.append("&", "a");
   ASSERT_EQ(params.to_string(), "%26=a");
   params.append("b", "&");
@@ -75,8 +75,8 @@ TEST(url_search_params, to_string_serialize_ampersand) {
   SUCCEED();
 }
 
-TEST(url_search_params, set) {
-  auto search_params = ada::url_search_params();
+TEST(UrlSearchParams, set) {
+  auto search_params = fermat::uri::UrlSearchParams();
   search_params.append("key1", "value1");
   search_params.append("key1", "value2");
   ASSERT_EQ(search_params.size(), 2);
@@ -98,8 +98,8 @@ TEST(url_search_params, set) {
   SUCCEED();
 }
 
-TEST(url_search_params, remove) {
-  auto search_params = ada::url_search_params();
+TEST(UrlSearchParams, remove) {
+  auto search_params = fermat::uri::UrlSearchParams();
   search_params.append("key1", "value1");
   search_params.append("key1", "value2");
   search_params.append("key2", "value2");
@@ -112,8 +112,8 @@ TEST(url_search_params, remove) {
   SUCCEED();
 }
 
-TEST(url_search_params, sort) {
-  auto search_params = ada::url_search_params();
+TEST(UrlSearchParams, sort) {
+  auto search_params = fermat::uri::UrlSearchParams();
   search_params.append("bbb", "second");
   search_params.append("aaa", "first");
   search_params.append("ccc", "third");
@@ -123,29 +123,29 @@ TEST(url_search_params, sort) {
   SUCCEED();
 }
 
-TEST(url_search_params, string_constructor) {
-  auto p = ada::url_search_params("?a=b");
+TEST(UrlSearchParams, string_constructor) {
+  auto p = fermat::uri::UrlSearchParams("?a=b");
   ASSERT_EQ(p.to_string(), "a=b");
   SUCCEED();
 }
 
-TEST(url_search_params, string_constructor_with_empty_input) {
-  auto p = ada::url_search_params("");
+TEST(UrlSearchParams, string_constructor_with_empty_input) {
+  auto p = fermat::uri::UrlSearchParams("");
   ASSERT_EQ(p.to_string(), "");
   ASSERT_EQ(p.size(), 0);
   SUCCEED();
 }
 
-TEST(url_search_params, string_constructor_without_value) {
-  auto p = ada::url_search_params("a=b&c");
+TEST(UrlSearchParams, string_constructor_without_value) {
+  auto p = fermat::uri::UrlSearchParams("a=b&c");
   ASSERT_EQ(p.to_string(), "a=b&c=");
   SUCCEED();
 }
 
 // Taken from
 // https://github.com/web-platform-tests/wpt/blob/master/url/urlsearchparams-constructor.any.js
-TEST(url_search_params, string_constructor_with_edge_cases) {
-  auto p = ada::url_search_params("&a&&& &&&&&a+b=& c&m%c3%b8%c3%b8");
+TEST(UrlSearchParams, string_constructor_with_edge_cases) {
+  auto p = fermat::uri::UrlSearchParams("&a&&& &&&&&a+b=& c&m%c3%b8%c3%b8");
   p.to_string();
   ASSERT_TRUE(p.has("a"));
   ASSERT_TRUE(p.has("a b"));
@@ -156,8 +156,8 @@ TEST(url_search_params, string_constructor_with_edge_cases) {
   SUCCEED();
 }
 
-TEST(url_search_params, has) {
-  auto search_params = ada::url_search_params("key1=value1&key2=value2");
+TEST(UrlSearchParams, has) {
+  auto search_params = fermat::uri::UrlSearchParams("key1=value1&key2=value2");
   ASSERT_TRUE(search_params.has("key1"));
   ASSERT_TRUE(search_params.has("key2"));
   ASSERT_TRUE(search_params.has("key1", "value1"));
@@ -168,10 +168,10 @@ TEST(url_search_params, has) {
   SUCCEED();
 }
 
-TEST(url_search_params, iterators) {
+TEST(UrlSearchParams, iterators) {
   // JS style iterators
   auto search_params =
-      ada::url_search_params("key1=value1&key1=value2&key2=value3");
+      fermat::uri::UrlSearchParams("key1=value1&key1=value2&key2=value3");
   auto keys = search_params.get_keys();
   ASSERT_EQ(keys.next(), "key1");
   ASSERT_EQ(keys.next(), "key1");
@@ -221,9 +221,9 @@ TEST(url_search_params, iterators) {
 }
 
 // https://github.com/cloudflare/workerd/issues/1777
-TEST(url_search_params, test_to_string_encoding) {
+TEST(UrlSearchParams, test_to_string_encoding) {
   auto search_params =
-      ada::url_search_params("q1=foo&q2=foo+bar&q3=foo bar&q4=foo/bar");
+      fermat::uri::UrlSearchParams("q1=foo&q2=foo+bar&q3=foo bar&q4=foo/bar");
   ASSERT_EQ(search_params.get("q1").value(), "foo");
   ASSERT_EQ(search_params.get("q2").value(), "foo bar");
   ASSERT_EQ(search_params.get("q3").value(), "foo bar");
@@ -234,8 +234,8 @@ TEST(url_search_params, test_to_string_encoding) {
 }
 
 // https://github.com/cloudflare/workerd/issues/1777
-TEST(url_search_params, test_character_set) {
-  auto search_params = ada::url_search_params("key=value");
+TEST(UrlSearchParams, test_character_set) {
+  auto search_params = fermat::uri::UrlSearchParams("key=value");
 
   // - The application/x-www-form-urlencoded percent-encode set is the component
   // percent-encode set and U+0021 (!), U+0027 (') to U+0029 RIGHT PARENTHESIS,

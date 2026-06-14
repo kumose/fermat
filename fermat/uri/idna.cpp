@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <cstring>
 
-namespace ada::idna {
+namespace fermat::uri::idna {
     size_t utf8_to_utf32(const char *buf, size_t len, char32_t *utf32_output) {
         const uint8_t *data = reinterpret_cast<const uint8_t *>(buf);
         size_t pos = 0;
@@ -183,13 +183,13 @@ namespace ada::idna {
         }
         return utf8_output - start;
     }
-} // namespace ada::idna
+} // namespace fermat::uri::idna
 /* end file src/unicode_transcoding.cpp */
 /* begin file src/mapping.cpp */
 
 #include <algorithm>
 #include <array>
-#include <string>
+#include <fermat/container/string.h>
 
 /* begin file src/mapping_tables.cpp */
 // IDNA  15.0.0
@@ -199,7 +199,7 @@ namespace ada::idna {
 #define ADA_IDNA_TABLES_H
 #include <cstdint>
 
-namespace ada::idna {
+namespace fermat::uri::idna {
 
 const uint32_t mappings[5164] =
 {
@@ -2588,12 +2588,12 @@ const uint32_t table[8000][2] =
 };
 
 
-} // namespace ada::idna
+} // namespace fermat::uri::idna
 #endif // ADA_IDNA_TABLES_H
 
 /* end file src/mapping_tables.cpp */
 
-namespace ada::idna {
+namespace fermat::uri::idna {
 
 // This can be greatly accelerated. For now we just use a simply
 // binary search. In practice, you should *not* do that.
@@ -2712,7 +2712,7 @@ std::u32string map(std::u32string_view input) {
   }
   return answer;
 }
-}  // namespace ada::idna
+}  // namespace fermat::uri::idna
 /* end file src/mapping.cpp */
 /* begin file src/normalization.cpp */
 /* begin file src/normalization_tables.cpp */
@@ -2732,7 +2732,7 @@ std::u32string map(std::u32string_view input) {
  * See https://github.com/uni-algo/uni-algo/blob/c612968c5ed3ace39bde4c894c24286c5f2c7fe2/include/uni_algo/impl/data/data_norm.h for reference.
  */
 
-namespace ada::idna {
+namespace fermat::uri::idna {
 
 const uint8_t decomposition_index[4352] = {
     0,  1,  2,  3,  4,  5,  6,  7,  7,  8,  9,  10, 11, 12, 13, 14, 15, 7,  7,
@@ -7610,11 +7610,11 @@ const char32_t composition_data[1883] = {
     70476, 70832, 70844, 70842, 70843, 70845, 70846, 71087, 71098, 71087, 71099,
     71984, 71992};
 
-}  // namespace ada::idna
+}  // namespace fermat::uri::idna
 #endif  // ADA_IDNA_NORMALIZATION_TABLES_H
 /* end file src/normalization_tables.cpp */
 
-namespace ada::idna {
+namespace fermat::uri::idna {
 
 // See
 // https://github.com/uni-algo/uni-algo/blob/c612968c5ed3ace39bde4c894c24286c5f2c7fe2/include/uni_algo/impl/impl_norm.h#L467
@@ -7826,13 +7826,13 @@ void normalize(std::u32string& input) {
   compose(input);
 }
 
-}  // namespace ada::idna
+}  // namespace fermat::uri::idna
 /* end file src/normalization.cpp */
 /* begin file src/punycode.cpp */
 
 #include <cstdint>
 
-namespace ada::idna {
+namespace fermat::uri::idna {
 
 constexpr int32_t base = 36;
 constexpr int32_t tmin = 1;
@@ -7986,7 +7986,7 @@ bool verify_punycode(std::string_view input) {
   return true;
 }
 
-bool utf32_to_punycode(std::u32string_view input, std::string &out) {
+bool utf32_to_punycode(std::u32string_view input, fermat::KString &out) {
   out.reserve(input.size() + out.size());
   uint32_t n = initial_n;
   int32_t d = 0;
@@ -8047,13 +8047,13 @@ bool utf32_to_punycode(std::u32string_view input, std::string &out) {
   return true;
 }
 
-}  // namespace ada::idna
+}  // namespace fermat::uri::idna
 /* end file src/punycode.cpp */
 /* begin file src/validity.cpp */
 #include <algorithm>
 #include <string_view>
 
-namespace ada::idna {
+namespace fermat::uri::idna {
 
 enum direction : uint8_t {
   NONE,
@@ -9379,7 +9379,7 @@ bool is_label_valid(const std::u32string_view label) {
   return true;
 }
 
-}  // namespace ada::idna
+}  // namespace fermat::uri::idna
 /* end file src/validity.cpp */
 /* begin file src/to_ascii.cpp */
 
@@ -9387,7 +9387,7 @@ bool is_label_valid(const std::u32string_view label) {
 #include <cstdint>
 
 
-namespace ada::idna {
+namespace fermat::uri::idna {
 
 bool begins_with(std::u32string_view view, std::u32string_view prefix) {
   if (view.size() < prefix.size()) {
@@ -9448,13 +9448,13 @@ bool contains_forbidden_domain_code_point(std::string_view view) {
 }
 
 // We return "" on error.
-static std::string from_ascii_to_ascii(std::string_view ut8_string) {
-  static const std::string error = "";
+static fermat::KString from_ascii_to_ascii(std::string_view ut8_string) {
+  static const fermat::KString error = "";
   // copy and map
   // we could be more efficient by avoiding the copy when unnecessary.
-  std::string mapped_string = std::string(ut8_string);
+  fermat::KString mapped_string = fermat::KString(ut8_string);
   ascii_map(mapped_string.data(), mapped_string.size());
-  std::string out;
+  fermat::KString out;
   size_t label_start = 0;
 
   while (label_start != mapped_string.size()) {
@@ -9474,11 +9474,11 @@ static std::string from_ascii_to_ascii(std::string_view ut8_string) {
           out.data() + out.size() - label_view.size() + 4,
           label_view.size() - 4);
       std::u32string tmp_buffer;
-      bool is_ok = ada::idna::punycode_to_utf32(puny_segment_ascii, tmp_buffer);
+      bool is_ok = fermat::uri::idna::punycode_to_utf32(puny_segment_ascii, tmp_buffer);
       if (!is_ok) {
         return error;
       }
-      std::u32string post_map = ada::idna::map(tmp_buffer);
+      std::u32string post_map = fermat::uri::idna::map(tmp_buffer);
       if (tmp_buffer != post_map) {
         return error;
       }
@@ -9504,24 +9504,24 @@ static std::string from_ascii_to_ascii(std::string_view ut8_string) {
 }
 
 // We return "" on error.
-std::string to_ascii(std::string_view ut8_string) {
+fermat::KString to_ascii(std::string_view ut8_string) {
   if (is_ascii(ut8_string)) {
     return from_ascii_to_ascii(ut8_string);
   }
-  static const std::string error = "";
+  static const fermat::KString error = "";
   // We convert to UTF-32
   size_t utf32_length =
-      ada::idna::utf32_length_from_utf8(ut8_string.data(), ut8_string.size());
+      fermat::uri::idna::utf32_length_from_utf8(ut8_string.data(), ut8_string.size());
   std::u32string utf32(utf32_length, '\0');
-  size_t actual_utf32_length = ada::idna::utf8_to_utf32(
+  size_t actual_utf32_length = fermat::uri::idna::utf8_to_utf32(
       ut8_string.data(), ut8_string.size(), utf32.data());
   if (actual_utf32_length == 0) {
     return error;
   }
   // mapping
-  utf32 = ada::idna::map(utf32);
+  utf32 = fermat::uri::idna::map(utf32);
   normalize(utf32);
-  std::string out;
+  fermat::KString out;
   size_t label_start = 0;
 
   while (label_start != utf32.size()) {
@@ -9546,11 +9546,11 @@ std::string to_ascii(std::string_view ut8_string) {
           out.data() + out.size() - label_view.size() + 4,
           label_view.size() - 4);
       std::u32string tmp_buffer;
-      bool is_ok = ada::idna::punycode_to_utf32(puny_segment_ascii, tmp_buffer);
+      bool is_ok = fermat::uri::idna::punycode_to_utf32(puny_segment_ascii, tmp_buffer);
       if (!is_ok) {
         return error;
       }
-      std::u32string post_map = ada::idna::map(tmp_buffer);
+      std::u32string post_map = fermat::uri::idna::map(tmp_buffer);
       if (tmp_buffer != post_map) {
         return error;
       }
@@ -9580,7 +9580,7 @@ std::string to_ascii(std::string_view ut8_string) {
         }
         // It is valid! So now we must encode it as punycode...
         out.append("xn--");
-        bool is_ok = ada::idna::utf32_to_punycode(label_view, out);
+        bool is_ok = fermat::uri::idna::utf32_to_punycode(label_view, out);
         if (!is_ok) {
           return error;
         }
@@ -9592,17 +9592,17 @@ std::string to_ascii(std::string_view ut8_string) {
   }
   return out;
 }
-}  // namespace ada::idna
+}  // namespace fermat::uri::idna
 /* end file src/to_ascii.cpp */
 /* begin file src/to_unicode.cpp */
 
 #include <algorithm>
-#include <string>
+#include <fermat/container/string.h>
 
 
-namespace ada::idna {
-std::string to_unicode(std::string_view input) {
-  std::string output;
+namespace fermat::uri::idna {
+fermat::KString to_unicode(std::string_view input) {
+  fermat::KString output;
   output.reserve(input.size());
 
   size_t label_start = 0;
@@ -9613,16 +9613,16 @@ std::string to_unicode(std::string_view input) {
         is_last_label ? input.size() - label_start : loc_dot - label_start;
     auto label_view = std::string_view(input.data() + label_start, label_size);
 
-    if (ada::idna::begins_with(label_view, "xn--") &&
-        ada::idna::is_ascii(label_view)) {
+    if (fermat::uri::idna::begins_with(label_view, "xn--") &&
+        fermat::uri::idna::is_ascii(label_view)) {
       label_view.remove_prefix(4);
-      if (ada::idna::verify_punycode(label_view)) {
+      if (fermat::uri::idna::verify_punycode(label_view)) {
         std::u32string tmp_buffer;
-        if (ada::idna::punycode_to_utf32(label_view, tmp_buffer)) {
-          auto utf8_size = ada::idna::utf8_length_from_utf32(tmp_buffer.data(),
+        if (fermat::uri::idna::punycode_to_utf32(label_view, tmp_buffer)) {
+          auto utf8_size = fermat::uri::idna::utf8_length_from_utf32(tmp_buffer.data(),
                                                              tmp_buffer.size());
-          std::string final_utf8(utf8_size, '\0');
-          ada::idna::utf32_to_utf8(tmp_buffer.data(), tmp_buffer.size(),
+          fermat::KString final_utf8(utf8_size, '\0');
+          fermat::uri::idna::utf32_to_utf8(tmp_buffer.data(), tmp_buffer.size(),
                                    final_utf8.data());
           output.append(final_utf8);
         } else {
@@ -9647,6 +9647,6 @@ std::string to_unicode(std::string_view input) {
 
   return output;
 }
-}  // namespace ada::idna
+}  // namespace fermat::uri::idna
 /* end file src/to_unicode.cpp */
 /* end file src/idna.cpp */

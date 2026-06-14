@@ -44,10 +44,10 @@ std::string url_examples[] = {
 // has just the necessary size. This will entice tools to detect
 // an out-of-bound access.
 template <class result>
-ada::result<result> ada_parse(std::string_view view) {
+fermat::uri::result<result> ada_parse(std::string_view view) {
   std::unique_ptr<char[]> buffer(new char[view.size()]);
   memcpy(buffer.get(), view.data(), view.size());
-  return ada::parse<result>(std::string_view(buffer.get(), view.size()));
+  return fermat::uri::parse<result>(std::string_view(buffer.get(), view.size()));
 }
 
 template <class result>
@@ -56,7 +56,7 @@ size_t fancy_fuzz(size_t N, size_t seed = 0) {
   for (size_t trial = 0; trial < N; trial++) {
     std::string copy =
         url_examples[(seed++) % (sizeof(url_examples) / sizeof(std::string))];
-    auto url = ada::parse<result>(copy);
+    auto url = fermat::uri::parse<result>(copy);
     while (url) {
       // mutate the string.
       int k = ((321321 * counter++) % 3);
@@ -87,7 +87,7 @@ size_t simple_fuzz(size_t N, size_t seed = 0) {
   for (size_t trial = 0; trial < N; trial++) {
     std::string copy =
         url_examples[(seed++) % (sizeof(url_examples) / sizeof(std::string))];
-    auto url = ada::parse<result>(copy);
+    auto url = fermat::uri::parse<result>(copy);
     while (url) {
       // mutate the string.
       copy[(13134 * counter++) % copy.size()] = char(counter++ * 71117);
@@ -124,17 +124,17 @@ int main() {
   std::cout << "You have litte-endian system." << std::endl;
 #endif
   std::cout << "Running basic fuzzer.\n";
-  std::cout << "[fancy]  Executed " << fancy_fuzz<ada::url>(100000)
+  std::cout << "[fancy]  Executed " << fancy_fuzz<fermat::uri::Url>(100000)
             << " mutations.\n";
-  std::cout << "[simple] Executed " << simple_fuzz<ada::url>(40000)
+  std::cout << "[simple] Executed " << simple_fuzz<fermat::uri::Url>(40000)
             << " mutations.\n";
-  std::cout << "[roller] Executed " << roller_fuzz<ada::url>(40000)
+  std::cout << "[roller] Executed " << roller_fuzz<fermat::uri::Url>(40000)
             << " correct cases.\n";
-  std::cout << "[fancy]  Executed " << fancy_fuzz<ada::url_aggregator>(100000)
+  std::cout << "[fancy]  Executed " << fancy_fuzz<fermat::uri::UrlAggregator>(100000)
             << " mutations.\n";
-  std::cout << "[simple] Executed " << simple_fuzz<ada::url_aggregator>(40000)
+  std::cout << "[simple] Executed " << simple_fuzz<fermat::uri::UrlAggregator>(40000)
             << " mutations.\n";
-  std::cout << "[roller] Executed " << roller_fuzz<ada::url_aggregator>(40000)
+  std::cout << "[roller] Executed " << roller_fuzz<fermat::uri::UrlAggregator>(40000)
             << " correct cases.\n";
   return EXIT_SUCCESS;
 }

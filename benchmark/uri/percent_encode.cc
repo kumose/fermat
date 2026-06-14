@@ -26,8 +26,8 @@ double examples_bytes = []() -> double {
 static void Fragment(benchmark::State& state) {
   for (auto _ : state) {
     for (std::string& url_string : examples) {
-      benchmark::DoNotOptimize(ada::unicode::percent_encode(
-          url_string, ada::character_sets::FRAGMENT_PERCENT_ENCODE));
+      benchmark::DoNotOptimize(fermat::uri::unicode::percent_encode(
+          url_string, fermat::uri::character_sets::FRAGMENT_PERCENT_ENCODE));
     }
   }
   if (collector.has_events()) {
@@ -36,8 +36,8 @@ static void Fragment(benchmark::State& state) {
       std::atomic_thread_fence(std::memory_order_acquire);
       collector.start();
       for (std::string& url_string : examples) {
-        benchmark::DoNotOptimize(ada::unicode::percent_encode(
-            url_string, ada::character_sets::FRAGMENT_PERCENT_ENCODE));
+        benchmark::DoNotOptimize(fermat::uri::unicode::percent_encode(
+            url_string, fermat::uri::character_sets::FRAGMENT_PERCENT_ENCODE));
       }
       std::atomic_thread_fence(std::memory_order_release);
       event_count allocate_count = collector.end();
@@ -70,8 +70,8 @@ BENCHMARK(Fragment);
 static void Query(benchmark::State& state) {
   for (auto _ : state) {
     for (std::string& url_string : examples) {
-      benchmark::DoNotOptimize(ada::unicode::percent_encode(
-          url_string, ada::character_sets::QUERY_PERCENT_ENCODE));
+      benchmark::DoNotOptimize(fermat::uri::unicode::percent_encode(
+          url_string, fermat::uri::character_sets::QUERY_PERCENT_ENCODE));
     }
   }
   if (collector.has_events()) {
@@ -80,8 +80,8 @@ static void Query(benchmark::State& state) {
       std::atomic_thread_fence(std::memory_order_acquire);
       collector.start();
       for (std::string& url_string : examples) {
-        benchmark::DoNotOptimize(ada::unicode::percent_encode(
-            url_string, ada::character_sets::QUERY_PERCENT_ENCODE));
+        benchmark::DoNotOptimize(fermat::uri::unicode::percent_encode(
+            url_string, fermat::uri::character_sets::QUERY_PERCENT_ENCODE));
       }
       std::atomic_thread_fence(std::memory_order_release);
       event_count allocate_count = collector.end();
@@ -114,8 +114,8 @@ BENCHMARK(Query);
 static void SpecialQuery(benchmark::State& state) {
   for (auto _ : state) {
     for (std::string& url_string : examples) {
-      benchmark::DoNotOptimize(ada::unicode::percent_encode(
-          url_string, ada::character_sets::FRAGMENT_PERCENT_ENCODE));
+      benchmark::DoNotOptimize(fermat::uri::unicode::percent_encode(
+          url_string, fermat::uri::character_sets::FRAGMENT_PERCENT_ENCODE));
     }
   }
   if (collector.has_events()) {
@@ -124,8 +124,8 @@ static void SpecialQuery(benchmark::State& state) {
       std::atomic_thread_fence(std::memory_order_acquire);
       collector.start();
       for (std::string& url_string : examples) {
-        benchmark::DoNotOptimize(ada::unicode::percent_encode(
-            url_string, ada::character_sets::SPECIAL_QUERY_PERCENT_ENCODE));
+        benchmark::DoNotOptimize(fermat::uri::unicode::percent_encode(
+            url_string, fermat::uri::character_sets::SPECIAL_QUERY_PERCENT_ENCODE));
       }
       std::atomic_thread_fence(std::memory_order_release);
       event_count allocate_count = collector.end();
@@ -158,8 +158,8 @@ BENCHMARK(SpecialQuery);
 static void UserInfo(benchmark::State& state) {
   for (auto _ : state) {
     for (std::string& url_string : examples) {
-      benchmark::DoNotOptimize(ada::unicode::percent_encode(
-          url_string, ada::character_sets::USERINFO_PERCENT_ENCODE));
+      benchmark::DoNotOptimize(fermat::uri::unicode::percent_encode(
+          url_string, fermat::uri::character_sets::USERINFO_PERCENT_ENCODE));
     }
   }
   if (collector.has_events()) {
@@ -168,8 +168,8 @@ static void UserInfo(benchmark::State& state) {
       std::atomic_thread_fence(std::memory_order_acquire);
       collector.start();
       for (std::string& url_string : examples) {
-        benchmark::DoNotOptimize(ada::unicode::percent_encode(
-            url_string, ada::character_sets::USERINFO_PERCENT_ENCODE));
+        benchmark::DoNotOptimize(fermat::uri::unicode::percent_encode(
+            url_string, fermat::uri::character_sets::USERINFO_PERCENT_ENCODE));
       }
       std::atomic_thread_fence(std::memory_order_release);
       event_count allocate_count = collector.end();
@@ -202,8 +202,8 @@ BENCHMARK(UserInfo);
 static void C0Control(benchmark::State& state) {
   for (auto _ : state) {
     for (std::string& url_string : examples) {
-      benchmark::DoNotOptimize(ada::unicode::percent_encode(
-          url_string, ada::character_sets::C0_CONTROL_PERCENT_ENCODE));
+      benchmark::DoNotOptimize(fermat::uri::unicode::percent_encode(
+          url_string, fermat::uri::character_sets::C0_CONTROL_PERCENT_ENCODE));
     }
   }
   if (collector.has_events()) {
@@ -212,8 +212,8 @@ static void C0Control(benchmark::State& state) {
       std::atomic_thread_fence(std::memory_order_acquire);
       collector.start();
       for (std::string& url_string : examples) {
-        benchmark::DoNotOptimize(ada::unicode::percent_encode(
-            url_string, ada::character_sets::C0_CONTROL_PERCENT_ENCODE));
+        benchmark::DoNotOptimize(fermat::uri::unicode::percent_encode(
+            url_string, fermat::uri::character_sets::C0_CONTROL_PERCENT_ENCODE));
       }
       std::atomic_thread_fence(std::memory_order_release);
       event_count allocate_count = collector.end();

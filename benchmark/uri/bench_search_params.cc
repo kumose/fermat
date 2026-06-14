@@ -239,7 +239,7 @@ size_t init_data(const char* input = default_file) {
 size_t count_ada_invalid() {
   size_t how_many = 0;
   for (std::string& url_string : url_examples) {
-    auto url = ada::parse(url_string);
+    auto url = fermat::uri::parse(url_string);
     if (!url) {
       how_many++;
     }
@@ -247,16 +247,16 @@ size_t count_ada_invalid() {
   return how_many;
 }
 
-template <class result_type = ada::url_aggregator>
+template <class result_type = fermat::uri::UrlAggregator>
 static void BasicBench_AdaURL(benchmark::State& state) {
   // volatile to prevent optimizations.
   volatile size_t param_count = 0;
 
   for (auto _ : state) {
     for (std::string& url_string : url_examples) {
-      ada::result<result_type> url = ada::parse<result_type>(url_string);
+      fermat::uri::result<result_type> url = fermat::uri::parse<result_type>(url_string);
       if (url) {
-        auto params = ada::url_search_params{url->get_search()};
+        auto params = fermat::uri::UrlSearchParams{url->get_search()};
         param_count += params.size();
       }
     }
@@ -267,9 +267,9 @@ static void BasicBench_AdaURL(benchmark::State& state) {
       std::atomic_thread_fence(std::memory_order_acquire);
       collector.start();
       for (std::string& url_string : url_examples) {
-        ada::result<result_type> url = ada::parse<result_type>(url_string);
+        fermat::uri::result<result_type> url = fermat::uri::parse<result_type>(url_string);
         if (url) {
-          auto params = ada::url_search_params{url->get_search()};
+          auto params = fermat::uri::UrlSearchParams{url->get_search()};
           param_count += params.size();
         }
       }
@@ -308,7 +308,7 @@ static void BasicBench_AdaURL(benchmark::State& state) {
                          benchmark::Counter::kIsIterationInvariantRate);
 }
 
-auto url_search_params_AdaURL = BasicBench_AdaURL<ada::url_aggregator>;
+auto url_search_params_AdaURL = BasicBench_AdaURL<fermat::uri::UrlAggregator>;
 BENCHMARK(url_search_params_AdaURL);
 
 int main(int argc, char** argv) {

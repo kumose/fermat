@@ -6,27 +6,27 @@
 #include <fermat/uri/url.h>
 #include <fermat/uri/url_aggregator.h>
 
-namespace ada {
+namespace fermat::uri {
     template<class result_type>
-    ada_warn_unused tl::expected<result_type, ada::errors> parse(
+    [[nodiscard]] fermat::expected<result_type, fermat::uri::errors> parse(
         std::string_view input, const result_type *base_url) {
         result_type u =
-                ada::parser::parse_url_impl<result_type, true>(input, base_url);
+                fermat::uri::parser::parse_url_impl<result_type, true>(input, base_url);
         if (!u.is_valid) {
-            return tl::unexpected(errors::generic_error);
+            return fermat::unexpected(errors::generic_error);
         }
         return u;
     }
 
-    template ada::result<url> parse<url>(std::string_view input,
-                                         const url *base_url = nullptr);
+    template fermat::uri::result<Url> parse<Url>(std::string_view input,
+                                                 const Url *base_url);
 
-    template ada::result<url_aggregator> parse<url_aggregator>(
-        std::string_view input, const url_aggregator *base_url = nullptr);
+    template fermat::uri::result<UrlAggregator> parse<UrlAggregator>(
+        std::string_view input, const UrlAggregator *base_url);
 
-    std::string href_from_file(std::string_view input) {
+    fermat::KString href_from_file(std::string_view input) {
         // This is going to be much faster than constructing a URL.
-        std::string tmp_buffer;
+        fermat::KString tmp_buffer;
         std::string_view internal_input;
         if (unicode::has_tabs_or_newline(input)) {
             tmp_buffer = input;
@@ -35,24 +35,24 @@ namespace ada {
         } else {
             internal_input = input;
         }
-        std::string path;
+        fermat::KString path;
         if (internal_input.empty()) {
             path = "/";
         } else if ((internal_input[0] == '/') || (internal_input[0] == '\\')) {
             helpers::parse_prepared_path(internal_input.substr(1),
-                                         ada::scheme::type::FILE, path);
+                                         fermat::uri::scheme::type::FILE, path);
         } else {
-            helpers::parse_prepared_path(internal_input, ada::scheme::type::FILE, path);
+            helpers::parse_prepared_path(internal_input, fermat::uri::scheme::type::FILE, path);
         }
         return "file://" + path;
     }
 
     bool can_parse(std::string_view input, const std::string_view *base_input) {
-        ada::url_aggregator base_aggregator;
-        ada::url_aggregator *base_pointer = nullptr;
+        fermat::uri::UrlAggregator base_aggregator;
+        fermat::uri::UrlAggregator *base_pointer = nullptr;
 
         if (base_input != nullptr) {
-            base_aggregator = ada::parser::parse_url_impl<ada::url_aggregator, false>(
+            base_aggregator = fermat::uri::parser::parse_url_impl<fermat::uri::UrlAggregator, false>(
                 *base_input, nullptr);
             if (!base_aggregator.is_valid) {
                 return false;
@@ -60,22 +60,22 @@ namespace ada {
             base_pointer = &base_aggregator;
         }
 
-        ada::url_aggregator result =
-                ada::parser::parse_url_impl<ada::url_aggregator, false>(input,
-                                                                        base_pointer);
+        fermat::uri::UrlAggregator result =
+                fermat::uri::parser::parse_url_impl<fermat::uri::UrlAggregator, false>(input,
+                    base_pointer);
         return result.is_valid;
     }
 
-    ada_warn_unused std::string to_string(ada::encoding_type type) {
+    [[nodiscard]] fermat::KString to_string(fermat::uri::encoding_type type) {
         switch (type) {
-            case ada::encoding_type::UTF8:
+            case fermat::uri::encoding_type::UTF8:
                 return "UTF-8";
-            case ada::encoding_type::UTF_16LE:
+            case fermat::uri::encoding_type::UTF_16LE:
                 return "UTF-16LE";
-            case ada::encoding_type::UTF_16BE:
+            case fermat::uri::encoding_type::UTF_16BE:
                 return "UTF-16BE";
             default:
-                unreachable();
+                TURBO_UNREACHABLE();
         }
     }
-} // namespace ada
+} // namespace fermat::uri

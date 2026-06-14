@@ -6,7 +6,7 @@
 size_t count_ada_invalid() {
   size_t how_many = 0;
   for (std::string& url_string : url_examples) {
-    auto url = ada::parse(url_string);
+    auto url = fermat::uri::parse(url_string);
     if (!url) {
       how_many++;
     }
@@ -17,7 +17,7 @@ size_t count_ada_invalid() {
 enum { JUST_PARSE = 1, PARSE_AND_HREF = 0 };
 
 template <bool just_parse = PARSE_AND_HREF,
-          class result_type = ada::url_aggregator>
+          class result_type = fermat::uri::UrlAggregator>
 static void BasicBench_AdaURL(benchmark::State& state) {
   // volatile to prevent optimizations.
   volatile size_t success = 0;
@@ -25,7 +25,7 @@ static void BasicBench_AdaURL(benchmark::State& state) {
 
   for (auto _ : state) {
     for (std::string& url_string : url_examples) {
-      ada::result<result_type> url = ada::parse<result_type>(url_string);
+      fermat::uri::result<result_type> url = fermat::uri::parse<result_type>(url_string);
       if (url) {
         success++;
         if constexpr (!just_parse) {
@@ -40,7 +40,7 @@ static void BasicBench_AdaURL(benchmark::State& state) {
       std::atomic_thread_fence(std::memory_order_acquire);
       collector.start();
       for (std::string& url_string : url_examples) {
-        ada::result<result_type> url = ada::parse<result_type>(url_string);
+        fermat::uri::result<result_type> url = fermat::uri::parse<result_type>(url_string);
         if (url) {
           success++;
           if constexpr (!just_parse) {
@@ -83,10 +83,10 @@ static void BasicBench_AdaURL(benchmark::State& state) {
                          benchmark::Counter::kIsIterationInvariantRate);
 }
 
-auto BasicBench_AdaURL_href = BasicBench_AdaURL<PARSE_AND_HREF, ada::url>;
+auto BasicBench_AdaURL_href = BasicBench_AdaURL<PARSE_AND_HREF, fermat::uri::Url>;
 BENCHMARK(BasicBench_AdaURL_href);
 auto BasicBench_AdaURL_aggregator_href =
-    BasicBench_AdaURL<PARSE_AND_HREF, ada::url_aggregator>;
+    BasicBench_AdaURL<PARSE_AND_HREF, fermat::uri::UrlAggregator>;
 BENCHMARK(BasicBench_AdaURL_aggregator_href);
 
 static void BasicBench_AdaURL_CanParse(benchmark::State& state) {
@@ -95,7 +95,7 @@ static void BasicBench_AdaURL_CanParse(benchmark::State& state) {
 
   for (auto _ : state) {
     for (std::string& url_string : url_examples) {
-      bool can_parse = ada::can_parse(url_string);
+      bool can_parse = fermat::uri::can_parse(url_string);
       if (can_parse) {
         success++;
       }
@@ -107,7 +107,7 @@ static void BasicBench_AdaURL_CanParse(benchmark::State& state) {
       std::atomic_thread_fence(std::memory_order_acquire);
       collector.start();
       for (std::string& url_string : url_examples) {
-        bool can_parse = ada::can_parse(url_string);
+        bool can_parse = fermat::uri::can_parse(url_string);
         if (can_parse) {
           success++;
         }

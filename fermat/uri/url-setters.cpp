@@ -1,25 +1,25 @@
 /**
  * @file url-setters.cpp
- * Includes all the setters of `ada::url`
+ * Includes all the setters of `fermat::uri::url`
  */
 #include <fermat/uri.h>
 #include <fermat/uri/helpers.h>
 
 #include <optional>
-#include <string>
+#include <fermat/container/string.h>
 
-namespace ada {
+namespace fermat::uri {
     template<bool override_hostname>
-    bool url::set_host_or_hostname(const std::string_view input) {
+    bool Url::set_host_or_hostname(const std::string_view input) {
         if (has_opaque_path) {
             return false;
         }
 
-        std::optional<std::string> previous_host = host;
+        std::optional<fermat::KString> previous_host = host;
         std::optional<uint16_t> previous_port = port;
 
         size_t host_end_pos = input.find('#');
-        std::string _host(input.data(), host_end_pos != std::string_view::npos
+        fermat::KString _host(input.data(), host_end_pos != std::string_view::npos
                                             ? host_end_pos
                                             : input.size());
         helpers::remove_ascii_tab_or_newline(_host);
@@ -27,7 +27,7 @@ namespace ada {
 
         // If url's scheme is "file", then set state to file host state, instead of
         // host state.
-        if (type != ada::scheme::type::FILE) {
+        if (type != fermat::uri::scheme::type::FILE) {
             std::string_view host_view(_host.data(), _host.length());
             auto [location, found_colon] =
                     helpers::get_host_delimiter_location(is_special(), host_view);
@@ -91,44 +91,44 @@ namespace ada {
         return true;
     }
 
-    bool url::set_host(const std::string_view input) {
+    bool Url::set_host(const std::string_view input) {
         return set_host_or_hostname < false > (input);
     }
 
-    bool url::set_hostname(const std::string_view input) {
+    bool Url::set_hostname(const std::string_view input) {
         return set_host_or_hostname < true > (input);
     }
 
-    bool url::set_username(const std::string_view input) {
+    bool Url::set_username(const std::string_view input) {
         if (cannot_have_credentials_or_port()) {
             return false;
         }
-        username = ada::unicode::percent_encode(
+        username = fermat::uri::unicode::percent_encode(
             input, character_sets::USERINFO_PERCENT_ENCODE);
         return true;
     }
 
-    bool url::set_password(const std::string_view input) {
+    bool Url::set_password(const std::string_view input) {
         if (cannot_have_credentials_or_port()) {
             return false;
         }
-        password = ada::unicode::percent_encode(
+        password = fermat::uri::unicode::percent_encode(
             input, character_sets::USERINFO_PERCENT_ENCODE);
         return true;
     }
 
-    bool url::set_port(const std::string_view input) {
+    bool Url::set_port(const std::string_view input) {
         if (cannot_have_credentials_or_port()) {
             return false;
         }
-        std::string trimmed(input);
+        fermat::KString trimmed(input);
         helpers::remove_ascii_tab_or_newline(trimmed);
         if (trimmed.empty()) {
             port = std::nullopt;
             return true;
         }
         // Input should not start with control characters.
-        if (ada::unicode::is_c0_control_or_space(trimmed.front())) {
+        if (fermat::uri::unicode::is_c0_control_or_space(trimmed.front())) {
             return false;
         }
         // Input should contain at least one ascii digit.
@@ -147,41 +147,41 @@ namespace ada {
         return false;
     }
 
-    void url::set_hash(const std::string_view input) {
+    void Url::set_hash(const std::string_view input) {
         if (input.empty()) {
             hash = std::nullopt;
             helpers::strip_trailing_spaces_from_opaque_path(*this);
             return;
         }
 
-        std::string new_value;
+        fermat::KString new_value;
         new_value = input[0] == '#' ? input.substr(1) : input;
         helpers::remove_ascii_tab_or_newline(new_value);
         hash = unicode::percent_encode(new_value,
-                                       ada::character_sets::FRAGMENT_PERCENT_ENCODE);
+                                       fermat::uri::character_sets::FRAGMENT_PERCENT_ENCODE);
     }
 
-    void url::set_search(const std::string_view input) {
+    void Url::set_search(const std::string_view input) {
         if (input.empty()) {
             query = std::nullopt;
             helpers::strip_trailing_spaces_from_opaque_path(*this);
             return;
         }
 
-        std::string new_value;
+        fermat::KString new_value;
         new_value = input[0] == '?' ? input.substr(1) : input;
         helpers::remove_ascii_tab_or_newline(new_value);
 
         auto query_percent_encode_set =
                 is_special()
-                    ? ada::character_sets::SPECIAL_QUERY_PERCENT_ENCODE
-                    : ada::character_sets::QUERY_PERCENT_ENCODE;
+                    ? fermat::uri::character_sets::SPECIAL_QUERY_PERCENT_ENCODE
+                    : fermat::uri::character_sets::QUERY_PERCENT_ENCODE;
 
-        query = ada::unicode::percent_encode(std::string_view(new_value),
+        query = fermat::uri::unicode::percent_encode(std::string_view(new_value),
                                              query_percent_encode_set);
     }
 
-    bool url::set_pathname(const std::string_view input) {
+    bool Url::set_pathname(const std::string_view input) {
         if (has_opaque_path) {
             return false;
         }
@@ -190,8 +190,8 @@ namespace ada {
         return true;
     }
 
-    bool url::set_protocol(const std::string_view input) {
-        std::string view(input);
+    bool Url::set_protocol(const std::string_view input) {
+        fermat::KString view(input);
         helpers::remove_ascii_tab_or_newline(view);
         if (view.empty()) {
             return true;
@@ -204,7 +204,7 @@ namespace ada {
 
         view.append(":");
 
-        std::string::iterator pointer =
+        fermat::KString::iterator pointer =
                 std::find_if_not(view.begin(), view.end(), unicode::is_alnum_plus);
 
         if (pointer != view.end() && *pointer == ':') {
@@ -214,8 +214,8 @@ namespace ada {
         return false;
     }
 
-    bool url::set_href(const std::string_view input) {
-        ada::result<ada::url> out = ada::parse<ada::url>(input);
+    bool Url::set_href(const std::string_view input) {
+        fermat::uri::result<fermat::uri::Url> out = fermat::uri::parse<fermat::uri::Url>(input);
 
         if (out) {
             username = out->username;
@@ -232,4 +232,4 @@ namespace ada {
 
         return out.has_value();
     }
-} // namespace ada
+} // namespace fermat::uri

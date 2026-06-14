@@ -8,7 +8,7 @@
 #include <cstring>
 #include <sstream>
 
-namespace ada::helpers {
+namespace fermat::uri::helpers {
     template<typename out_iter>
     void encode_json(std::string_view view, out_iter out) {
         // trivial implementation. could be faster.
@@ -34,54 +34,54 @@ namespace ada::helpers {
         }
     }
 
-    ada_unused std::string get_state(ada::state s) {
+    fermat::KString get_state(fermat::uri::state s) {
         switch (s) {
-            case ada::state::AUTHORITY:
+            case fermat::uri::state::AUTHORITY:
                 return "Authority";
-            case ada::state::SCHEME_START:
+            case fermat::uri::state::SCHEME_START:
                 return "Scheme Start";
-            case ada::state::SCHEME:
+            case fermat::uri::state::SCHEME:
                 return "Scheme";
-            case ada::state::HOST:
+            case fermat::uri::state::HOST:
                 return "Host";
-            case ada::state::NO_SCHEME:
+            case fermat::uri::state::NO_SCHEME:
                 return "No Scheme";
-            case ada::state::FRAGMENT:
+            case fermat::uri::state::FRAGMENT:
                 return "Fragment";
-            case ada::state::RELATIVE_SCHEME:
+            case fermat::uri::state::RELATIVE_SCHEME:
                 return "Relative Scheme";
-            case ada::state::RELATIVE_SLASH:
+            case fermat::uri::state::RELATIVE_SLASH:
                 return "Relative Slash";
-            case ada::state::FILE:
+            case fermat::uri::state::FILE:
                 return "File";
-            case ada::state::FILE_HOST:
+            case fermat::uri::state::FILE_HOST:
                 return "File Host";
-            case ada::state::FILE_SLASH:
+            case fermat::uri::state::FILE_SLASH:
                 return "File Slash";
-            case ada::state::PATH_OR_AUTHORITY:
+            case fermat::uri::state::PATH_OR_AUTHORITY:
                 return "Path or Authority";
-            case ada::state::SPECIAL_AUTHORITY_IGNORE_SLASHES:
+            case fermat::uri::state::SPECIAL_AUTHORITY_IGNORE_SLASHES:
                 return "Special Authority Ignore Slashes";
-            case ada::state::SPECIAL_AUTHORITY_SLASHES:
+            case fermat::uri::state::SPECIAL_AUTHORITY_SLASHES:
                 return "Special Authority Slashes";
-            case ada::state::SPECIAL_RELATIVE_OR_AUTHORITY:
+            case fermat::uri::state::SPECIAL_RELATIVE_OR_AUTHORITY:
                 return "Special Relative or Authority";
-            case ada::state::QUERY:
+            case fermat::uri::state::QUERY:
                 return "Query";
-            case ada::state::PATH:
+            case fermat::uri::state::PATH:
                 return "Path";
-            case ada::state::PATH_START:
+            case fermat::uri::state::PATH_START:
                 return "Path Start";
-            case ada::state::OPAQUE_PATH:
+            case fermat::uri::state::OPAQUE_PATH:
                 return "Opaque Path";
-            case ada::state::PORT:
+            case fermat::uri::state::PORT:
                 return "Port";
             default:
                 return "unknown state";
         }
     }
 
-    ada_really_inline std::optional<std::string_view> prune_hash(
+    TURBO_FORCE_INLINE std::optional<std::string_view> prune_hash(
         std::string_view &input) noexcept {
         // compiles down to 20--30 instructions including a class to memchr (C
         // function). this function should be quite fast.
@@ -95,14 +95,14 @@ namespace ada::helpers {
         return hash;
     }
 
-    ada_really_inline bool shorten_path(std::string &path,
-                                        ada::scheme::type type) noexcept {
+    TURBO_FORCE_INLINE bool shorten_path(fermat::KString &path,
+                                        fermat::uri::scheme::type type) noexcept {
         size_t first_delimiter = path.find_first_of('/', 1);
 
         // Let path be url's path.
         // If url's scheme is "file", path's size is 1, and path[0] is a normalized
         // Windows drive letter, then return.
-        if (type == ada::scheme::type::FILE &&
+        if (type == fermat::uri::scheme::type::FILE &&
             first_delimiter == std::string_view::npos && !path.empty()) {
             if (checkers::is_normalized_windows_drive_letter(
                 helpers::substring(path, 1))) {
@@ -112,7 +112,7 @@ namespace ada::helpers {
 
         // Remove path's last item, if any.
         size_t last_delimiter = path.rfind('/');
-        if (last_delimiter != std::string::npos) {
+        if (last_delimiter != fermat::KString::npos) {
             path.erase(last_delimiter);
             return true;
         }
@@ -120,14 +120,14 @@ namespace ada::helpers {
         return false;
     }
 
-    ada_really_inline bool shorten_path(std::string_view &path,
-                                        ada::scheme::type type) noexcept {
+    TURBO_FORCE_INLINE bool shorten_path(std::string_view &path,
+                                        fermat::uri::scheme::type type) noexcept {
         size_t first_delimiter = path.find_first_of('/', 1);
 
         // Let path be url's path.
         // If url's scheme is "file", path's size is 1, and path[0] is a normalized
         // Windows drive letter, then return.
-        if (type == ada::scheme::type::FILE &&
+        if (type == fermat::uri::scheme::type::FILE &&
             first_delimiter == std::string_view::npos && !path.empty()) {
             if (checkers::is_normalized_windows_drive_letter(
                 helpers::substring(path, 1))) {
@@ -147,33 +147,33 @@ namespace ada::helpers {
         return false;
     }
 
-    ada_really_inline void remove_ascii_tab_or_newline(
-        std::string &input) noexcept {
+    TURBO_FORCE_INLINE void remove_ascii_tab_or_newline(
+        fermat::KString &input) noexcept {
         // if this ever becomes a performance issue, we could use an approach similar
         // to has_tabs_or_newline
         input.erase(std::remove_if(input.begin(), input.end(),
                                    [](char c) {
-                                       return ada::unicode::is_ascii_tab_or_newline(c);
+                                       return fermat::uri::unicode::is_ascii_tab_or_newline(c);
                                    }),
                     input.end());
     }
 
-    ada_really_inline std::string_view substring(std::string_view input,
+    TURBO_FORCE_INLINE std::string_view substring(std::string_view input,
                                                  size_t pos) noexcept {
-        ADA_ASSERT_TRUE(pos <= input.size());
+        DKCHECK(pos <= input.size());
         // The following is safer but unneeded if we have the above line:
         // return pos > input.size() ? std::string_view() : input.substr(pos);
         return input.substr(pos);
     }
 
-    ada_really_inline void resize(std::string_view &input, size_t pos) noexcept {
-        ADA_ASSERT_TRUE(pos <= input.size());
+    TURBO_FORCE_INLINE void resize(std::string_view &input, size_t pos) noexcept {
+        DKCHECK(pos <= input.size());
         input.remove_suffix(input.size() - pos);
     }
 
     // computes the number of trailing zeroes
     // this is a private inline function only defined in this source file.
-    ada_really_inline int trailing_zeroes(uint32_t input_num) noexcept {
+    TURBO_FORCE_INLINE int trailing_zeroes(uint32_t input_num) noexcept {
 #ifdef ADA_REGULAR_VISUAL_STUDIO
         unsigned long ret;
         // Search the mask data from least significant bit (LSB)
@@ -202,7 +202,7 @@ namespace ada::helpers {
   }())
 #endif
 
-    ada_really_inline size_t find_next_host_delimiter_special(
+    TURBO_FORCE_INLINE size_t find_next_host_delimiter_special(
         std::string_view view, size_t location) noexcept {
         // first check for short strings in which case we do it naively.
         if (view.size() - location < 16) {
@@ -263,7 +263,7 @@ namespace ada::helpers {
         return size_t(view.size());
     }
 #elif ADA_SSE2
-    ada_really_inline size_t find_next_host_delimiter_special(
+    TURBO_FORCE_INLINE size_t find_next_host_delimiter_special(
         std::string_view view, size_t location) noexcept {
         // first check for short strings in which case we do it naively.
         if (view.size() - location < 16) {
@@ -326,7 +326,7 @@ namespace ada::helpers {
                 return result;
             }();
     // credit: @the-moisrex recommended a table-based approach
-    ada_really_inline size_t find_next_host_delimiter_special(
+    TURBO_FORCE_INLINE size_t find_next_host_delimiter_special(
         std::string_view view, size_t location) noexcept {
         auto const str = view.substr(location);
         for (auto pos = str.begin(); pos != str.end(); ++pos) {
@@ -342,7 +342,7 @@ namespace ada::helpers {
     // :, /, ? or [. If none is found, view.size() is returned.
     // For use within get_host_delimiter_location.
 #if ADA_NEON
-    ada_really_inline size_t find_next_host_delimiter(std::string_view view,
+    TURBO_FORCE_INLINE size_t find_next_host_delimiter(std::string_view view,
                                                       size_t location) noexcept {
         // first check for short strings in which case we do it naively.
         if (view.size() - location < 16) {
@@ -403,7 +403,7 @@ namespace ada::helpers {
         return size_t(view.size());
     }
 #elif ADA_SSE2
-    ada_really_inline size_t find_next_host_delimiter(std::string_view view,
+    TURBO_FORCE_INLINE size_t find_next_host_delimiter(std::string_view view,
                                                       size_t location) noexcept {
         // first check for short strings in which case we do it naively.
         if (view.size() - location < 16) {
@@ -460,7 +460,7 @@ namespace ada::helpers {
         return result;
     }();
     // credit: @the-moisrex recommended a table-based approach
-    ada_really_inline size_t find_next_host_delimiter(std::string_view view,
+    TURBO_FORCE_INLINE size_t find_next_host_delimiter(std::string_view view,
                                                       size_t location) noexcept {
         auto const str = view.substr(location);
         for (auto pos = str.begin(); pos != str.end(); ++pos) {
@@ -472,7 +472,7 @@ namespace ada::helpers {
     }
 #endif
 
-    ada_really_inline std::pair<size_t, bool> get_host_delimiter_location(
+    TURBO_FORCE_INLINE std::pair<size_t, bool> get_host_delimiter_location(
         const bool is_special, std::string_view &view) noexcept {
         /**
          * The spec at https://url.spec.whatwg.org/#hostname-state expects us to
@@ -552,19 +552,19 @@ namespace ada::helpers {
         return {location, found_colon};
     }
 
-    ada_really_inline void trim_c0_whitespace(std::string_view &input) noexcept {
+    TURBO_FORCE_INLINE void trim_c0_whitespace(std::string_view &input) noexcept {
         while (!input.empty() &&
-               ada::unicode::is_c0_control_or_space(input.front())) {
+               fermat::uri::unicode::is_c0_control_or_space(input.front())) {
             input.remove_prefix(1);
         }
-        while (!input.empty() && ada::unicode::is_c0_control_or_space(input.back())) {
+        while (!input.empty() && fermat::uri::unicode::is_c0_control_or_space(input.back())) {
             input.remove_suffix(1);
         }
     }
 
-    ada_really_inline void parse_prepared_path(std::string_view input,
-                                               ada::scheme::type type,
-                                               std::string &path) {
+    TURBO_FORCE_INLINE void parse_prepared_path(std::string_view input,
+                                               fermat::uri::scheme::type type,
+                                               fermat::KString &path) {
         ada_log("parse_prepared_path ", input);
         uint8_t accumulator = checkers::path_signature(input);
         // Let us first detect a trivial case.
@@ -575,8 +575,8 @@ namespace ada::helpers {
         constexpr uint8_t backslash_char = 2;
         constexpr uint8_t dot_char = 4;
         constexpr uint8_t percent_char = 8;
-        bool special = type != ada::scheme::NOT_SPECIAL;
-        bool may_need_slow_file_handling = (type == ada::scheme::type::FILE &&
+        bool special = type != fermat::uri::scheme::NOT_SPECIAL;
+        bool may_need_slow_file_handling = (type == fermat::uri::scheme::type::FILE &&
                                             checkers::is_windows_drive_letter(input));
         bool trivial_path =
                 (special
@@ -619,7 +619,7 @@ namespace ada::helpers {
         bool fast_path =
                 (special &&
                  (accumulator & (need_encoding | backslash_char | percent_char)) == 0) &&
-                (type != ada::scheme::type::FILE);
+                (type != fermat::uri::scheme::type::FILE);
         if (fast_path) {
             ada_log("parse_prepared_path fast");
             // Here we don't need to worry about \ or percent encoding.
@@ -661,7 +661,7 @@ namespace ada::helpers {
                     previous_location = new_location + 1;
                     if (path_view == "..") {
                         size_t last_delimiter = path.rfind('/');
-                        if (last_delimiter != std::string::npos) {
+                        if (last_delimiter != fermat::KString::npos) {
                             path.erase(last_delimiter);
                         }
                     } else if (path_view != ".") {
@@ -674,7 +674,7 @@ namespace ada::helpers {
             ada_log("parse_path slow");
             // we have reached the general case
             bool needs_percent_encoding = (accumulator & 1);
-            std::string path_buffer_tmp;
+            fermat::KString path_buffer_tmp;
             do {
                 size_t location = (special && (accumulator & 2))
                                       ? input.find_first_of("/\\")
@@ -688,7 +688,7 @@ namespace ada::helpers {
                 // temporary file.
                 std::string_view path_buffer =
                 (needs_percent_encoding &&
-                 ada::unicode::percent_encode<false>(
+                 fermat::uri::unicode::percent_encode<false>(
                      path_view, character_sets::PATH_PERCENT_ENCODE, path_buffer_tmp))
                     ? path_buffer_tmp
                     : path_view;
@@ -706,7 +706,7 @@ namespace ada::helpers {
                     // If url's scheme is "file", url's path is empty, and path_buffer is a
                     // Windows drive letter, then replace the second code point in
                     // path_buffer with U+003A (:).
-                    if (type == ada::scheme::type::FILE && path.empty() &&
+                    if (type == fermat::uri::scheme::type::FILE && path.empty() &&
                         checkers::is_windows_drive_letter(path_buffer)) {
                         path += '/';
                         path += path_buffer[0];
@@ -726,7 +726,7 @@ namespace ada::helpers {
         }
     }
 
-    bool overlaps(std::string_view input1, const std::string &input2) noexcept {
+    bool overlaps(std::string_view input1, const fermat::KString &input2) noexcept {
         ada_log("helpers::overlaps check if string_view '", input1, "' [",
                 input1.size(), " bytes] is part of string '", input2, "' [",
                 input2.size(), " bytes]");
@@ -735,14 +735,14 @@ namespace ada::helpers {
     }
 
     template<class url_type>
-    ada_really_inline void strip_trailing_spaces_from_opaque_path(
+    TURBO_FORCE_INLINE void strip_trailing_spaces_from_opaque_path(
         url_type &url) noexcept {
         ada_log("helpers::strip_trailing_spaces_from_opaque_path");
         if (!url.has_opaque_path) return;
         if (url.has_hash()) return;
         if (url.has_search()) return;
 
-        auto path = std::string(url.get_pathname());
+        auto path = fermat::KString(url.get_pathname());
         while (!path.empty() && path.back() == ' ') {
             path.resize(path.size() - 1);
         }
@@ -759,7 +759,7 @@ namespace ada::helpers {
                 return result;
             }();
     // credit: @the-moisrex recommended a table-based approach
-    ada_really_inline size_t
+    TURBO_FORCE_INLINE size_t
     find_authority_delimiter_special(std::string_view view) noexcept {
         // performance note: we might be able to gain further performance
         // with SIMD instrinsics.
@@ -780,7 +780,7 @@ namespace ada::helpers {
         return result;
     }();
     // credit: @the-moisrex recommended a table-based approach
-    ada_really_inline size_t
+    TURBO_FORCE_INLINE size_t
     find_authority_delimiter(std::string_view view) noexcept {
         // performance note: we might be able to gain further performance
         // with SIMD instrinsics.
@@ -791,11 +791,11 @@ namespace ada::helpers {
         }
         return size_t(view.size());
     }
-} // namespace ada::helpers
+} // namespace fermat::uri::helpers
 
-namespace ada {
-    ada_warn_unused std::string to_string(ada::state state) {
-        return ada::helpers::get_state(state);
+namespace fermat::uri {
+    [[nodiscard]] fermat::KString to_string(fermat::uri::state state) {
+        return fermat::uri::helpers::get_state(state);
     }
 #undef ada_make_uint8x16_t
-} // namespace ada
+} // namespace fermat::uri

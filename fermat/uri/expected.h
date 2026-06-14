@@ -82,7 +82,7 @@
   std::is_trivially_destructible<T>
 
 // GCC 5 < v < 8 has a bug in is_trivially_copy_constructible which breaks
-// std::vector for non-copyable types
+// fermat::Vector for non-copyable types
 #elif (defined(__GNUC__) && __GNUC__ < 8 && !defined(__clang__))
 #ifndef TL_GCC_LESS_8_TRIVIALLY_COPY_CONSTRUCTIBLE_MUTEX
 #define TL_GCC_LESS_8_TRIVIALLY_COPY_CONSTRUCTIBLE_MUTEX
@@ -94,7 +94,7 @@ namespace tl {
         };
 #ifdef _GLIBCXX_VECTOR
 template<class T, class A>
-struct is_trivially_copy_constructible<std::vector<T, A> > : std::false_type {
+struct is_trivially_copy_constructible<fermat::Vector<T, A> > : std::false_type {
 };
 #endif
 }  // namespace detail

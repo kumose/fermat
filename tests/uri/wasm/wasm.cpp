@@ -8,11 +8,11 @@ struct parse_result {
   std::string result;
   std::string href;
   uint32_t type;
-  ada::url_components components;
+  fermat::uri::UrlComponents components;
 };
 
 parse_result parse(const std::string &input) {
-  auto out = ada::parse<ada::url_aggregator>(input);
+  auto out = fermat::uri::parse<fermat::uri::UrlComponents>(input);
   parse_result result;
   if (!out.has_value()) {
     result.result = "fail";
@@ -31,15 +31,15 @@ EMSCRIPTEN_BINDINGS(url_components) {
       .property("href", &parse_result::href)
       .property("type", &parse_result::type)
       .property("components", &parse_result::components);
-  class_<ada::url_components>("URLComponents")
-      .property("protocol_end", &ada::url_components::protocol_end)
-      .property("username_end", &ada::url_components::username_end)
-      .property("host_start", &ada::url_components::host_start)
-      .property("host_end", &ada::url_components::host_end)
-      .property("port", &ada::url_components::port)
-      .property("pathname_start", &ada::url_components::pathname_start)
-      .property("search_start", &ada::url_components::search_start)
-      .property("hash_start", &ada::url_components::hash_start);
+  class_<fermat::uri::UrlComponents>("URLComponents")
+      .property("protocol_end", &fermat::uri::UrlComponents::protocol_end)
+      .property("username_end", &fermat::uri::UrlComponents::username_end)
+      .property("host_start", &fermat::uri::UrlComponents::host_start)
+      .property("host_end", &fermat::uri::UrlComponents::host_end)
+      .property("port", &fermat::uri::UrlComponents::port)
+      .property("pathname_start", &fermat::uri::UrlComponents::pathname_start)
+      .property("search_start", &fermat::uri::UrlComponents::search_start)
+      .property("hash_start", &fermat::uri::UrlComponents::hash_start);
 
   function("parse", &parse);
 }

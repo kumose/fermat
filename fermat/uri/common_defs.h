@@ -1,9 +1,26 @@
-/**
- * @file common_defs.h
- * @brief Common definitions for cross-platform compiler support.
- */
-#ifndef ADA_COMMON_DEFS_H
-#define ADA_COMMON_DEFS_H
+// Copyright (C) 2026 Kumo inc. and its affiliates. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// @file common_defs.h
+/// @brief Common definitions for cross-platform compiler support.
+
+#pragma once
+
+#include <turbo/base/macros.h>
+#include <turbo/log/logging.h>
 
 #ifdef _MSC_VER
 #define ADA_VISUAL_STUDIO 1
@@ -43,19 +60,6 @@
 
 #if defined(ADA_REGULAR_VISUAL_STUDIO)
 
-#define ada_really_inline __forceinline
-#define ada_never_inline __declspec(noinline)
-
-#define ada_unused
-#define ada_warn_unused
-
-#ifndef ada_likely
-#define ada_likely(x) x
-#endif
-#ifndef ada_unlikely
-#define ada_unlikely(x) x
-#endif
-
 #define ADA_PUSH_DISABLE_WARNINGS __pragma(warning(push))
 #define ADA_PUSH_DISABLE_ALL_WARNINGS __pragma(warning(push, 0))
 #define ADA_DISABLE_VS_WARNING(WARNING_NUMBER) \
@@ -80,19 +84,6 @@
 #define ADA_POP_DISABLE_WARNINGS __pragma(warning(pop))
 
 #else  // ADA_REGULAR_VISUAL_STUDIO
-
-#define ada_really_inline inline __attribute__((always_inline))
-#define ada_never_inline inline __attribute__((noinline))
-
-#define ada_unused __attribute__((unused))
-#define ada_warn_unused __attribute__((warn_unused_result))
-
-#ifndef ada_likely
-#define ada_likely(x) __builtin_expect(!!(x), 1)
-#endif
-#ifndef ada_unlikely
-#define ada_unlikely(x) __builtin_expect(!!(x), 0)
-#endif
 
 #define ADA_PUSH_DISABLE_WARNINGS _Pragma("GCC diagnostic push")
 // gcc doesn't seem to disable all warnings with all and extra, add warnings
@@ -127,57 +118,10 @@
 
 #endif  // MSC_VER
 
-#if defined(ADA_VISUAL_STUDIO)
-/**
- * It does not matter here whether you are using
- * the regular visual studio or clang under visual
- * studio.
- */
-#if ADA_USING_LIBRARY
-#define ADA_DLLIMPORTEXPORT __declspec(dllimport)
-#else
-#define ADA_DLLIMPORTEXPORT __declspec(dllexport)
-#endif
-#else
-#define ADA_DLLIMPORTEXPORT
-#endif
-
-/// If EXPR is an error, returns it.
-#define ADA_TRY(EXPR)   \
-  {                     \
-    auto _err = (EXPR); \
-    if (_err) {         \
-      return _err;      \
-    }                   \
-  }
-
 // __has_cpp_attribute is part of C++20
 #if !defined(__has_cpp_attribute)
 #define __has_cpp_attribute(x) 0
 #endif
-
-#if __has_cpp_attribute(gnu::noinline)
-#define ADA_ATTRIBUTE_NOINLINE [[gnu::noinline]]
-#else
-#define ADA_ATTRIBUTE_NOINLINE
-#endif
-
-namespace ada {
-    [[noreturn]] inline void unreachable() {
-#ifdef __GNUC__
-        __builtin_unreachable();
-#elif defined(_MSC_VER)
-        __assume(false);
-#else
-#endif
-    }
-} // namespace ada
-
-#if defined(__GNUC__) && !defined(__clang__)
-#if __GNUC__ <= 8
-#define ADA_OLD_GCC 1
-#endif  //  __GNUC__ <= 8
-#endif  // defined(__GNUC__) && !defined(__clang__)
 
 #if defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__)
 #define ADA_IS_BIG_ENDIAN (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
@@ -238,50 +182,6 @@ namespace ada {
 #endif  // _MSC_VER
 #endif  // ADA_DEVELOPMENT_CHECKS
 
-#define ADA_STR(x) #x
-
-#if ADA_DEVELOPMENT_CHECKS
-#define ADA_REQUIRE(EXPR) \
-  {                       \
-    if (!(EXPR) { abort(); }) }
-
-#define ADA_FAIL(MESSAGE)                            \
-  do {                                               \
-    std::cerr << "FAIL: " << (MESSAGE) << std::endl; \
-    abort();                                         \
-  } while (0);
-#define ADA_ASSERT_EQUAL(LHS, RHS, MESSAGE)                                    \
-  do {                                                                         \
-    if (LHS != RHS) {                                                          \
-      std::cerr << "Mismatch: '" << LHS << "' - '" << RHS << "'" << std::endl; \
-      ADA_FAIL(MESSAGE);                                                       \
-    }                                                                          \
-  } while (0);
-#define ADA_ASSERT_TRUE(COND)                                               \
-  do {                                                                      \
-    if (!(COND)) {                                                          \
-      std::cerr << "Assert at line " << __LINE__ << " of file " << __FILE__ \
-                << std::endl;                                               \
-      ADA_FAIL(ADA_STR(COND));                                              \
-    }                                                                       \
-  } while (0);
-#else
-#define ADA_FAIL(MESSAGE)
-#define ADA_ASSERT_EQUAL(LHS, RHS, MESSAGE)
-#define ADA_ASSERT_TRUE(COND)
-#endif
-
-#ifdef ADA_VISUAL_STUDIO
-#define ADA_ASSUME(COND) __assume(COND)
-#else
-#define ADA_ASSUME(COND)       \
-  do {                         \
-    if (!(COND)) {             \
-      __builtin_unreachable(); \
-    }                          \
-  } while (0)
-#endif
-
 #if defined(__SSE2__) || defined(__x86_64__) || defined(__x86_64) || \
     (defined(_M_AMD64) || defined(_M_X64) ||                         \
      (defined(_M_IX86_FP) && _M_IX86_FP == 2))
@@ -291,17 +191,3 @@ namespace ada {
 #if defined(__aarch64__) || defined(_M_ARM64)
 #define ADA_NEON 1
 #endif
-
-#ifndef __has_cpp_attribute
-#define ada_lifetime_bound
-#elif __has_cpp_attribute(msvc::lifetimebound)
-#define ada_lifetime_bound [[msvc::lifetimebound]]
-#elif __has_cpp_attribute(clang::lifetimebound)
-#define ada_lifetime_bound [[clang::lifetimebound]]
-#elif __has_cpp_attribute(lifetimebound)
-#define ada_lifetime_bound [[lifetimebound]]
-#else
-#define ada_lifetime_bound
-#endif
-
-#endif  // ADA_COMMON_DEFS_H

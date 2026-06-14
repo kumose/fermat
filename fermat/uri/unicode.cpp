@@ -4,7 +4,7 @@
 #include <fermat/uri/unicode.h>
 
 ADA_PUSH_DISABLE_ALL_WARNINGS
-#include "ada_idna.cpp"
+#include "idna.cpp"
 ADA_POP_DISABLE_WARNINGS
 
 #include <algorithm>
@@ -14,7 +14,7 @@ ADA_POP_DISABLE_WARNINGS
 #include <emmintrin.h>
 #endif
 
-namespace ada::unicode {
+namespace fermat::uri::unicode {
     constexpr bool is_tabs_or_newline(char c) noexcept {
         return c == '\r' || c == '\n' || c == '\t';
     }
@@ -49,7 +49,7 @@ namespace ada::unicode {
         return non_ascii == 0;
     }
 #if ADA_NEON
-    ada_really_inline bool has_tabs_or_newline(
+    TURBO_FORCE_INLINE bool has_tabs_or_newline(
         std::string_view user_input) noexcept {
         // first check for short strings in which case we do it naively.
         if (user_input.size() < 16) {
@@ -91,7 +91,7 @@ namespace ada::unicode {
         return vmaxvq_u32(vreinterpretq_u32_u8(running)) != 0;
     }
 #elif ADA_SSE2
-    ada_really_inline bool has_tabs_or_newline(
+    TURBO_FORCE_INLINE bool has_tabs_or_newline(
         std::string_view user_input) noexcept {
         // first check for short strings in which case we do it naively.
         if (user_input.size() < 16) {
@@ -124,7 +124,7 @@ namespace ada::unicode {
         return _mm_movemask_epi8(running) != 0;
     }
 #else
-    ada_really_inline bool has_tabs_or_newline(
+    TURBO_FORCE_INLINE bool has_tabs_or_newline(
         std::string_view user_input) noexcept {
         auto has_zero_byte = [](uint64_t v) {
             return ((v - 0x0101010101010101) & ~(v) & 0x8080808080808080);
@@ -170,7 +170,7 @@ namespace ada::unicode {
                 return result;
             }();
 
-    ada_really_inline constexpr bool is_forbidden_host_code_point(
+    TURBO_FORCE_INLINE constexpr bool is_forbidden_host_code_point(
         const char c) noexcept {
         return is_forbidden_host_code_point_table[uint8_t(c)];
     }
@@ -195,12 +195,12 @@ namespace ada::unicode {
 
     static_assert(sizeof(is_forbidden_domain_code_point_table) == 256);
 
-    ada_really_inline constexpr bool is_forbidden_domain_code_point(
+    TURBO_FORCE_INLINE constexpr bool is_forbidden_domain_code_point(
         const char c) noexcept {
         return is_forbidden_domain_code_point_table[uint8_t(c)];
     }
 
-    ada_really_inline constexpr bool contains_forbidden_domain_code_point(
+    TURBO_FORCE_INLINE constexpr bool contains_forbidden_domain_code_point(
         const char *input, size_t length) noexcept {
         size_t i = 0;
         uint8_t accumulator{};
@@ -237,7 +237,7 @@ namespace ada::unicode {
         return result;
     }();
 
-    ada_really_inline constexpr uint8_t
+    TURBO_FORCE_INLINE constexpr uint8_t
     contains_forbidden_domain_code_point_or_upper(const char *input,
                                                   size_t length) noexcept {
         size_t i = 0;
@@ -269,23 +269,23 @@ namespace ada::unicode {
         return result;
     }();
 
-    ada_really_inline constexpr bool is_alnum_plus(const char c) noexcept {
+    TURBO_FORCE_INLINE constexpr bool is_alnum_plus(const char c) noexcept {
         return is_alnum_plus_table[uint8_t(c)];
         // A table is almost surely much faster than the
         // following under most compilers: return
         // return (std::isalnum(c) || c == '+' || c == '-' || c == '.');
     }
 
-    ada_really_inline constexpr bool is_ascii_hex_digit(const char c) noexcept {
+    TURBO_FORCE_INLINE constexpr bool is_ascii_hex_digit(const char c) noexcept {
         return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') ||
                (c >= 'a' && c <= 'f');
     }
 
-    ada_really_inline constexpr bool is_c0_control_or_space(const char c) noexcept {
+    TURBO_FORCE_INLINE constexpr bool is_c0_control_or_space(const char c) noexcept {
         return (unsigned char) c <= ' ';
     }
 
-    ada_really_inline constexpr bool is_ascii_tab_or_newline(
+    TURBO_FORCE_INLINE constexpr bool is_ascii_tab_or_newline(
         const char c) noexcept {
         return c == '\t' || c == '\n' || c == '\r';
     }
@@ -294,7 +294,7 @@ namespace ada::unicode {
         "..", "%2e.", ".%2e", "%2e%2e"
     };
 
-    ada_really_inline constexpr bool is_double_dot_path_segment(
+    TURBO_FORCE_INLINE constexpr bool is_double_dot_path_segment(
         std::string_view input) noexcept {
         // This will catch most cases:
         // The length must be 2,4 or 6.
@@ -343,12 +343,12 @@ namespace ada::unicode {
         //  "%2e%2E";
     }
 
-    ada_really_inline constexpr bool is_single_dot_path_segment(
+    TURBO_FORCE_INLINE constexpr bool is_single_dot_path_segment(
         std::string_view input) noexcept {
         return input == "." || input == "%2e" || input == "%2E";
     }
 
-    ada_really_inline constexpr bool is_lowercase_hex(const char c) noexcept {
+    TURBO_FORCE_INLINE constexpr bool is_lowercase_hex(const char c) noexcept {
         return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
     }
 
@@ -362,13 +362,13 @@ namespace ada::unicode {
         return hex_to_binary_table[c - '0'];
     }
 
-    std::string percent_decode(const std::string_view input, size_t first_percent) {
+    fermat::KString percent_decode(const std::string_view input, size_t first_percent) {
         // next line is for safety only, we expect users to avoid calling
         // percent_decode when first_percent is outside the range.
         if (first_percent == std::string_view::npos) {
-            return std::string(input);
+            return fermat::KString(input);
         }
-        std::string dest;
+        fermat::KString dest;
         dest.reserve(input.length());
         dest.append(input.substr(0, first_percent));
         const char *pointer = input.data() + first_percent;
@@ -396,7 +396,7 @@ namespace ada::unicode {
         return dest;
     }
 
-    std::string percent_encode(const std::string_view input,
+    fermat::KString percent_encode(const std::string_view input,
                                const uint8_t character_set[]) {
         auto pointer =
                 std::find_if(input.begin(), input.end(), [character_set](const char c) {
@@ -404,10 +404,10 @@ namespace ada::unicode {
                 });
         // Optimization: Don't iterate if percent encode is not required
         if (pointer == input.end()) {
-            return std::string(input);
+            return fermat::KString(input);
         }
 
-        std::string result;
+        fermat::KString result;
         result.reserve(input.length()); // in the worst case, percent encoding might
         // produce 3 characters.
         result.append(input.substr(0, std::distance(input.begin(), pointer)));
@@ -425,7 +425,7 @@ namespace ada::unicode {
 
     template<bool append>
     bool percent_encode(const std::string_view input, const uint8_t character_set[],
-                        std::string &out) {
+                        fermat::KString &out) {
         ada_log("percent_encode ", input, " to output string while ",
                 append ? "appending" : "overwriting");
         auto pointer =
@@ -458,16 +458,16 @@ namespace ada::unicode {
         return true;
     }
 
-    bool to_ascii(std::optional<std::string> &out, const std::string_view plain,
+    bool to_ascii(std::optional<fermat::KString> &out, const std::string_view plain,
                   size_t first_percent) {
-        std::string percent_decoded_buffer;
+        fermat::KString percent_decoded_buffer;
         std::string_view input = plain;
         if (first_percent != std::string_view::npos) {
             percent_decoded_buffer = unicode::percent_decode(plain, first_percent);
             input = percent_decoded_buffer;
         }
         // input is a non-empty UTF-8 string, must be percent decoded
-        std::string idna_ascii = ada::idna::to_ascii(input);
+        fermat::KString idna_ascii = fermat::uri::idna::to_ascii(input);
         if (idna_ascii.empty() || contains_forbidden_domain_code_point(
                 idna_ascii.data(), idna_ascii.size())) {
             return false;
@@ -476,9 +476,9 @@ namespace ada::unicode {
         return true;
     }
 
-    std::string percent_encode(const std::string_view input,
+    fermat::KString percent_encode(const std::string_view input,
                                const uint8_t character_set[], size_t index) {
-        std::string out;
+        fermat::KString out;
         out.append(input.data(), index);
         auto pointer = input.begin() + index;
         for (; pointer != input.end(); pointer++) {
@@ -490,4 +490,4 @@ namespace ada::unicode {
         }
         return out;
     }
-} // namespace ada::unicode
+} // namespace fermat::uri::unicode

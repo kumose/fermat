@@ -17,22 +17,22 @@
 // This function copies your input onto a memory buffer that
 // has just the necessary size. This will entice tools to detect
 // an out-of-bound access.
-template<class result_type = ada::url_aggregator>
-ada::result<result_type> ada_parse(std::string_view view,
+template<class result_type = fermat::uri::UrlAggregator>
+fermat::uri::result<result_type> ada_parse(std::string_view view,
                                    const result_type *base = nullptr) {
     std::cout << "about to parse '" << view << "' [" << view.size() << " bytes]"
             << std::endl;
     std::unique_ptr<char[]> buffer(new char[view.size()]);
     memcpy(buffer.get(), view.data(), view.size());
-    return ada::parse<result_type>(std::string_view(buffer.get(), view.size()),
+    return fermat::uri::parse<result_type>(std::string_view(buffer.get(), view.size()),
                                    base);
 }
 
-template ada::result<ada::url> ada_parse(std::string_view view,
-                                         const ada::url *base);
+template fermat::uri::result<fermat::uri::Url> ada_parse(std::string_view view,
+                                         const fermat::uri::Url *base);
 
-template ada::result<ada::url_aggregator> ada_parse(
-    std::string_view view, const ada::url_aggregator *base);
+template fermat::uri::result<fermat::uri::UrlAggregator> ada_parse(
+    std::string_view view, const fermat::uri::UrlAggregator *base);
 
 #include "simdjson.h"
 
@@ -52,7 +52,7 @@ std::string ADA_URLTESTDATA_JSON = gen_file_path( "ada_extra_urltestdata.json");
 std::string VERIFYDNSLENGTH_TESTS_JSON =
         gen_file_path( "verifydnslength_tests.json");
 
-using Types = testing::Types<ada::url, ada::url_aggregator>;
+using Types = testing::Types<fermat::uri::Url, fermat::uri::UrlAggregator>;
 
 template<class T>
 struct wpt_tests_typed : testing::Test {
@@ -91,8 +91,8 @@ TEST(wpt_tests, idna_test_v2_to_ascii) {
                     std::string(std::string_view(simdjson::to_json_string(object)));
             std::string_view input = object["input"].get_string();
 
-            std::optional<std::string> output;
-            ada::unicode::to_ascii(output, input, input.find('%'));
+            std::optional<fermat::KString> output;
+            fermat::uri::unicode::to_ascii(output, input, input.find('%'));
             auto expected_output = object["output"];
             auto given_output = output.has_value() ? output.value() : "";
 
@@ -136,8 +136,8 @@ TEST(wpt_tests, percent_encoding) {
                 bool allow_replacement_characters = true;
                 EXPECT_FALSE(
                     input_element.get_string(allow_replacement_characters).get(input));
-                std::string my_input_encoded = ada::unicode::percent_encode(
-                    input, ada::character_sets::QUERY_PERCENT_ENCODE);
+                fermat::KString my_input_encoded = fermat::uri::unicode::percent_encode(
+                    input, fermat::uri::character_sets::QUERY_PERCENT_ENCODE);
                 ondemand::object outputs = object["output"].get_object();
                 std::string_view expected_view;
                 ASSERT_FALSE(outputs["utf-8"].get(expected_view));
@@ -187,7 +187,7 @@ TYPED_TEST(wpt_tests_typed, setters_tests_encoding) {
 
                     auto base = ada_parse<TypeParam>(href);
                     ASSERT_TRUE(base.has_value());
-                    if constexpr (std::is_same<ada::url_aggregator, TypeParam>::value) {
+                    if constexpr (std::is_same<fermat::uri::UrlAggregator, TypeParam>::value) {
                         ASSERT_TRUE(base->validate());
                         element_string += "\n" + base->to_diagram() + "\n";
                     }
@@ -275,8 +275,8 @@ TYPED_TEST(wpt_tests_typed, toascii_encoding) {
                         std::string(std::string_view(simdjson::to_json_string(object)));
 
                 std::string_view input = object["input"];
-                std::optional<std::string> output;
-                ada::unicode::to_ascii(output, input, input.find('%'));
+                std::optional<fermat::KString> output;
+                fermat::uri::unicode::to_ascii(output, input, input.find('%'));
                 auto expected_output = object["output"];
 
                 // The following code replicates `toascii.window.js` from web-platform
@@ -284,7 +284,7 @@ TYPED_TEST(wpt_tests_typed, toascii_encoding) {
                 // @see
                 // https://github.com/web-platform-tests/wpt/blob/master/url/toascii.window.js
                 auto current =
-                        ada::parse<TypeParam>("https://" + std::string(input) + "/x");
+                        fermat::uri::parse<TypeParam>("https://" + std::string(input) + "/x");
 
                 if (expected_output.type() == ondemand::json_type::string) {
                     std::string_view stringified_output = expected_output.get_string();
@@ -298,7 +298,7 @@ TYPED_TEST(wpt_tests_typed, toascii_encoding) {
                 }
 
                 // Test setters for host and hostname values.
-                auto setter = ada::parse<TypeParam>("https://x/x");
+                auto setter = fermat::uri::parse<TypeParam>("https://x/x");
                 ASSERT_EQ(setter->set_host(input), !expected_output.is_null());
                 ASSERT_EQ(setter->set_hostname(input), !expected_output.is_null());
 
@@ -347,7 +347,7 @@ TYPED_TEST(wpt_tests_typed, urltestdata_encoding) {
                     std::cout << "input='" << input << "' [" << input.size() << " bytes]"
                             << std::endl;
                     std::string_view base;
-                    ada::result<TypeParam> base_url;
+                    fermat::uri::result<TypeParam> base_url;
                     if (!object["base"].get(base)) {
                         std::cout << "base=" << base << std::endl;
                         base_url = ada_parse<TypeParam>(base);
@@ -370,11 +370,11 @@ TYPED_TEST(wpt_tests_typed, urltestdata_encoding) {
                     } else {
                         ASSERT_TRUE(input_url.has_value());
                         // Next we test the 'to_string' method.
-                        if constexpr (std::is_same<ada::url_aggregator, TypeParam>::value) {
+                        if constexpr (std::is_same<fermat::uri::UrlAggregator, TypeParam>::value) {
                             ASSERT_TRUE(input_url->validate());
                         }
-                        std::string parsed_url_json = input_url->to_string();
-                        if constexpr (std::is_same<ada::url_aggregator, TypeParam>::value) {
+                        fermat::KString parsed_url_json = input_url->to_string();
+                        if constexpr (std::is_same<fermat::uri::UrlAggregator, TypeParam>::value) {
                             std::cout << "\n====\n" + input_url->to_diagram() + "\n====\n";
                         }
                         std::string_view protocol = object["protocol"].get_string();
@@ -415,7 +415,7 @@ TYPED_TEST(wpt_tests_typed, urltestdata_encoding) {
                         }
 
                         // We need padding.
-                        simdjson::padded_string padded_url_json = parsed_url_json;
+                        simdjson::padded_string padded_url_json = std::string_view(parsed_url_json);
                         // We need a second parser.
                         ondemand::parser urlparser;
                         ondemand::document parsed_doc = urlparser.iterate(padded_url_json);
@@ -423,7 +423,7 @@ TYPED_TEST(wpt_tests_typed, urltestdata_encoding) {
                         ondemand::object parsed_object = parsed_doc.get_object();
                         std::string_view json_recovered_path;
                         if (parsed_object["path"].get_string().get(json_recovered_path)) {
-                            if constexpr (std::is_same<ada::url, TypeParam>::value) {
+                            if constexpr (std::is_same<fermat::uri::Url, TypeParam>::value) {
                                 std::cerr << "The serialized url instance does not provide a "
                                         "'path' key or the JSON is invalid."
                                         << std::endl;
@@ -467,7 +467,7 @@ TEST(wpt_tests, verify_dns_length) {
                 std::string message =
                         std::string(object["message"].get_string().value());
                 bool failure = object["failure"].get_bool().value();
-                ada::result<ada::url> input_url = ada_parse<ada::url>(input);
+                fermat::uri::result<fermat::uri::Url> input_url = ada_parse<fermat::uri::Url>(input);
                 ASSERT_EQ(!input_url->has_valid_domain(), failure);
                 counter++;
             }

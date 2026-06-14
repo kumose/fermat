@@ -1,56 +1,70 @@
-/**
- * @file url-inl.h
- * @brief Definitions for the URL
- */
-#ifndef ADA_URL_INL_H
-#define ADA_URL_INL_H
+// Copyright (C) 2026 Kumo inc. and its affiliates. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// @file url-inl.h
+/// @brief Definitions for the URL
+
+#pragma once
 
 #include <fermat/uri/checkers.h>
 #include <fermat/uri/url.h>
 #include <fermat/uri/url_components.h>
 
 #include <optional>
-#include <string>
+#include <fermat/container/string.h>
 #if ADA_REGULAR_VISUAL_STUDIO
 #include <intrin.h>
 #endif  // ADA_REGULAR_VISUAL_STUDIO
 
-namespace ada {
-    [[nodiscard]] ada_really_inline bool url::has_credentials() const noexcept {
+namespace fermat::uri {
+    [[nodiscard]] TURBO_FORCE_INLINE bool Url::has_credentials() const noexcept {
         return !username.empty() || !password.empty();
     }
 
-    [[nodiscard]] ada_really_inline bool url::has_port() const noexcept {
+    [[nodiscard]] TURBO_FORCE_INLINE bool Url::has_port() const noexcept {
         return port.has_value();
     }
 
-    [[nodiscard]] inline bool url::cannot_have_credentials_or_port() const {
+    [[nodiscard]] inline bool Url::cannot_have_credentials_or_port() const {
         return !host.has_value() || host.value().empty() ||
-               type == ada::scheme::type::FILE;
+               type == fermat::uri::scheme::type::FILE;
     }
 
-    [[nodiscard]] inline bool url::has_empty_hostname() const noexcept {
+    [[nodiscard]] inline bool Url::has_empty_hostname() const noexcept {
         if (!host.has_value()) {
             return false;
         }
         return host.value().empty();
     }
 
-    [[nodiscard]] inline bool url::has_hostname() const noexcept {
+    [[nodiscard]] inline bool Url::has_hostname() const noexcept {
         return host.has_value();
     }
 
-    inline std::ostream &operator<<(std::ostream &out, const ada::url &u) {
+    inline std::ostream &operator<<(std::ostream &out, const fermat::uri::Url &u) {
         return out << u.to_string();
     }
 
-    [[nodiscard]] size_t url::get_pathname_length() const noexcept {
+    [[nodiscard]] size_t Url::get_pathname_length() const noexcept {
         return path.size();
     }
 
-    [[nodiscard]] ada_really_inline ada::url_components url::get_components()
+    [[nodiscard]] TURBO_FORCE_INLINE fermat::uri::UrlComponents Url::get_components()
     const noexcept {
-        url_components out{};
+        UrlComponents out{};
 
         // protocol ends with ':'. for example: "https:"
         out.protocol_end = uint32_t(get_protocol().size());
@@ -120,73 +134,73 @@ namespace ada {
         return out;
     }
 
-    inline void url::update_base_hostname(std::string_view input) { host = input; }
+    inline void Url::update_base_hostname(std::string_view input) { host = input; }
 
-    inline void url::update_unencoded_base_hash(std::string_view input) {
+    inline void Url::update_unencoded_base_hash(std::string_view input) {
         // We do the percent encoding
         hash = unicode::percent_encode(input,
-                                       ada::character_sets::FRAGMENT_PERCENT_ENCODE);
+                                       fermat::uri::character_sets::FRAGMENT_PERCENT_ENCODE);
     }
 
-    inline void url::update_base_search(std::string_view input,
+    inline void Url::update_base_search(std::string_view input,
                                         const uint8_t query_percent_encode_set[]) {
-        query = ada::unicode::percent_encode(input, query_percent_encode_set);
+        query = fermat::uri::unicode::percent_encode(input, query_percent_encode_set);
     }
 
-    inline void url::update_base_search(std::optional<std::string> input) {
+    inline void Url::update_base_search(std::optional<fermat::KString> input) {
         query = input;
     }
 
-    inline void url::update_base_pathname(const std::string_view input) {
+    inline void Url::update_base_pathname(const std::string_view input) {
         path = input;
     }
 
-    inline void url::update_base_username(const std::string_view input) {
+    inline void Url::update_base_username(const std::string_view input) {
         username = input;
     }
 
-    inline void url::update_base_password(const std::string_view input) {
+    inline void Url::update_base_password(const std::string_view input) {
         password = input;
     }
 
-    inline void url::update_base_port(std::optional<uint16_t> input) {
+    inline void Url::update_base_port(std::optional<uint16_t> input) {
         port = input;
     }
 
-    inline void url::clear_pathname() { path.clear(); }
+    inline void Url::clear_pathname() { path.clear(); }
 
-    inline void url::clear_search() { query = std::nullopt; }
+    inline void Url::clear_search() { query = std::nullopt; }
 
-    [[nodiscard]] inline bool url::has_hash() const noexcept {
+    [[nodiscard]] inline bool Url::has_hash() const noexcept {
         return hash.has_value();
     }
 
-    [[nodiscard]] inline bool url::has_search() const noexcept {
+    [[nodiscard]] inline bool Url::has_search() const noexcept {
         return query.has_value();
     }
 
-    inline void url::set_protocol_as_file() { type = ada::scheme::type::FILE; }
+    inline void Url::set_protocol_as_file() { type = fermat::uri::scheme::type::FILE; }
 
-    inline void url::set_scheme(std::string &&new_scheme) noexcept {
-        type = ada::scheme::get_scheme_type(new_scheme);
+    inline void Url::set_scheme(fermat::KString &&new_scheme) noexcept {
+        type = fermat::uri::scheme::get_scheme_type(new_scheme);
         // We only move the 'scheme' if it is non-special.
         if (!is_special()) {
             non_special_scheme = std::move(new_scheme);
         }
     }
 
-    inline void url::copy_scheme(ada::url &&u) noexcept {
+    inline void Url::copy_scheme(fermat::uri::Url &&u) noexcept {
         non_special_scheme = u.non_special_scheme;
         type = u.type;
     }
 
-    inline void url::copy_scheme(const ada::url &u) {
+    inline void Url::copy_scheme(const fermat::uri::Url &u) {
         non_special_scheme = u.non_special_scheme;
         type = u.type;
     }
 
-    [[nodiscard]] ada_really_inline std::string url::get_href() const noexcept {
-        std::string output = get_protocol();
+    [[nodiscard]] TURBO_FORCE_INLINE fermat::KString Url::get_href() const noexcept {
+        fermat::KString output = get_protocol();
 
         if (host.has_value()) {
             output += "//";
@@ -217,8 +231,8 @@ namespace ada {
         return output;
     }
 
-ada_really_inline size_t url::parse_port(std::string_view view,
-                                         bool check_trailing_content) noexcept {
+    TURBO_FORCE_INLINE size_t Url::parse_port(std::string_view view,
+                                             bool check_trailing_content) noexcept {
         ada_log("parse_port('", view, "') ", view.size());
         if (!view.empty() && view[0] == '-') {
             ada_log("parse_port: view[0] == '0' && view.size() > 1");
@@ -252,6 +266,4 @@ ada_really_inline size_t url::parse_port(std::string_view view,
         }
         return consumed;
     }
-} // namespace ada
-
-#endif  // ADA_URL_H
+} // namespace fermat::uri

@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-// This is a reference to ada::url_components::omitted
+// This is a reference to fermat::uri::url_components::omitted
 // It represents "uint32_t(-1)"
 #define ada_url_omitted 0xffffffff
 
@@ -55,7 +55,7 @@ ada_url ada_copy(ada_url input);
 
 bool ada_is_valid(ada_url result);
 
-// url_aggregator getters
+// UrlComponents getters
 // if ada_is_valid(result)) is false, an empty string is returned
 ada_owned_string ada_get_origin(ada_url result);
 ada_string ada_get_href(ada_url result);
@@ -71,7 +71,7 @@ ada_string ada_get_protocol(ada_url result);
 uint8_t ada_get_host_type(ada_url result);
 uint8_t ada_get_scheme_type(ada_url result);
 
-// url_aggregator setters
+// UrlComponents setters
 // if ada_is_valid(result)) is false, the setters have no effect
 // input should be a null terminated C string
 bool ada_set_href(ada_url result, const char* input, size_t length);
@@ -85,12 +85,12 @@ bool ada_set_pathname(ada_url result, const char* input, size_t length);
 void ada_set_search(ada_url result, const char* input, size_t length);
 void ada_set_hash(ada_url result, const char* input, size_t length);
 
-// url_aggregator clear methods
+// UrlComponents clear methods
 void ada_clear_port(ada_url result);
 void ada_clear_hash(ada_url result);
 void ada_clear_search(ada_url result);
 
-// url_aggregator functions
+// UrlComponents functions
 // if ada_is_valid(result) is false, functions below will return false
 bool ada_has_credentials(ada_url result);
 bool ada_has_empty_hostname(ada_url result);
@@ -102,7 +102,7 @@ bool ada_has_password(ada_url result);
 bool ada_has_hash(ada_url result);
 bool ada_has_search(ada_url result);
 
-// returns a pointer to the internal url_aggregator::url_components
+// returns a pointer to the internal UrlComponents::UrlComponents
 const ada_url_components* ada_get_components(ada_url result);
 
 // idna methods

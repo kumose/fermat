@@ -40,17 +40,17 @@ static void BasicBench_AdaURL(benchmark::State &state) {
   for (auto _ : state) {
     for (const std::pair<std::string, std::string> &url_strings :
          url_examples) {
-      ada::result<result> base;
+      fermat::uri::result<result> base;
       result *base_ptr = nullptr;
       if (!url_strings.second.empty()) {
-        base = ada::parse<result>(url_strings.second);
+        base = fermat::uri::parse<result>(url_strings.second);
         if (base) {
           base_ptr = &*base;
         } else {
           continue;
         }
       }
-      auto url = ada::parse(url_strings.first, base_ptr);
+      auto url = fermat::uri::parse(url_strings.first, base_ptr);
       if (url) {
         href_size += url->get_href().size();
       }
@@ -63,17 +63,17 @@ static void BasicBench_AdaURL(benchmark::State &state) {
       collector.start();
       for (const std::pair<std::string, std::string> &url_strings :
            url_examples) {
-        ada::result<result> base;
+        fermat::uri::result<result> base;
         result *base_ptr = nullptr;
         if (!url_strings.second.empty()) {
-          base = ada::parse<result>(url_strings.second);
+          base = fermat::uri::parse<result>(url_strings.second);
           if (base) {
             base_ptr = &*base;
           } else {
             continue;
           }
         }
-        auto url = ada::parse(url_strings.first, base_ptr);
+        auto url = fermat::uri::parse(url_strings.first, base_ptr);
         if (url) {
           href_size += url->get_href().size();
         }
@@ -111,9 +111,9 @@ static void BasicBench_AdaURL(benchmark::State &state) {
       benchmark::Counter(double(std::size(url_examples)),
                          benchmark::Counter::kIsIterationInvariantRate);
 }
-auto BasicBench_AdaURL_url = BasicBench_AdaURL<ada::url>;
+auto BasicBench_AdaURL_url = BasicBench_AdaURL<fermat::uri::Url>;
 BENCHMARK(BasicBench_AdaURL_url);
-auto BasicBench_AdaURL_url_aggregator = BasicBench_AdaURL<ada::url_aggregator>;
+auto BasicBench_AdaURL_url_aggregator = BasicBench_AdaURL<fermat::uri::UrlAggregator>;
 BENCHMARK(BasicBench_AdaURL_url_aggregator);
 
 #if ADA_url_whatwg_ENABLED

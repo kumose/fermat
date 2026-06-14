@@ -1,9 +1,23 @@
-/**
- * @file url_aggregator-inl.h
- * @brief Inline functions for url aggregator
- */
-#ifndef ADA_URL_AGGREGATOR_INL_H
-#define ADA_URL_AGGREGATOR_INL_H
+// Copyright (C) 2026 Kumo inc. and its affiliates. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// @file url_aggregator-inl.h
+/// @brief Inline functions for url aggregator
+
+#pragma once
 
 #include <fermat/uri/character_sets.h>
 #include <fermat/uri/character_sets-inl.h>
@@ -19,12 +33,12 @@
 #include <optional>
 #include <string_view>
 
-namespace ada {
-    inline void url_aggregator::update_base_authority(
-        std::string_view base_buffer, const ada::url_components &base) {
+namespace fermat::uri {
+    inline void UrlAggregator::update_base_authority(
+        std::string_view base_buffer, const fermat::uri::UrlComponents &base) {
         std::string_view input = base_buffer.substr(
             base.protocol_end, base.host_start - base.protocol_end);
-        ada_log("url_aggregator::update_base_authority ", input);
+        ada_log("UrlAggregator::update_base_authority ", input);
 
         bool input_starts_with_dash = checkers::begins_with(input, "//");
         uint32_t diff = components.host_start - components.protocol_end;
@@ -71,38 +85,38 @@ namespace ada {
         }
         components.host_end += diff;
         components.pathname_start += diff;
-        if (components.search_start != url_components::omitted) {
+        if (components.search_start != UrlComponents::omitted) {
             components.search_start += diff;
         }
-        if (components.hash_start != url_components::omitted) {
+        if (components.hash_start != UrlComponents::omitted) {
             components.hash_start += diff;
         }
     }
 
-    inline void url_aggregator::update_unencoded_base_hash(std::string_view input) {
-        ada_log("url_aggregator::update_unencoded_base_hash ", input, " [",
+    inline void UrlAggregator::update_unencoded_base_hash(std::string_view input) {
+        ada_log("UrlAggregator::update_unencoded_base_hash ", input, " [",
                 input.size(), " bytes], buffer is '", buffer, "' [", buffer.size(),
                 " bytes] components.hash_start = ", components.hash_start);
-        ADA_ASSERT_TRUE(validate());
-        ADA_ASSERT_TRUE(!helpers::overlaps(input, buffer));
-        if (components.hash_start != url_components::omitted) {
+        DKCHECK(validate());
+        DKCHECK(!helpers::overlaps(input, buffer));
+        if (components.hash_start != UrlComponents::omitted) {
             buffer.resize(components.hash_start);
         }
         components.hash_start = uint32_t(buffer.size());
         buffer += "#";
-        bool encoding_required = unicode::percent_encode < true > (
-                                     input, ada::character_sets::FRAGMENT_PERCENT_ENCODE, buffer);
+        bool encoding_required = unicode::percent_encode<true>(
+            input, fermat::uri::character_sets::FRAGMENT_PERCENT_ENCODE, buffer);
         // When encoding_required is false, then buffer is left unchanged, and percent
         // encoding was not deemed required.
         if (!encoding_required) {
             buffer.append(input);
         }
-        ada_log("url_aggregator::update_unencoded_base_hash final buffer is '",
+        ada_log("UrlAggregator::update_unencoded_base_hash final buffer is '",
                 buffer, "' [", buffer.size(), " bytes]");
-        ADA_ASSERT_TRUE(validate());
+        DKCHECK(validate());
     }
 
-ada_really_inline uint32_t url_aggregator::replace_and_resize(
+    TURBO_FORCE_INLINE uint32_t UrlAggregator::replace_and_resize(
         uint32_t start, uint32_t end, std::string_view input) {
         uint32_t current_length = end - start;
         uint32_t input_size = uint32_t(input.size());
@@ -123,11 +137,11 @@ ada_really_inline uint32_t url_aggregator::replace_and_resize(
         return new_difference;
     }
 
-    inline void url_aggregator::update_base_hostname(const std::string_view input) {
-        ada_log("url_aggregator::update_base_hostname ", input, " [", input.size(),
+    inline void UrlAggregator::update_base_hostname(const std::string_view input) {
+        ada_log("UrlAggregator::update_base_hostname ", input, " [", input.size(),
                 " bytes], buffer is '", buffer, "' [", buffer.size(), " bytes]");
-        ADA_ASSERT_TRUE(validate());
-        ADA_ASSERT_TRUE(!helpers::overlaps(input, buffer));
+        DKCHECK(validate());
+        DKCHECK(!helpers::overlaps(input, buffer));
 
         // This next line is required for when parsing a URL like `foo://`
         add_authority_slashes_if_needed();
@@ -142,37 +156,37 @@ ada_really_inline uint32_t url_aggregator::replace_and_resize(
         }
         components.host_end += new_difference;
         components.pathname_start += new_difference;
-        if (components.search_start != url_components::omitted) {
+        if (components.search_start != UrlComponents::omitted) {
             components.search_start += new_difference;
         }
-        if (components.hash_start != url_components::omitted) {
+        if (components.hash_start != UrlComponents::omitted) {
             components.hash_start += new_difference;
         }
-        ADA_ASSERT_TRUE(validate());
+        DKCHECK(validate());
     }
 
-    [[nodiscard]] ada_really_inline uint32_t
+    [[nodiscard]] TURBO_FORCE_INLINE uint32_t
 
-    url_aggregator::get_pathname_length() const noexcept {
-        ada_log("url_aggregator::get_pathname_length");
+    UrlAggregator::get_pathname_length() const noexcept {
+        ada_log("UrlAggregator::get_pathname_length");
         uint32_t ending_index = uint32_t(buffer.size());
-        if (components.search_start != url_components::omitted) {
+        if (components.search_start != UrlComponents::omitted) {
             ending_index = components.search_start;
-        } else if (components.hash_start != url_components::omitted) {
+        } else if (components.hash_start != UrlComponents::omitted) {
             ending_index = components.hash_start;
         }
         return ending_index - components.pathname_start;
     }
 
-    [[nodiscard]] ada_really_inline bool url_aggregator::is_at_path()
+    [[nodiscard]] TURBO_FORCE_INLINE bool UrlAggregator::is_at_path()
     const noexcept {
         return buffer.size() == components.pathname_start;
     }
 
-    inline void url_aggregator::update_base_search(std::string_view input) {
-        ada_log("url_aggregator::update_base_search ", input);
-        ADA_ASSERT_TRUE(validate());
-        ADA_ASSERT_TRUE(!helpers::overlaps(input, buffer));
+    inline void UrlAggregator::update_base_search(std::string_view input) {
+        ada_log("UrlAggregator::update_base_search ", input);
+        DKCHECK(validate());
+        DKCHECK(!helpers::overlaps(input, buffer));
         if (input.empty()) {
             clear_search();
             return;
@@ -182,8 +196,8 @@ ada_really_inline uint32_t url_aggregator::replace_and_resize(
             input.remove_prefix(1);
         }
 
-        if (components.hash_start == url_components::omitted) {
-            if (components.search_start == url_components::omitted) {
+        if (components.hash_start == UrlComponents::omitted) {
+            if (components.search_start == UrlComponents::omitted) {
                 components.search_start = uint32_t(buffer.size());
                 buffer += "?";
             } else {
@@ -192,7 +206,7 @@ ada_really_inline uint32_t url_aggregator::replace_and_resize(
 
             buffer.append(input);
         } else {
-            if (components.search_start == url_components::omitted) {
+            if (components.search_start == UrlComponents::omitted) {
                 components.search_start = components.hash_start;
             } else {
                 buffer.erase(components.search_start,
@@ -205,18 +219,18 @@ ada_really_inline uint32_t url_aggregator::replace_and_resize(
             components.hash_start += uint32_t(input.size() + 1); // Do not forget `?`
         }
 
-        ADA_ASSERT_TRUE(validate());
+        DKCHECK(validate());
     }
 
-    inline void url_aggregator::update_base_search(
+    inline void UrlAggregator::update_base_search(
         std::string_view input, const uint8_t query_percent_encode_set[]) {
-        ada_log("url_aggregator::update_base_search ", input,
+        ada_log("UrlAggregator::update_base_search ", input,
                 " with encoding parameter ", to_string(), "\n", to_diagram());
-        ADA_ASSERT_TRUE(validate());
-        ADA_ASSERT_TRUE(!helpers::overlaps(input, buffer));
+        DKCHECK(validate());
+        DKCHECK(!helpers::overlaps(input, buffer));
 
-        if (components.hash_start == url_components::omitted) {
-            if (components.search_start == url_components::omitted) {
+        if (components.hash_start == UrlComponents::omitted) {
+            if (components.search_start == UrlComponents::omitted) {
                 components.search_start = uint32_t(buffer.size());
                 buffer += "?";
             } else {
@@ -224,14 +238,14 @@ ada_really_inline uint32_t url_aggregator::replace_and_resize(
             }
 
             bool encoding_required =
-                    unicode::percent_encode < true > (input, query_percent_encode_set, buffer);
+                    unicode::percent_encode<true>(input, query_percent_encode_set, buffer);
             // When encoding_required is false, then buffer is left unchanged, and
             // percent encoding was not deemed required.
             if (!encoding_required) {
                 buffer.append(input);
             }
         } else {
-            if (components.search_start == url_components::omitted) {
+            if (components.search_start == UrlComponents::omitted) {
                 components.search_start = components.hash_start;
             } else {
                 buffer.erase(components.search_start,
@@ -241,7 +255,7 @@ ada_really_inline uint32_t url_aggregator::replace_and_resize(
 
             buffer.insert(components.search_start, "?");
             size_t idx =
-                    ada::unicode::percent_encode_index(input, query_percent_encode_set);
+                    fermat::uri::unicode::percent_encode_index(input, query_percent_encode_set);
             if (idx == input.size()) {
                 buffer.insert(components.search_start + 1, input);
                 components.hash_start += uint32_t(input.size() + 1); // Do not forget `?`
@@ -250,26 +264,26 @@ ada_really_inline uint32_t url_aggregator::replace_and_resize(
                 input.remove_prefix(idx);
                 // We only create a temporary string if we need percent encoding and
                 // we attempt to create as small a temporary string as we can.
-                std::string encoded =
-                        ada::unicode::percent_encode(input, query_percent_encode_set);
+                fermat::KString encoded =
+                        fermat::uri::unicode::percent_encode(input, query_percent_encode_set);
                 buffer.insert(components.search_start + idx + 1, encoded);
                 components.hash_start +=
                         uint32_t(encoded.size() + idx + 1); // Do not forget `?`
             }
         }
 
-        ADA_ASSERT_TRUE(validate());
+        DKCHECK(validate());
     }
 
-    inline void url_aggregator::update_base_pathname(const std::string_view input) {
-        ada_log("url_aggregator::update_base_pathname '", input, "' [", input.size(),
+    inline void UrlAggregator::update_base_pathname(const std::string_view input) {
+        ada_log("UrlAggregator::update_base_pathname '", input, "' [", input.size(),
                 " bytes] \n", to_diagram());
-        ADA_ASSERT_TRUE(!helpers::overlaps(input, buffer));
-        ADA_ASSERT_TRUE(validate());
+        DKCHECK(!helpers::overlaps(input, buffer));
+        DKCHECK(validate());
 
         const bool begins_with_dashdash = checkers::begins_with(input, "//");
         if (!begins_with_dashdash && has_dash_dot()) {
-            ada_log("url_aggregator::update_base_pathname has /.: \n", to_diagram());
+            ada_log("UrlAggregator::update_base_pathname has /.: \n", to_diagram());
             // We must delete the ./
             delete_dash_dot();
         }
@@ -286,55 +300,52 @@ ada_really_inline uint32_t url_aggregator::replace_and_resize(
         uint32_t difference = replace_and_resize(
             components.pathname_start,
             components.pathname_start + get_pathname_length(), input);
-        if (components.search_start != url_components::omitted) {
+        if (components.search_start != UrlComponents::omitted) {
             components.search_start += difference;
         }
-        if (components.hash_start != url_components::omitted) {
+        if (components.hash_start != UrlComponents::omitted) {
             components.hash_start += difference;
         }
-        ada_log("url_aggregator::update_base_pathname end '", input, "' [",
+        ada_log("UrlAggregator::update_base_pathname end '", input, "' [",
                 input.size(), " bytes] \n", to_diagram());
-        ADA_ASSERT_TRUE(validate());
+        DKCHECK(validate());
     }
 
-    inline void url_aggregator::append_base_pathname(const std::string_view input) {
-        ada_log("url_aggregator::append_base_pathname ", input, " ", to_string(),
+    inline void UrlAggregator::append_base_pathname(const std::string_view input) {
+        ada_log("UrlAggregator::append_base_pathname ", input, " ", to_string(),
                 "\n", to_diagram());
-        ADA_ASSERT_TRUE(validate());
-        ADA_ASSERT_TRUE(!helpers::overlaps(input, buffer));
+        DKCHECK(validate());
+        DKCHECK(!helpers::overlaps(input, buffer));
 #if ADA_DEVELOPMENT_CHECKS
         // computing the expected password.
-        std::string path_expected(get_pathname());
+        fermat::KString path_expected(get_pathname());
         path_expected.append(input);
 #endif  // ADA_DEVELOPMENT_CHECKS
         uint32_t ending_index = uint32_t(buffer.size());
-        if (components.search_start != url_components::omitted) {
+        if (components.search_start != UrlComponents::omitted) {
             ending_index = components.search_start;
-        } else if (components.hash_start != url_components::omitted) {
+        } else if (components.hash_start != UrlComponents::omitted) {
             ending_index = components.hash_start;
         }
         buffer.insert(ending_index, input);
 
-        if (components.search_start != url_components::omitted) {
+        if (components.search_start != UrlComponents::omitted) {
             components.search_start += uint32_t(input.size());
         }
-        if (components.hash_start != url_components::omitted) {
+        if (components.hash_start != UrlComponents::omitted) {
             components.hash_start += uint32_t(input.size());
         }
 #if ADA_DEVELOPMENT_CHECKS
-        std::string path_after = std::string(get_pathname());
-        ADA_ASSERT_EQUAL(
-            path_expected, path_after,
-            "append_base_pathname problem after inserting " + std::string(input));
-#endif  // ADA_DEVELOPMENT_CHECKS
-        ADA_ASSERT_TRUE(validate());
+        DKCHECK_EQ(path_expected, fermat::KString(get_pathname())) << "append_base_pathname problem after inserting "<<input;
+#endif
+        DKCHECK(validate());
     }
 
-    inline void url_aggregator::update_base_username(const std::string_view input) {
-        ada_log("url_aggregator::update_base_username '", input, "' ", to_string(),
+    inline void UrlAggregator::update_base_username(const std::string_view input) {
+        ada_log("UrlAggregator::update_base_username '", input, "' ", to_string(),
                 "\n", to_diagram());
-        ADA_ASSERT_TRUE(validate());
-        ADA_ASSERT_TRUE(!helpers::overlaps(input, buffer));
+        DKCHECK(validate());
+        DKCHECK(!helpers::overlaps(input, buffer));
 
         add_authority_slashes_if_needed();
 
@@ -359,22 +370,22 @@ ada_really_inline uint32_t url_aggregator::replace_and_resize(
 
         components.host_end += diff;
         components.pathname_start += diff;
-        if (components.search_start != url_components::omitted) {
+        if (components.search_start != UrlComponents::omitted) {
             components.search_start += diff;
         }
-        if (components.hash_start != url_components::omitted) {
+        if (components.hash_start != UrlComponents::omitted) {
             components.hash_start += diff;
         }
-        ADA_ASSERT_TRUE(validate());
+        DKCHECK(validate());
     }
 
-    inline void url_aggregator::append_base_username(const std::string_view input) {
-        ada_log("url_aggregator::append_base_username ", input);
-        ADA_ASSERT_TRUE(validate());
-        ADA_ASSERT_TRUE(!helpers::overlaps(input, buffer));
+    inline void UrlAggregator::append_base_username(const std::string_view input) {
+        ada_log("UrlAggregator::append_base_username ", input);
+        DKCHECK(validate());
+        DKCHECK(!helpers::overlaps(input, buffer));
 #if ADA_DEVELOPMENT_CHECKS
         // computing the expected password.
-        std::string username_expected(get_username());
+        fermat::KString username_expected(get_username());
         username_expected.append(input);
 #endif  // ADA_DEVELOPMENT_CHECKS
         add_authority_slashes_if_needed();
@@ -397,24 +408,22 @@ ada_really_inline uint32_t url_aggregator::replace_and_resize(
 
         components.host_end += difference;
         components.pathname_start += difference;
-        if (components.search_start != url_components::omitted) {
+        if (components.search_start != UrlComponents::omitted) {
             components.search_start += difference;
         }
-        if (components.hash_start != url_components::omitted) {
+        if (components.hash_start != UrlComponents::omitted) {
             components.hash_start += difference;
         }
 #if ADA_DEVELOPMENT_CHECKS
-        std::string username_after(get_username());
-        ADA_ASSERT_EQUAL(
-            username_expected, username_after,
-            "append_base_username problem after inserting " + std::string(input));
-#endif  // ADA_DEVELOPMENT_CHECKS
-        ADA_ASSERT_TRUE(validate());
+        DKCHECK_EQ(username_expected, fermat::KString(get_username()))<<"append_base_username problem after inserting "<<input;
+#endif
+
+        DKCHECK(validate());
     }
 
-    inline void url_aggregator::clear_password() {
-        ada_log("url_aggregator::clear_password ", to_string(), "\n", to_diagram());
-        ADA_ASSERT_TRUE(validate());
+    inline void UrlAggregator::clear_password() {
+        ada_log("UrlAggregator::clear_password ", to_string(), "\n", to_diagram());
+        DKCHECK(validate());
         if (!has_password()) {
             return;
         }
@@ -424,18 +433,18 @@ ada_really_inline uint32_t url_aggregator::replace_and_resize(
         components.host_start -= diff;
         components.host_end -= diff;
         components.pathname_start -= diff;
-        if (components.search_start != url_components::omitted) {
+        if (components.search_start != UrlComponents::omitted) {
             components.search_start -= diff;
         }
-        if (components.hash_start != url_components::omitted) {
+        if (components.hash_start != UrlComponents::omitted) {
             components.hash_start -= diff;
         }
     }
 
-    inline void url_aggregator::update_base_password(const std::string_view input) {
-        ada_log("url_aggregator::update_base_password ", input);
-        ADA_ASSERT_TRUE(validate());
-        ADA_ASSERT_TRUE(!helpers::overlaps(input, buffer));
+    inline void UrlAggregator::update_base_password(const std::string_view input) {
+        ada_log("UrlAggregator::update_base_password ", input);
+        DKCHECK(validate());
+        DKCHECK(!helpers::overlaps(input, buffer));
 
         add_authority_slashes_if_needed();
 
@@ -477,23 +486,23 @@ ada_really_inline uint32_t url_aggregator::replace_and_resize(
 
         components.host_end += difference;
         components.pathname_start += difference;
-        if (components.search_start != url_components::omitted) {
+        if (components.search_start != UrlComponents::omitted) {
             components.search_start += difference;
         }
-        if (components.hash_start != url_components::omitted) {
+        if (components.hash_start != UrlComponents::omitted) {
             components.hash_start += difference;
         }
-        ADA_ASSERT_TRUE(validate());
+        DKCHECK(validate());
     }
 
-    inline void url_aggregator::append_base_password(const std::string_view input) {
-        ada_log("url_aggregator::append_base_password ", input, " ", to_string(),
+    inline void UrlAggregator::append_base_password(const std::string_view input) {
+        ada_log("UrlAggregator::append_base_password ", input, " ", to_string(),
                 "\n", to_diagram());
-        ADA_ASSERT_TRUE(validate());
-        ADA_ASSERT_TRUE(!helpers::overlaps(input, buffer));
+        DKCHECK(validate());
+        DKCHECK(!helpers::overlaps(input, buffer));
 #if ADA_DEVELOPMENT_CHECKS
         // computing the expected password.
-        std::string password_expected = std::string(get_password());
+        fermat::KString password_expected = fermat::KString(get_password());
         password_expected.append(input);
 #endif  // ADA_DEVELOPMENT_CHECKS
         add_authority_slashes_if_needed();
@@ -523,34 +532,32 @@ ada_really_inline uint32_t url_aggregator::replace_and_resize(
 
         components.host_end += difference;
         components.pathname_start += difference;
-        if (components.search_start != url_components::omitted) {
+        if (components.search_start != UrlComponents::omitted) {
             components.search_start += difference;
         }
-        if (components.hash_start != url_components::omitted) {
+        if (components.hash_start != UrlComponents::omitted) {
             components.hash_start += difference;
         }
 #if ADA_DEVELOPMENT_CHECKS
-        std::string password_after(get_password());
-        ADA_ASSERT_EQUAL(
-            password_expected, password_after,
-            "append_base_password problem after inserting " + std::string(input));
-#endif  // ADA_DEVELOPMENT_CHECKS
-        ADA_ASSERT_TRUE(validate());
+        DKCHECK_EQ(password_expected, fermat::KString(get_password()))<<"append_base_password problem after inserting "<<input;
+#endif
+
+        DKCHECK(validate());
     }
 
-    inline void url_aggregator::update_base_port(uint32_t input) {
-        ada_log("url_aggregator::update_base_port");
-        ADA_ASSERT_TRUE(validate());
-        if (input == url_components::omitted) {
+    inline void UrlAggregator::update_base_port(uint32_t input) {
+        ada_log("UrlAggregator::update_base_port");
+        DKCHECK(validate());
+        if (input == UrlComponents::omitted) {
             clear_port();
             return;
         }
         // calling std::to_string(input.value()) is unfortunate given that the port
         // value is probably already available as a string.
-        std::string value = helpers::concat(":", std::to_string(input));
+        fermat::KString value = helpers::concat(":", std::to_string(input));
         uint32_t difference = uint32_t(value.size());
 
-        if (components.port != url_components::omitted) {
+        if (components.port != UrlComponents::omitted) {
             difference -= components.pathname_start - components.host_end;
             buffer.erase(components.host_end,
                          components.pathname_start - components.host_end);
@@ -558,48 +565,48 @@ ada_really_inline uint32_t url_aggregator::replace_and_resize(
 
         buffer.insert(components.host_end, value);
         components.pathname_start += difference;
-        if (components.search_start != url_components::omitted) {
+        if (components.search_start != UrlComponents::omitted) {
             components.search_start += difference;
         }
-        if (components.hash_start != url_components::omitted) {
+        if (components.hash_start != UrlComponents::omitted) {
             components.hash_start += difference;
         }
         components.port = input;
-        ADA_ASSERT_TRUE(validate());
+        DKCHECK(validate());
     }
 
-    inline void url_aggregator::clear_port() {
-        ada_log("url_aggregator::clear_port");
-        ADA_ASSERT_TRUE(validate());
-        if (components.port == url_components::omitted) {
+    inline void UrlAggregator::clear_port() {
+        ada_log("UrlAggregator::clear_port");
+        DKCHECK(validate());
+        if (components.port == UrlComponents::omitted) {
             return;
         }
         uint32_t length = components.pathname_start - components.host_end;
         buffer.erase(components.host_end, length);
         components.pathname_start -= length;
-        if (components.search_start != url_components::omitted) {
+        if (components.search_start != UrlComponents::omitted) {
             components.search_start -= length;
         }
-        if (components.hash_start != url_components::omitted) {
+        if (components.hash_start != UrlComponents::omitted) {
             components.hash_start -= length;
         }
-        components.port = url_components::omitted;
-        ADA_ASSERT_TRUE(validate());
+        components.port = UrlComponents::omitted;
+        DKCHECK(validate());
     }
 
-    [[nodiscard]] inline uint32_t url_aggregator::retrieve_base_port() const {
-        ada_log("url_aggregator::retrieve_base_port");
+    [[nodiscard]] inline uint32_t UrlAggregator::retrieve_base_port() const {
+        ada_log("UrlAggregator::retrieve_base_port");
         return components.port;
     }
 
-    inline void url_aggregator::clear_search() {
-        ada_log("url_aggregator::clear_search");
-        ADA_ASSERT_TRUE(validate());
-        if (components.search_start == url_components::omitted) {
+    inline void UrlAggregator::clear_search() {
+        ada_log("UrlAggregator::clear_search");
+        DKCHECK(validate());
+        if (components.search_start == UrlComponents::omitted) {
             return;
         }
 
-        if (components.hash_start == url_components::omitted) {
+        if (components.hash_start == UrlComponents::omitted) {
             buffer.resize(components.search_start);
         } else {
             buffer.erase(components.search_start,
@@ -607,40 +614,35 @@ ada_really_inline uint32_t url_aggregator::replace_and_resize(
             components.hash_start = components.search_start;
         }
 
-        components.search_start = url_components::omitted;
+        components.search_start = UrlComponents::omitted;
 
-#if ADA_DEVELOPMENT_CHECKS
-        ADA_ASSERT_EQUAL(get_search(), "",
-                         "search should have been cleared on buffer=" + buffer +
-                         " with " + components.to_string() + "\n" + to_diagram());
-#endif
-        ADA_ASSERT_TRUE(validate());
+        DKCHECK_EQ(get_search(), "")<<"search should have been cleared on buffer=" + buffer +
+                         " with " + components.to_string() + "\n" + to_diagram();
+        DKCHECK(validate());
     }
 
-    inline void url_aggregator::clear_hash() {
-        ada_log("url_aggregator::clear_hash");
-        ADA_ASSERT_TRUE(validate());
-        if (components.hash_start == url_components::omitted) {
+    inline void UrlAggregator::clear_hash() {
+        ada_log("UrlAggregator::clear_hash");
+        DKCHECK(validate());
+        if (components.hash_start == UrlComponents::omitted) {
             return;
         }
         buffer.resize(components.hash_start);
-        components.hash_start = url_components::omitted;
+        components.hash_start = UrlComponents::omitted;
 
-#if ADA_DEVELOPMENT_CHECKS
-        ADA_ASSERT_EQUAL(get_hash(), "",
+        DKCHECK_EQ(get_hash(), "")<<
                          "hash should have been cleared on buffer=" + buffer +
-                         " with " + components.to_string() + "\n" + to_diagram());
-#endif
-        ADA_ASSERT_TRUE(validate());
+                         " with " + components.to_string() + "\n" + to_diagram();
+        DKCHECK(validate());
     }
 
-    inline void url_aggregator::clear_pathname() {
-        ada_log("url_aggregator::clear_pathname");
-        ADA_ASSERT_TRUE(validate());
+    inline void UrlAggregator::clear_pathname() {
+        ada_log("UrlAggregator::clear_pathname");
+        DKCHECK(validate());
         uint32_t ending_index = uint32_t(buffer.size());
-        if (components.search_start != url_components::omitted) {
+        if (components.search_start != UrlComponents::omitted) {
             ending_index = components.search_start;
-        } else if (components.hash_start != url_components::omitted) {
+        } else if (components.hash_start != UrlComponents::omitted) {
             ending_index = components.hash_start;
         }
         uint32_t pathname_length = ending_index - components.pathname_start;
@@ -653,29 +655,28 @@ ada_really_inline uint32_t url_aggregator::replace_and_resize(
             buffer.erase(components.host_end, 2);
             difference += 2;
         }
-        if (components.search_start != url_components::omitted) {
+        if (components.search_start != UrlComponents::omitted) {
             components.search_start -= difference;
         }
-        if (components.hash_start != url_components::omitted) {
+        if (components.hash_start != UrlComponents::omitted) {
             components.hash_start -= difference;
         }
-        ada_log("url_aggregator::clear_pathname completed, running checks...");
-#if ADA_DEVELOPMENT_CHECKS
-        ADA_ASSERT_EQUAL(get_pathname(), "",
+        ada_log("UrlAggregator::clear_pathname completed, running checks...");
+
+        DKCHECK_EQ(get_pathname(), "")<<
                          "pathname should have been cleared on buffer=" + buffer +
-                         " with " + components.to_string() + "\n" + to_diagram());
-#endif
-        ADA_ASSERT_TRUE(validate());
-        ada_log("url_aggregator::clear_pathname completed, running checks... ok");
+                         " with " + components.to_string() + "\n" + to_diagram();
+        DKCHECK(validate());
+        ada_log("UrlAggregator::clear_pathname completed, running checks... ok");
     }
 
-    inline void url_aggregator::clear_hostname() {
-        ada_log("url_aggregator::clear_hostname");
-        ADA_ASSERT_TRUE(validate());
+    inline void UrlAggregator::clear_hostname() {
+        ada_log("UrlAggregator::clear_hostname");
+        DKCHECK(validate());
         if (!has_authority()) {
             return;
         }
-        ADA_ASSERT_TRUE(has_authority());
+        DKCHECK(has_authority());
 
         uint32_t hostname_length = components.host_end - components.host_start;
         uint32_t start = components.host_start;
@@ -688,52 +689,50 @@ ada_really_inline uint32_t url_aggregator::replace_and_resize(
         buffer.erase(start, hostname_length);
         components.host_end = start;
         components.pathname_start -= hostname_length;
-        if (components.search_start != url_components::omitted) {
+        if (components.search_start != UrlComponents::omitted) {
             components.search_start -= hostname_length;
         }
-        if (components.hash_start != url_components::omitted) {
+        if (components.hash_start != UrlComponents::omitted) {
             components.hash_start -= hostname_length;
         }
-#if ADA_DEVELOPMENT_CHECKS
-        ADA_ASSERT_EQUAL(get_hostname(), "",
+        DKCHECK_EQ(get_hostname(), "")<<
                          "hostname should have been cleared on buffer=" + buffer +
-                         " with " + components.to_string() + "\n" + to_diagram());
-#endif
-        ADA_ASSERT_TRUE(has_authority());
-        ADA_ASSERT_EQUAL(has_empty_hostname(), true,
+                         " with " + components.to_string() + "\n" + to_diagram();
+        DKCHECK(has_authority());
+        DKCHECK_EQ(has_empty_hostname(), true)<<
                          "hostname should have been cleared on buffer=" + buffer +
-                         " with " + components.to_string() + "\n" + to_diagram());
-        ADA_ASSERT_TRUE(validate());
+                         " with " + components.to_string() + "\n" + to_diagram();
+        DKCHECK(validate());
     }
 
-    [[nodiscard]] inline bool url_aggregator::has_hash() const noexcept {
-        ada_log("url_aggregator::has_hash");
-        return components.hash_start != url_components::omitted;
+    [[nodiscard]] inline bool UrlAggregator::has_hash() const noexcept {
+        ada_log("UrlAggregator::has_hash");
+        return components.hash_start != UrlComponents::omitted;
     }
 
-    [[nodiscard]] inline bool url_aggregator::has_search() const noexcept {
-        ada_log("url_aggregator::has_search");
-        return components.search_start != url_components::omitted;
+    [[nodiscard]] inline bool UrlAggregator::has_search() const noexcept {
+        ada_log("UrlAggregator::has_search");
+        return components.search_start != UrlComponents::omitted;
     }
 
-ada_really_inline bool url_aggregator::has_credentials() const noexcept {
-        ada_log("url_aggregator::has_credentials");
+    TURBO_FORCE_INLINE bool UrlAggregator::has_credentials() const noexcept {
+        ada_log("UrlAggregator::has_credentials");
         return has_non_empty_username() || has_non_empty_password();
     }
 
-    inline bool url_aggregator::cannot_have_credentials_or_port() const {
-        ada_log("url_aggregator::cannot_have_credentials_or_port");
-        return type == ada::scheme::type::FILE ||
+    inline bool UrlAggregator::cannot_have_credentials_or_port() const {
+        ada_log("UrlAggregator::cannot_have_credentials_or_port");
+        return type == fermat::uri::scheme::type::FILE ||
                components.host_start == components.host_end;
     }
 
-    [[nodiscard]] ada_really_inline const ada::url_components &
-    url_aggregator::get_components() const noexcept {
+    [[nodiscard]] TURBO_FORCE_INLINE const fermat::uri::UrlComponents &
+    UrlAggregator::get_components() const noexcept {
         return components;
     }
 
-    [[nodiscard]] inline bool ada::url_aggregator::has_authority() const noexcept {
-        ada_log("url_aggregator::has_authority");
+    [[nodiscard]] inline bool fermat::uri::UrlAggregator::has_authority() const noexcept {
+        ada_log("UrlAggregator::has_authority");
         // Performance: instead of doing this potentially expensive check, we could
         // have a boolean in the struct.
         return components.protocol_end + 2 <= components.host_start &&
@@ -741,9 +740,9 @@ ada_really_inline bool url_aggregator::has_credentials() const noexcept {
                                   components.protocol_end + 2) == "//";
     }
 
-    inline void ada::url_aggregator::add_authority_slashes_if_needed() noexcept {
-        ada_log("url_aggregator::add_authority_slashes_if_needed");
-        ADA_ASSERT_TRUE(validate());
+    inline void fermat::uri::UrlAggregator::add_authority_slashes_if_needed() noexcept {
+        ada_log("UrlAggregator::add_authority_slashes_if_needed");
+        DKCHECK(validate());
         // Protocol setter will insert `http:` to the URL. It is up to hostname setter
         // to insert
         // `//` initially to the buffer, since it depends on the hostname existence.
@@ -758,37 +757,37 @@ ada_really_inline bool url_aggregator::has_credentials() const noexcept {
         components.host_start += 2;
         components.host_end += 2;
         components.pathname_start += 2;
-        if (components.search_start != url_components::omitted) {
+        if (components.search_start != UrlComponents::omitted) {
             components.search_start += 2;
         }
-        if (components.hash_start != url_components::omitted) {
+        if (components.hash_start != UrlComponents::omitted) {
             components.hash_start += 2;
         }
-        ADA_ASSERT_TRUE(validate());
+        DKCHECK(validate());
     }
 
-    inline void ada::url_aggregator::reserve(uint32_t capacity) {
+    inline void fermat::uri::UrlAggregator::reserve(uint32_t capacity) {
         buffer.reserve(capacity);
     }
 
-    inline bool url_aggregator::has_non_empty_username() const noexcept {
-        ada_log("url_aggregator::has_non_empty_username");
+    inline bool UrlAggregator::has_non_empty_username() const noexcept {
+        ada_log("UrlAggregator::has_non_empty_username");
         return components.protocol_end + 2 < components.username_end;
     }
 
-    inline bool url_aggregator::has_non_empty_password() const noexcept {
-        ada_log("url_aggregator::has_non_empty_password");
+    inline bool UrlAggregator::has_non_empty_password() const noexcept {
+        ada_log("UrlAggregator::has_non_empty_password");
         return components.host_start - components.username_end > 0;
     }
 
-    inline bool url_aggregator::has_password() const noexcept {
-        ada_log("url_aggregator::has_password");
+    inline bool UrlAggregator::has_password() const noexcept {
+        ada_log("UrlAggregator::has_password");
         // This function does not care about the length of the password
         return components.host_start > components.username_end &&
                buffer[components.username_end] == ':';
     }
 
-    inline bool url_aggregator::has_empty_hostname() const noexcept {
+    inline bool UrlAggregator::has_empty_hostname() const noexcept {
         if (!has_hostname()) {
             return false;
         }
@@ -801,38 +800,38 @@ ada_really_inline bool url_aggregator::has_credentials() const noexcept {
         return components.username_end != components.host_start;
     }
 
-    inline bool url_aggregator::has_hostname() const noexcept {
+    inline bool UrlAggregator::has_hostname() const noexcept {
         return has_authority();
     }
 
-    inline bool url_aggregator::has_port() const noexcept {
-        ada_log("url_aggregator::has_port");
+    inline bool UrlAggregator::has_port() const noexcept {
+        ada_log("UrlAggregator::has_port");
         // A URL cannot have a username/password/port if its host is null or the empty
         // string, or its scheme is "file".
         return has_hostname() && components.pathname_start != components.host_end;
     }
 
-    [[nodiscard]] inline bool url_aggregator::has_dash_dot() const noexcept {
+    [[nodiscard]] inline bool UrlAggregator::has_dash_dot() const noexcept {
         // If url's host is null, url does not have an opaque path, url's path's size
         // is greater than 1, and url's path[0] is the empty string, then append
         // U+002F (/) followed by U+002E (.) to output.
-        ada_log("url_aggregator::has_dash_dot");
+        ada_log("UrlAggregator::has_dash_dot");
 #if ADA_DEVELOPMENT_CHECKS
         // If pathname_start and host_end are exactly two characters apart, then we
         // either have a one-digit port such as http://test.com:5?param=1 or else we
         // have a /.: sequence such as "non-spec:/.//". We test that this is the case.
         if (components.pathname_start == components.host_end + 2) {
-            ADA_ASSERT_TRUE((buffer[components.host_end] == '/' &&
-                             buffer[components.host_end + 1] == '.') ||
-                            (buffer[components.host_end] == ':' &&
-                             checkers::is_digit(buffer[components.host_end + 1])));
+            DKCHECK((buffer[components.host_end] == '/' &&
+                    buffer[components.host_end + 1] == '.') ||
+                (buffer[components.host_end] == ':' &&
+                    checkers::is_digit(buffer[components.host_end + 1])));
         }
         if (components.pathname_start == components.host_end + 2 &&
             buffer[components.host_end] == '/' &&
             buffer[components.host_end + 1] == '.') {
-            ADA_ASSERT_TRUE(components.pathname_start + 1 < buffer.size());
-            ADA_ASSERT_TRUE(buffer[components.pathname_start] == '/');
-            ADA_ASSERT_TRUE(buffer[components.pathname_start + 1] == '/');
+            DKCHECK(components.pathname_start + 1 < buffer.size());
+            DKCHECK(buffer[components.pathname_start] == '/');
+            DKCHECK(buffer[components.pathname_start + 1] == '/');
         }
 #endif
         // Performance: it should be uncommon for components.pathname_start ==
@@ -844,16 +843,16 @@ ada_really_inline bool url_aggregator::has_credentials() const noexcept {
                buffer[components.host_end + 1] == '.';
     }
 
-    [[nodiscard]] inline std::string_view url_aggregator::get_href() const noexcept
+    [[nodiscard]] inline std::string_view UrlAggregator::get_href() const noexcept
 
-    ada_lifetime_bound {
-        ada_log("url_aggregator::get_href");
+    TURBO_ATTRIBUTE_LIFETIME_BOUND {
+        ada_log("UrlAggregator::get_href");
         return buffer;
     }
 
-ada_really_inline size_t url_aggregator::parse_port(
+    TURBO_FORCE_INLINE size_t UrlAggregator::parse_port(
         std::string_view view, bool check_trailing_content) noexcept {
-        ada_log("url_aggregator::parse_port('", view, "') ", view.size());
+        ada_log("UrlAggregator::parse_port('", view, "') ", view.size());
         if (!view.empty() && view[0] == '-') {
             ada_log("parse_port: view[0] == '0' && view.size() > 1");
             is_valid = false;
@@ -890,10 +889,10 @@ ada_really_inline size_t url_aggregator::parse_port(
         return consumed;
     }
 
-    inline void url_aggregator::set_protocol_as_file() {
-        ada_log("url_aggregator::set_protocol_as_file ");
-        ADA_ASSERT_TRUE(validate());
-        type = ada::scheme::type::FILE;
+    inline void UrlAggregator::set_protocol_as_file() {
+        ada_log("UrlAggregator::set_protocol_as_file ");
+        DKCHECK(validate());
+        type = fermat::uri::scheme::type::FILE;
         // next line could overflow but unsigned arithmetic has well-defined
         // overflows.
         uint32_t new_difference = 5 - components.protocol_end;
@@ -911,19 +910,17 @@ ada_really_inline size_t url_aggregator::parse_port(
         components.host_start += new_difference;
         components.host_end += new_difference;
         components.pathname_start += new_difference;
-        if (components.search_start != url_components::omitted) {
+        if (components.search_start != UrlComponents::omitted) {
             components.search_start += new_difference;
         }
-        if (components.hash_start != url_components::omitted) {
+        if (components.hash_start != UrlComponents::omitted) {
             components.hash_start += new_difference;
         }
-        ADA_ASSERT_TRUE(validate());
+        DKCHECK(validate());
     }
 
     inline std::ostream &operator<<(std::ostream &out,
-                                    const ada::url_aggregator &u) {
+                                    const fermat::uri::UrlAggregator &u) {
         return out << u.to_string();
     }
-} // namespace ada
-
-#endif  // ADA_URL_AGGREGATOR_INL_H
+} // namespace fermat::uri

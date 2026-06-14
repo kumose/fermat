@@ -9,28 +9,28 @@
 #include <fermat/uri/unicode.h>
 #include <fermat/uri/url-inl.h>
 
-namespace ada::parser {
+namespace fermat::uri::parser {
     template<class result_type, bool store_values>
     result_type parse_url_impl(std::string_view user_input,
                                const result_type *base_url) {
         // We can specialize the implementation per type.
         // Important: result_type_is_ada_url is evaluated at *compile time*. This
         // means that doing if constexpr(result_type_is_ada_url) { something } else {
-        // something else } is free (at runtime). This means that ada::url_aggregator
-        // and ada::url **do not have to support the exact same API**.
+        // something else } is free (at runtime). This means that fermat::uri::UrlAggregator
+        // and fermat::uri::url **do not have to support the exact same API**.
         constexpr bool result_type_is_ada_url =
-                std::is_same<ada::url, result_type>::value;
+                std::is_same<fermat::uri::Url, result_type>::value;
         constexpr bool result_type_is_ada_url_aggregator =
-                std::is_same<ada::url_aggregator, result_type>::value;
+                std::is_same<fermat::uri::UrlAggregator, result_type>::value;
         static_assert(result_type_is_ada_url ||
                       result_type_is_ada_url_aggregator); // We don't support
         // anything else for now.
 
-        ada_log("ada::parser::parse_url('", user_input, "' [", user_input.size(),
+        ada_log("fermat::uri::parser::parse_url('", user_input, "' [", user_input.size(),
                 " bytes],", (base_url != nullptr ? base_url->to_string() : "null"),
                 ")");
 
-        ada::state state = ada::state::SCHEME_START;
+        fermat::uri::state state = fermat::uri::state::SCHEME_START;
         result_type url{};
 
         // We refuse to parse URL strings that exceed 4GB. Such strings are almost
@@ -65,7 +65,7 @@ namespace ada::parser {
                     1;
             url.reserve(reserve_capacity);
         }
-        std::string tmp_buffer;
+        fermat::KString tmp_buffer;
         std::string_view internal_input;
         if (unicode::has_tabs_or_newline(user_input)) {
             tmp_buffer = user_input;
@@ -84,7 +84,7 @@ namespace ada::parser {
 
         // Optimization opportunity. Most websites do not have fragment.
         std::optional<std::string_view> fragment = helpers::prune_hash(url_data);
-        // We add it last so that an implementation like ada::url_aggregator
+        // We add it last so that an implementation like fermat::uri::UrlAggregator
         // can append it last to its internal buffer, thus improving performance.
 
         // Here url_data no longer has its fragment.
@@ -100,29 +100,29 @@ namespace ada::parser {
         // We never decrement input_position.
         while (input_position <= input_size) {
             ada_log("In parsing at ", input_position, " out of ", input_size,
-                    " in state ", ada::to_string(state));
+                    " in state ", fermat::uri::to_string(state));
             switch (state) {
-                case ada::state::SCHEME_START: {
+                case fermat::uri::state::SCHEME_START: {
                     ada_log("SCHEME_START ", helpers::substring(url_data, input_position));
                     // If c is an ASCII alpha, append c, lowercased, to buffer, and set
                     // state to scheme state.
                     if ((input_position != input_size) &&
                         checkers::is_alpha(url_data[input_position])) {
-                        state = ada::state::SCHEME;
+                        state = fermat::uri::state::SCHEME;
                         input_position++;
                     } else {
                         // Otherwise, if state override is not given, set state to no scheme
                         // state and decrease pointer by 1.
-                        state = ada::state::NO_SCHEME;
+                        state = fermat::uri::state::NO_SCHEME;
                     }
                     break;
                 }
-                case ada::state::SCHEME: {
+                case fermat::uri::state::SCHEME: {
                     ada_log("SCHEME ", helpers::substring(url_data, input_position));
                     // If c is an ASCII alphanumeric, U+002B (+), U+002D (-), or U+002E (.),
                     // append c, lowercased, to buffer.
                     while ((input_position != input_size) &&
-                           (ada::unicode::is_alnum_plus(url_data[input_position]))) {
+                           (fermat::uri::unicode::is_alnum_plus(url_data[input_position]))) {
                         input_position++;
                     }
                     // Otherwise, if c is U+003A (:), then:
@@ -144,9 +144,9 @@ namespace ada::parser {
                         ada_log("SCHEME the scheme is ", url.get_protocol());
 
                         // If url's scheme is "file", then:
-                        if (url.type == ada::scheme::type::FILE) {
+                        if (url.type == fermat::uri::scheme::type::FILE) {
                             // Set state to file state.
-                            state = ada::state::FILE;
+                            state = fermat::uri::state::FILE;
                         }
                         // Otherwise, if url is special, base is non-null, and base's scheme
                         // is url's scheme: Note: Doing base_url->scheme is unsafe if base_url
@@ -154,38 +154,38 @@ namespace ada::parser {
                         else if (url.is_special() && base_url != nullptr &&
                                  base_url->type == url.type) {
                             // Set state to special relative or authority state.
-                            state = ada::state::SPECIAL_RELATIVE_OR_AUTHORITY;
+                            state = fermat::uri::state::SPECIAL_RELATIVE_OR_AUTHORITY;
                         }
                         // Otherwise, if url is special, set state to special authority
                         // slashes state.
                         else if (url.is_special()) {
-                            state = ada::state::SPECIAL_AUTHORITY_SLASHES;
+                            state = fermat::uri::state::SPECIAL_AUTHORITY_SLASHES;
                         }
                         // Otherwise, if remaining starts with an U+002F (/), set state to
                         // path or authority state and increase pointer by 1.
                         else if (input_position + 1 < input_size &&
                                  url_data[input_position + 1] == '/') {
-                            state = ada::state::PATH_OR_AUTHORITY;
+                            state = fermat::uri::state::PATH_OR_AUTHORITY;
                             input_position++;
                         }
                         // Otherwise, set url's path to the empty string and set state to
                         // opaque path state.
                         else {
-                            state = ada::state::OPAQUE_PATH;
+                            state = fermat::uri::state::OPAQUE_PATH;
                         }
                     }
                     // Otherwise, if state override is not given, set buffer to the empty
                     // string, state to no scheme state, and start over (from the first code
                     // point in input).
                     else {
-                        state = ada::state::NO_SCHEME;
+                        state = fermat::uri::state::NO_SCHEME;
                         input_position = 0;
                         break;
                     }
                     input_position++;
                     break;
                 }
-                case ada::state::NO_SCHEME: {
+                case fermat::uri::state::NO_SCHEME: {
                     ada_log("NO_SCHEME ", helpers::substring(url_data, input_position));
                     // If base is null, or base has an opaque path and c is not U+0023 (#),
                     // validation error, return failure.
@@ -216,18 +216,18 @@ namespace ada::parser {
                     }
                     // Otherwise, if base's scheme is not "file", set state to relative
                     // state and decrease pointer by 1.
-                    else if (base_url->type != ada::scheme::type::FILE) {
+                    else if (base_url->type != fermat::uri::scheme::type::FILE) {
                         ada_log("NO_SCHEME non-file relative path");
-                        state = ada::state::RELATIVE_SCHEME;
+                        state = fermat::uri::state::RELATIVE_SCHEME;
                     }
                     // Otherwise, set state to file state and decrease pointer by 1.
                     else {
                         ada_log("NO_SCHEME file base type");
-                        state = ada::state::FILE;
+                        state = fermat::uri::state::FILE;
                     }
                     break;
                 }
-                case ada::state::AUTHORITY: {
+                case fermat::uri::state::AUTHORITY: {
                     ada_log("AUTHORITY ", helpers::substring(url_data, input_position));
                     // most URLs have no @. Having no @ tells us that we don't have to worry
                     // about AUTHORITY. Of course, we could have @ and still not have to
@@ -241,16 +241,16 @@ namespace ada::parser {
                             (url_data.find('@', input_position) != std::string_view::npos);
 
                     if (!contains_ampersand) {
-                        state = ada::state::HOST;
+                        state = fermat::uri::state::HOST;
                         break;
                     }
                     bool at_sign_seen{false};
                     bool password_token_seen{false};
-                    /**
-                     * We expect something of the sort...
-                     * https://user:pass@example.com:1234/foo/bar?baz#quux
-                     * --------^
-                     */
+                    ///
+                    /// We expect something of the sort...
+                    /// https://user:pass@example.com:1234/foo/bar?baz#quux
+                    /// --------^
+                    ///
                     do {
                         std::string_view view = helpers::substring(url_data, input_position);
                         // The delimiters are @, /, ? \\.
@@ -339,7 +339,7 @@ namespace ada::parser {
                                 url.is_valid = false;
                                 return url;
                             }
-                            state = ada::state::HOST;
+                            state = fermat::uri::state::HOST;
                             break;
                         }
                         if (end_of_authority == input_size) {
@@ -355,7 +355,7 @@ namespace ada::parser {
 
                     break;
                 }
-                case ada::state::SPECIAL_RELATIVE_OR_AUTHORITY: {
+                case fermat::uri::state::SPECIAL_RELATIVE_OR_AUTHORITY: {
                     ada_log("SPECIAL_RELATIVE_OR_AUTHORITY ",
                             helpers::substring(url_data, input_position));
 
@@ -363,34 +363,34 @@ namespace ada::parser {
                     // then set state to special authority ignore slashes state and increase
                     // pointer by 1.
                     std::string_view view = helpers::substring(url_data, input_position);
-                    if (ada::checkers::begins_with(view, "//")) {
-                        state = ada::state::SPECIAL_AUTHORITY_IGNORE_SLASHES;
+                    if (fermat::uri::checkers::begins_with(view, "//")) {
+                        state = fermat::uri::state::SPECIAL_AUTHORITY_IGNORE_SLASHES;
                         input_position += 2;
                     } else {
                         // Otherwise, validation error, set state to relative state and
                         // decrease pointer by 1.
-                        state = ada::state::RELATIVE_SCHEME;
+                        state = fermat::uri::state::RELATIVE_SCHEME;
                     }
 
                     break;
                 }
-                case ada::state::PATH_OR_AUTHORITY: {
+                case fermat::uri::state::PATH_OR_AUTHORITY: {
                     ada_log("PATH_OR_AUTHORITY ",
                             helpers::substring(url_data, input_position));
 
                     // If c is U+002F (/), then set state to authority state.
                     if ((input_position != input_size) &&
                         (url_data[input_position] == '/')) {
-                        state = ada::state::AUTHORITY;
+                        state = fermat::uri::state::AUTHORITY;
                         input_position++;
                     } else {
                         // Otherwise, set state to path state, and decrease pointer by 1.
-                        state = ada::state::PATH;
+                        state = fermat::uri::state::PATH;
                     }
 
                     break;
                 }
-                case ada::state::RELATIVE_SCHEME: {
+                case fermat::uri::state::RELATIVE_SCHEME: {
                     ada_log("RELATIVE_SCHEME ",
                             helpers::substring(url_data, input_position));
 
@@ -403,7 +403,7 @@ namespace ada::parser {
                         ada_log(
                             "RELATIVE_SCHEME if c is U+002F (/), then set state to relative "
                             "slash state");
-                        state = ada::state::RELATIVE_SLASH;
+                        state = fermat::uri::state::RELATIVE_SLASH;
                     } else if (url.is_special() && (input_position != input_size) &&
                                (url_data[input_position] == '\\')) {
                         // Otherwise, if url is special and c is U+005C (\), validation error,
@@ -411,7 +411,7 @@ namespace ada::parser {
                         ada_log(
                             "RELATIVE_SCHEME  if url is special and c is U+005C, validation "
                             "error, set state to relative slash state");
-                        state = ada::state::RELATIVE_SLASH;
+                        state = fermat::uri::state::RELATIVE_SLASH;
                     } else {
                         ada_log("RELATIVE_SCHEME otherwise");
                         // Set url's username to base's username, url's password to base's
@@ -446,7 +446,7 @@ namespace ada::parser {
                         // state to query state.
                         if ((input_position != input_size) &&
                             (url_data[input_position] == '?')) {
-                            state = ada::state::QUERY;
+                            state = fermat::uri::state::QUERY;
                         }
                         // Otherwise, if c is not the EOF code point:
                         else if (input_position != input_size) {
@@ -458,18 +458,18 @@ namespace ada::parser {
                             } else {
                                 std::string_view path = url.get_pathname();
                                 if (helpers::shorten_path(path, url.type)) {
-                                    url.update_base_pathname(std::string(path));
+                                    url.update_base_pathname(fermat::KString(path));
                                 }
                             }
                             // Set state to path state and decrease pointer by 1.
-                            state = ada::state::PATH;
+                            state = fermat::uri::state::PATH;
                             break;
                         }
                     }
                     input_position++;
                     break;
                 }
-                case ada::state::RELATIVE_SLASH: {
+                case fermat::uri::state::RELATIVE_SLASH: {
                     ada_log("RELATIVE_SLASH ",
                             helpers::substring(url_data, input_position));
 
@@ -478,12 +478,12 @@ namespace ada::parser {
                         (url_data[input_position] == '/' ||
                          url_data[input_position] == '\\')) {
                         // Set state to special authority ignore slashes state.
-                        state = ada::state::SPECIAL_AUTHORITY_IGNORE_SLASHES;
+                        state = fermat::uri::state::SPECIAL_AUTHORITY_IGNORE_SLASHES;
                     }
                     // Otherwise, if c is U+002F (/), then set state to authority state.
                     else if ((input_position != input_size) &&
                              (url_data[input_position] == '/')) {
-                        state = ada::state::AUTHORITY;
+                        state = fermat::uri::state::AUTHORITY;
                     }
                     // Otherwise, set
                     // - url's username to base's username,
@@ -505,14 +505,14 @@ namespace ada::parser {
                             url.set_hostname(base_url->get_hostname());
                             url.update_base_port(base_url->retrieve_base_port());
                         }
-                        state = ada::state::PATH;
+                        state = fermat::uri::state::PATH;
                         break;
                     }
 
                     input_position++;
                     break;
                 }
-                case ada::state::SPECIAL_AUTHORITY_SLASHES: {
+                case fermat::uri::state::SPECIAL_AUTHORITY_SLASHES: {
                     ada_log("SPECIAL_AUTHORITY_SLASHES ",
                             helpers::substring(url_data, input_position));
 
@@ -520,13 +520,13 @@ namespace ada::parser {
                     // then set state to special authority ignore slashes state and increase
                     // pointer by 1.
                     std::string_view view = helpers::substring(url_data, input_position);
-                    if (ada::checkers::begins_with(view, "//")) {
+                    if (fermat::uri::checkers::begins_with(view, "//")) {
                         input_position += 2;
                     }
 
                     [[fallthrough]];
                 }
-                case ada::state::SPECIAL_AUTHORITY_IGNORE_SLASHES: {
+                case fermat::uri::state::SPECIAL_AUTHORITY_IGNORE_SLASHES: {
                     ada_log("SPECIAL_AUTHORITY_IGNORE_SLASHES ",
                             helpers::substring(url_data, input_position));
 
@@ -537,19 +537,19 @@ namespace ada::parser {
                             (url_data[input_position] == '\\'))) {
                         input_position++;
                     }
-                    state = ada::state::AUTHORITY;
+                    state = fermat::uri::state::AUTHORITY;
 
                     break;
                 }
-                case ada::state::QUERY: {
+                case fermat::uri::state::QUERY: {
                     ada_log("QUERY ", helpers::substring(url_data, input_position));
                     if constexpr (store_values) {
                         // Let queryPercentEncodeSet be the special-query percent-encode set
                         // if url is special; otherwise the query percent-encode set.
                         const uint8_t *query_percent_encode_set =
                                 url.is_special()
-                                    ? ada::character_sets::SPECIAL_QUERY_PERCENT_ENCODE
-                                    : ada::character_sets::QUERY_PERCENT_ENCODE;
+                                    ? fermat::uri::character_sets::SPECIAL_QUERY_PERCENT_ENCODE
+                                    : fermat::uri::character_sets::QUERY_PERCENT_ENCODE;
 
                         // Percent-encode after encoding, with encoding, buffer, and
                         // queryPercentEncodeSet, and append the result to url's query.
@@ -562,7 +562,7 @@ namespace ada::parser {
                     }
                     return url;
                 }
-                case ada::state::HOST: {
+                case fermat::uri::state::HOST: {
                     ada_log("HOST ", helpers::substring(url_data, input_position));
 
                     std::string_view host_view =
@@ -586,7 +586,7 @@ namespace ada::parser {
                         ada_log("HOST parsing results in ", url.get_hostname());
                         // Set url's host to host, buffer to the empty string, and state to
                         // port state.
-                        state = ada::state::PORT;
+                        state = fermat::uri::state::PORT;
                         input_position++;
                     }
                     // Otherwise, if one of the following is true:
@@ -613,12 +613,12 @@ namespace ada::parser {
                                 " href=", url.get_href());
 
                         // Set url's host to host, and state to path start state.
-                        state = ada::state::PATH_START;
+                        state = fermat::uri::state::PATH_START;
                     }
 
                     break;
                 }
-                case ada::state::OPAQUE_PATH: {
+                case fermat::uri::state::OPAQUE_PATH: {
                     ada_log("OPAQUE_PATH ", helpers::substring(url_data, input_position));
                     std::string_view view = helpers::substring(url_data, input_position);
                     // If c is U+003F (?), then set url's query to the empty string and
@@ -626,7 +626,7 @@ namespace ada::parser {
                     size_t location = view.find('?');
                     if (location != std::string_view::npos) {
                         view.remove_suffix(view.size() - location);
-                        state = ada::state::QUERY;
+                        state = fermat::uri::state::QUERY;
                         input_position += location + 1;
                     } else {
                         input_position = input_size + 1;
@@ -638,7 +638,7 @@ namespace ada::parser {
                         view, character_sets::C0_CONTROL_PERCENT_ENCODE));
                     break;
                 }
-                case ada::state::PORT: {
+                case fermat::uri::state::PORT: {
                     ada_log("PORT ", helpers::substring(url_data, input_position));
                     std::string_view port_view =
                             helpers::substring(url_data, input_position);
@@ -650,13 +650,13 @@ namespace ada::parser {
                     state = state::PATH_START;
                     [[fallthrough]];
                 }
-                case ada::state::PATH_START: {
+                case fermat::uri::state::PATH_START: {
                     ada_log("PATH_START ", helpers::substring(url_data, input_position));
 
                     // If url is special, then:
                     if (url.is_special()) {
                         // Set state to path state.
-                        state = ada::state::PATH;
+                        state = fermat::uri::state::PATH;
 
                         // Optimization: Avoiding going into PATH state improves the
                         // performance of urls ending with /.
@@ -681,12 +681,12 @@ namespace ada::parser {
                     // set url's query to the empty string and state to query state.
                     else if ((input_position != input_size) &&
                              (url_data[input_position] == '?')) {
-                        state = ada::state::QUERY;
+                        state = fermat::uri::state::QUERY;
                     }
                     // Otherwise, if c is not the EOF code point:
                     else if (input_position != input_size) {
                         // Set state to path state.
-                        state = ada::state::PATH;
+                        state = fermat::uri::state::PATH;
 
                         // If c is not U+002F (/), then decrease pointer by 1.
                         if (url_data[input_position] != '/') {
@@ -697,7 +697,7 @@ namespace ada::parser {
                     input_position++;
                     break;
                 }
-                case ada::state::PATH: {
+                case fermat::uri::state::PATH: {
                     std::string_view view = helpers::substring(url_data, input_position);
                     ada_log("PATH ", helpers::substring(url_data, input_position));
 
@@ -705,7 +705,7 @@ namespace ada::parser {
                     // Furthermore, we can immediately locate the '?'.
                     size_t locofquestionmark = view.find('?');
                     if (locofquestionmark != std::string_view::npos) {
-                        state = ada::state::QUERY;
+                        state = fermat::uri::state::QUERY;
                         view.remove_suffix(view.size() - locofquestionmark);
                         input_position += locofquestionmark + 1;
                     } else {
@@ -716,12 +716,12 @@ namespace ada::parser {
                             helpers::parse_prepared_path(view, url.type, url.path);
                         } else {
                             url.consume_prepared_path(view);
-                            ADA_ASSERT_TRUE(url.validate());
+                            DKCHECK(url.validate());
                         }
                     }
                     break;
                 }
-                case ada::state::FILE_SLASH: {
+                case fermat::uri::state::FILE_SLASH: {
                     ada_log("FILE_SLASH ", helpers::substring(url_data, input_position));
 
                     // If c is U+002F (/) or U+005C (\), then:
@@ -730,7 +730,7 @@ namespace ada::parser {
                          url_data[input_position] == '\\')) {
                         ada_log("FILE_SLASH c is U+002F or U+005C");
                         // Set state to file host state.
-                        state = ada::state::FILE_HOST;
+                        state = fermat::uri::state::FILE_HOST;
                         input_position++;
                     } else {
                         ada_log("FILE_SLASH otherwise");
@@ -738,7 +738,7 @@ namespace ada::parser {
                         // Note: it is unsafe to do base_url->scheme unless you know that
                         // base_url_has_value() is true.
                         if (base_url != nullptr &&
-                            base_url->type == ada::scheme::type::FILE) {
+                            base_url->type == fermat::uri::scheme::type::FILE) {
                             // Set url's host to base's host.
                             if constexpr (result_type_is_ada_url) {
                                 url.host = base_url->host;
@@ -774,12 +774,12 @@ namespace ada::parser {
                         }
 
                         // Set state to path state, and decrease pointer by 1.
-                        state = ada::state::PATH;
+                        state = fermat::uri::state::PATH;
                     }
 
                     break;
                 }
-                case ada::state::FILE_HOST: {
+                case fermat::uri::state::FILE_HOST: {
                     std::string_view view = helpers::substring(url_data, input_position);
                     ada_log("FILE_HOST ", helpers::substring(url_data, input_position));
 
@@ -789,7 +789,7 @@ namespace ada::parser {
                         (location != std::string_view::npos) ? location : view.size());
 
                     if (checkers::is_windows_drive_letter(file_host_buffer)) {
-                        state = ada::state::PATH;
+                        state = fermat::uri::state::PATH;
                     } else if (file_host_buffer.empty()) {
                         // Set url's host to the empty string.
                         if constexpr (result_type_is_ada_url) {
@@ -798,7 +798,7 @@ namespace ada::parser {
                             url.update_base_hostname("");
                         }
                         // Set state to path start state.
-                        state = ada::state::PATH_START;
+                        state = fermat::uri::state::PATH_START;
                     } else {
                         size_t consumed_bytes = file_host_buffer.size();
                         input_position += consumed_bytes;
@@ -820,12 +820,12 @@ namespace ada::parser {
                         }
 
                         // Set buffer to the empty string and state to path start state.
-                        state = ada::state::PATH_START;
+                        state = fermat::uri::state::PATH_START;
                     }
 
                     break;
                 }
-                case ada::state::FILE: {
+                case fermat::uri::state::FILE: {
                     ada_log("FILE ", helpers::substring(url_data, input_position));
                     std::string_view file_view =
                             helpers::substring(url_data, input_position);
@@ -843,11 +843,11 @@ namespace ada::parser {
                          url_data[input_position] == '\\')) {
                         ada_log("FILE c is U+002F or U+005C");
                         // Set state to file slash state.
-                        state = ada::state::FILE_SLASH;
+                        state = fermat::uri::state::FILE_SLASH;
                     }
                     // Otherwise, if base is non-null and base's scheme is "file":
                     else if (base_url != nullptr &&
-                             base_url->type == ada::scheme::type::FILE) {
+                             base_url->type == fermat::uri::scheme::type::FILE) {
                         // Set url's host to base's host, url's path to a clone of base's
                         // path, and url's query to base's query.
                         ada_log("FILE base non-null");
@@ -867,7 +867,7 @@ namespace ada::parser {
                         // If c is U+003F (?), then set url's query to the empty string and
                         // state to query state.
                         if (input_position != input_size && url_data[input_position] == '?') {
-                            state = ada::state::QUERY;
+                            state = fermat::uri::state::QUERY;
                         }
                         // Otherwise, if c is not the EOF code point:
                         else if (input_position != input_size) {
@@ -881,7 +881,7 @@ namespace ada::parser {
                                 } else {
                                     std::string_view path = url.get_pathname();
                                     if (helpers::shorten_path(path, url.type)) {
-                                        url.update_base_pathname(std::string(path));
+                                        url.update_base_pathname(fermat::KString(path));
                                     }
                                 }
                             }
@@ -893,14 +893,14 @@ namespace ada::parser {
                             }
 
                             // Set state to path state and decrease pointer by 1.
-                            state = ada::state::PATH;
+                            state = fermat::uri::state::PATH;
                             break;
                         }
                     }
                     // Otherwise, set state to path state, and decrease pointer by 1.
                     else {
                         ada_log("FILE go to path");
-                        state = ada::state::PATH;
+                        state = fermat::uri::state::PATH;
                         break;
                     }
 
@@ -908,7 +908,7 @@ namespace ada::parser {
                     break;
                 }
                 default:
-                    ada::unreachable();
+                    TURBO_UNREACHABLE();
             }
         }
         if constexpr (store_values) {
@@ -919,11 +919,11 @@ namespace ada::parser {
         return url;
     }
 
-    template url parse_url_impl(std::string_view user_input,
-                                const url *base_url = nullptr);
+    template Url parse_url_impl(std::string_view user_input,
+                                const Url *base_url);
 
-    template url_aggregator parse_url_impl(
-        std::string_view user_input, const url_aggregator *base_url = nullptr);
+    template UrlAggregator parse_url_impl(
+        std::string_view user_input, const UrlAggregator *base_url);
 
     template<class result_type>
     result_type parse_url(std::string_view user_input,
@@ -931,9 +931,9 @@ namespace ada::parser {
         return parse_url_impl<result_type, true>(user_input, base_url);
     }
 
-    template url parse_url<url>(std::string_view user_input,
-                                const url *base_url = nullptr);
+    template Url parse_url<Url>(std::string_view user_input,
+                                const Url *base_url);
 
-    template url_aggregator parse_url<url_aggregator>(
-        std::string_view user_input, const url_aggregator *base_url = nullptr);
-} // namespace ada::parser
+    template UrlAggregator parse_url<UrlAggregator>(
+        std::string_view user_input, const UrlAggregator *base_url);
+} // namespace fermat::uri::parser

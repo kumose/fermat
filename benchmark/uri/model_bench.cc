@@ -56,7 +56,7 @@ std::vector<std::string> split_string(const std::string &str) {
 struct stat_numbers {
   std::string url_string{};
   std::string href{};
-  ada::url_components components{};
+  fermat::uri::UrlComponents components{};
   event_aggregate counters{};
   bool is_valid = true;
   bool has_port = false;
@@ -75,13 +75,13 @@ size_t count_ascii_bytes(const std::string &s) {
   return counter;
 }
 
-template <class result_type = ada::url_aggregator>
+template <class result_type = fermat::uri::UrlAggregator>
 std::vector<stat_numbers> collect_values(
     const std::vector<std::string> &url_examples, size_t trials) {
   std::vector<stat_numbers> numbers(url_examples.size());
   for (size_t i = 0; i < url_examples.size(); i++) {
     numbers[i].url_string = url_examples[i];
-    ada::result<result_type> url = ada::parse<result_type>(url_examples[i]);
+    fermat::uri::result<result_type> url = fermat::uri::parse<result_type>(url_examples[i]);
     if (url) {
       numbers[i].is_valid = true;
       numbers[i].href = url->get_href();
@@ -99,7 +99,7 @@ std::vector<stat_numbers> collect_values(
     for (stat_numbers &n : numbers) {
       std::atomic_thread_fence(std::memory_order_acquire);
       collector.start();
-      ada::result<result_type> url = ada::parse<result_type>(n.url_string);
+      fermat::uri::result<result_type> url = fermat::uri::parse<result_type>(n.url_string);
       if (url) {
         href_size += url->get_href().size();
       }
@@ -145,14 +145,14 @@ void print(const stat_numbers &n) {
 
   std::cout << std::setw(15) << n.href.size() << ",";
   size_t end = n.href.size();
-  if (n.components.hash_start != ada::url_components::omitted) {
+  if (n.components.hash_start != fermat::uri::UrlComponents::omitted) {
     std::cout << std::setw(15) << (end - n.components.hash_start) << ",";
     end = n.components.hash_start;
   } else {
     std::cout << std::setw(15) << 0 << ",";
   }
   // search size
-  if (n.components.search_start != ada::url_components::omitted) {
+  if (n.components.search_start != fermat::uri::UrlComponents::omitted) {
     std::cout << std::setw(15) << (end - n.components.search_start) << ",";
     end = n.components.search_start;
   } else {
@@ -171,8 +171,8 @@ void print(const stat_numbers &n) {
   std::cout << std::setw(15) << (end - n.components.protocol_end) << ",";
   end = n.components.protocol_end;
   // protocol type
-  ada::result<ada::url_aggregator> url =
-      ada::parse<ada::url_aggregator>(n.url_string);
+  fermat::uri::result<fermat::uri::UrlAggregator> url =
+      fermat::uri::parse<fermat::uri::UrlAggregator>(n.url_string);
   if (url) {
     std::cout << std::setw(15) << int(url->type);
   } else {
@@ -269,11 +269,11 @@ int main(int argc, char **argv) {
   size_t trials = 100;
   std::cout << "# trials " << trials << std::endl;
   if (use_ada_url) {
-    std::cout << "# ada::url" << std::endl;
-    print(collect_values<ada::url>(input_urls, trials));
+    std::cout << "# fermat::uri::Url" << std::endl;
+    print(collect_values<fermat::uri::Url>(input_urls, trials));
   } else {
-    std::cout << "# ada::url_aggregator" << std::endl;
-    print(collect_values<ada::url_aggregator>(input_urls, trials));
+    std::cout << "# fermat::uri::UrlAggregator" << std::endl;
+    print(collect_values<fermat::uri::UrlAggregator>(input_urls, trials));
   }
 
   return EXIT_SUCCESS;

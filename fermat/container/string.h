@@ -132,7 +132,7 @@ namespace fermat {
             return _capacity.first();
         }
 
-    private:
+    public:
         void reset() {
             _data = const_cast<Char *>(&kZero);
             size_ = 0;
@@ -300,6 +300,8 @@ namespace fermat {
         static constexpr size_type npos = size_type(-1);
         typedef std::true_type IsRelocatable;
 
+        using view_type = std::basic_string_view<Char>;
+
     private:
         using string_view_type = std::basic_string_view<value_type, traits_type>;
 
@@ -456,6 +458,11 @@ namespace fermat {
 
         BasicString &operator=(const value_type *s) {
             assign(s);
+            return *this;
+        }
+
+        BasicString &operator=(view_type s) {
+            assign(s.data(), s.size());
             return *this;
         }
 
@@ -673,12 +680,12 @@ namespace fermat {
             return replace(begin(), end(), first_or_n, last_or_c);
         }
 
-        BasicString &insert(size_type pos1, const BasicString &str) {
+        BasicString &insert(size_type pos1, view_type str) {
             return insert(pos1, str.data(), str.size());
         }
 
         BasicString &insert(
-            size_type pos1, const BasicString &str, size_type pos2, size_type n) {
+            size_type pos1, view_type str, size_type pos2, size_type n) {
             enforce<std::out_of_range>(pos2 <= str.length(), "");
             procrustes(n, str.length() - pos2);
             return insert(pos1, str.data() + pos2, n);
@@ -787,7 +794,7 @@ namespace fermat {
         // Replaces at most n1 chars of *this, starting with pos1 with the
         // content of str
         BasicString &replace(
-            size_type pos1, size_type n1, const BasicString &str) {
+            size_type pos1, size_type n1, view_type str) {
             return replace(pos1, n1, str.data(), str.size());
         }
 
@@ -796,7 +803,7 @@ namespace fermat {
         BasicString &replace(
             size_type pos1,
             size_type n1,
-            const BasicString &str,
+            view_type str,
             size_type pos2,
             size_type n2) {
             enforce<std::out_of_range>(pos2 <= str.length(), "");
@@ -827,7 +834,7 @@ namespace fermat {
             return replace(b, b + n1, s_or_n2, n_or_c);
         }
 
-        BasicString &replace(iterator i1, iterator i2, const BasicString &str) {
+        BasicString &replace(iterator i1, iterator i2, view_type str) {
             return replace(i1, i2, str.data(), str.length());
         }
 

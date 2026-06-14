@@ -3,26 +3,26 @@
 #include <fermat/uri/url_components.h>
 
 #include <numeric>
-#include <string>
+#include <fermat/container/string.h>
 
-namespace ada {
-    [[nodiscard]] bool url_components::check_offset_consistency() const noexcept {
-        /**
-   * https://user:pass@example.com:1234/foo/bar?baz#quux
-   *       |     |    |          | ^^^^|       |   |
-   *       |     |    |          | |   |       |   `----- hash_start
-   *       |     |    |          | |   |       `--------- search_start
-   *       |     |    |          | |   `----------------- pathname_start
-   *       |     |    |          | `--------------------- port
-   *       |     |    |          `----------------------- host_end
-   *       |     |    `---------------------------------- host_start
-   *       |     `--------------------------------------- username_end
-   *       `--------------------------------------------- protocol_end
-   */
-        // These conditions can be made more strict.
+namespace fermat::uri {
+    [[nodiscard]] bool UrlComponents::check_offset_consistency() const noexcept {
+        ///
+        /// https://user:pass@example.com:1234/foo/bar?baz#quux
+        ///       |     |    |          | ^^^^|       |   |
+        ///       |     |    |          | |   |       |   `----- hash_start
+        ///       |     |    |          | |   |       `--------- search_start
+        ///       |     |    |          | |   `----------------- pathname_start
+        ///       |     |    |          | `--------------------- port
+        ///       |     |    |          `----------------------- host_end
+        ///       |     |    `---------------------------------- host_start
+        ///       |     `--------------------------------------- username_end
+        ///       `--------------------------------------------- protocol_end
+        ///
+        /// These conditions can be made more strict.
         uint32_t index = 0;
 
-        if (protocol_end == url_components::omitted) {
+        if (protocol_end == UrlComponents::omitted) {
             return false;
         }
         if (protocol_end < index) {
@@ -30,7 +30,7 @@ namespace ada {
         }
         index = protocol_end;
 
-        if (username_end == url_components::omitted) {
+        if (username_end == UrlComponents::omitted) {
             return false;
         }
         if (username_end < index) {
@@ -38,7 +38,7 @@ namespace ada {
         }
         index = username_end;
 
-        if (host_start == url_components::omitted) {
+        if (host_start == UrlComponents::omitted) {
             return false;
         }
         if (host_start < index) {
@@ -46,7 +46,7 @@ namespace ada {
         }
         index = host_start;
 
-        if (port != url_components::omitted) {
+        if (port != UrlComponents::omitted) {
             if (port > 0xffff) {
                 return false;
             }
@@ -57,7 +57,7 @@ namespace ada {
             index += port_length;
         }
 
-        if (pathname_start == url_components::omitted) {
+        if (pathname_start == UrlComponents::omitted) {
             return false;
         }
         if (pathname_start < index) {
@@ -65,14 +65,14 @@ namespace ada {
         }
         index = pathname_start;
 
-        if (search_start != url_components::omitted) {
+        if (search_start != UrlComponents::omitted) {
             if (search_start < index) {
                 return false;
             }
             index = search_start;
         }
 
-        if (hash_start != url_components::omitted) {
+        if (hash_start != UrlComponents::omitted) {
             if (hash_start < index) {
                 return false;
             }
@@ -81,8 +81,8 @@ namespace ada {
         return true;
     }
 
-    [[nodiscard]] std::string url_components::to_string() const {
-        std::string answer;
+    [[nodiscard]] fermat::KString UrlComponents::to_string() const {
+        fermat::KString answer;
         auto back = std::back_insert_iterator(answer);
         answer.append("{\n");
 
@@ -121,4 +121,4 @@ namespace ada {
         answer.append("\n}");
         return answer;
     }
-} // namespace ada
+} // namespace fermat::uri

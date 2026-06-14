@@ -4,24 +4,24 @@
 
 #include <numeric>
 #include <algorithm>
-#include <string>
+#include <fermat/container/string.h>
 
-namespace ada {
-    bool url::parse_opaque_host(std::string_view input) {
+namespace fermat::uri {
+    bool Url::parse_opaque_host(std::string_view input) {
         ada_log("parse_opaque_host ", input, " [", input.size(), " bytes]");
         if (std::any_of(input.begin(), input.end(),
-                        ada::unicode::is_forbidden_host_code_point)) {
+                        fermat::uri::unicode::is_forbidden_host_code_point)) {
             return is_valid = false;
         }
 
         // Return the result of running UTF-8 percent-encode on input using the C0
         // control percent-encode set.
-        host = ada::unicode::percent_encode(
-            input, ada::character_sets::C0_CONTROL_PERCENT_ENCODE);
+        host = fermat::uri::unicode::percent_encode(
+            input, fermat::uri::character_sets::C0_CONTROL_PERCENT_ENCODE);
         return true;
     }
 
-    bool url::parse_ipv4(std::string_view input) {
+    bool Url::parse_ipv4(std::string_view input) {
         ada_log("parse_ipv4 ", input, " [", input.size(), " bytes]");
         if (input.back() == '.') {
             input.remove_suffix(1);
@@ -90,13 +90,13 @@ namespace ada {
             host = original_input; // The original input was already all decimal and we
             // validated it.
         } else {
-            host = ada::serializers::ipv4(ipv4); // We have to reserialize the address.
+            host = fermat::uri::serializers::ipv4(ipv4); // We have to reserialize the address.
         }
         host_type = IPV4;
         return true;
     }
 
-    bool url::parse_ipv6(std::string_view input) {
+    bool Url::parse_ipv6(std::string_view input) {
         ada_log("parse_ipv6 ", input, " [", input.size(), " bytes]");
 
         if (input.empty()) {
@@ -320,16 +320,16 @@ namespace ada {
                 "error, return failure");
             return is_valid = false;
         }
-        host = ada::serializers::ipv6(address);
+        host = fermat::uri::serializers::ipv6(address);
         ada_log("parse_ipv6 ", *host);
         host_type = IPV6;
         return true;
     }
 
     template<bool has_state_override>
-ada_really_inline bool url::parse_scheme(const std::string_view input) {
-        auto parsed_type = ada::scheme::get_scheme_type(input);
-        bool is_input_special = (parsed_type != ada::scheme::NOT_SPECIAL);
+TURBO_FORCE_INLINE bool Url::parse_scheme(const std::string_view input) {
+        auto parsed_type = fermat::uri::scheme::get_scheme_type(input);
+        bool is_input_special = (parsed_type != fermat::uri::scheme::NOT_SPECIAL);
         /**
    * In the common case, we will immediately recognize a special scheme (e.g.,
    *http, https), in which case, we can go really fast.
@@ -346,13 +346,13 @@ ada_really_inline bool url::parse_scheme(const std::string_view input) {
                 // If url includes credentials or has a non-null port, and buffer is
                 // "file", then return.
                 if ((has_credentials() || port.has_value()) &&
-                    parsed_type == ada::scheme::type::FILE) {
+                    parsed_type == fermat::uri::scheme::type::FILE) {
                     return false;
                 }
 
                 // If url's scheme is "file" and its host is an empty host, then return.
                 // An empty host is the empty string.
-                if (type == ada::scheme::type::FILE && host.has_value() &&
+                if (type == fermat::uri::scheme::type::FILE && host.has_value() &&
                     host.value().empty()) {
                     return false;
                 }
@@ -374,7 +374,7 @@ ada_really_inline bool url::parse_scheme(const std::string_view input) {
             }
         } else {
             // slow path
-            std::string _buffer(input);
+            fermat::KString _buffer(input);
             // Next function is only valid if the input is ASCII and returns false
             // otherwise, but it seems that we always have ascii content so we do not
             // need to check the return value.
@@ -385,7 +385,7 @@ ada_really_inline bool url::parse_scheme(const std::string_view input) {
                 // If url's scheme is a special scheme and buffer is not a special scheme,
                 // then return. If url's scheme is not a special scheme and buffer is a
                 // special scheme, then return.
-                if (is_special() != ada::scheme::is_special(_buffer)) {
+                if (is_special() != fermat::uri::scheme::is_special(_buffer)) {
                     return true;
                 }
 
@@ -397,7 +397,7 @@ ada_really_inline bool url::parse_scheme(const std::string_view input) {
 
                 // If url's scheme is "file" and its host is an empty host, then return.
                 // An empty host is the empty string.
-                if (type == ada::scheme::type::FILE && host.has_value() &&
+                if (type == fermat::uri::scheme::type::FILE && host.has_value() &&
                     host.value().empty()) {
                     return true;
                 }
@@ -422,7 +422,7 @@ ada_really_inline bool url::parse_scheme(const std::string_view input) {
         return true;
     }
 
-ada_really_inline bool url::parse_host(std::string_view input) {
+TURBO_FORCE_INLINE bool Url::parse_host(std::string_view input) {
         ada_log("parse_host ", input, " [", input.size(), " bytes]");
         if (input.empty()) {
             return is_valid = false;
@@ -452,7 +452,7 @@ ada_really_inline bool url::parse_host(std::string_view input) {
         // to ASCII with domain and false. The most common case is an ASCII input, in
         // which case we do not need to call the expensive 'to_ascii' if a few
         // conditions are met: no '%' and no 'xn-' subsequence.
-        std::string buffer = std::string(input);
+        fermat::KString buffer = fermat::KString(input);
         // This next function checks that the result is ascii, but we are going to
         // to check anyhow with is_forbidden.
         // bool is_ascii =
@@ -470,7 +470,7 @@ ada_really_inline bool url::parse_host(std::string_view input) {
             return true;
         }
         ada_log("parse_host calling to_ascii");
-        is_valid = ada::unicode::to_ascii(host, input, input.find('%'));
+        is_valid = fermat::uri::unicode::to_ascii(host, input, input.find('%'));
         if (!is_valid) {
             ada_log("parse_host to_ascii returns false");
             return is_valid = false;
@@ -479,7 +479,7 @@ ada_really_inline bool url::parse_host(std::string_view input) {
                 " bytes]");
 
         if (std::any_of(host.value().begin(), host.value().end(),
-                        ada::unicode::is_forbidden_domain_code_point)) {
+                        fermat::uri::unicode::is_forbidden_domain_code_point)) {
             host = std::nullopt;
             return is_valid = false;
         }
@@ -494,9 +494,9 @@ ada_really_inline bool url::parse_host(std::string_view input) {
         return true;
     }
 
-ada_really_inline void url::parse_path(std::string_view input) {
+TURBO_FORCE_INLINE void Url::parse_path(std::string_view input) {
         ada_log("parse_path ", input);
-        std::string tmp_buffer;
+        fermat::KString tmp_buffer;
         std::string_view internal_input;
         if (unicode::has_tabs_or_newline(input)) {
             tmp_buffer = input;
@@ -534,11 +534,11 @@ ada_really_inline void url::parse_path(std::string_view input) {
         }
     }
 
-    [[nodiscard]] std::string url::to_string() const {
+    [[nodiscard]] fermat::KString Url::to_string() const {
         if (!is_valid) {
             return "null";
         }
-        std::string answer;
+        fermat::KString answer;
         auto back = std::back_insert_iterator(answer);
         answer.append("{\n");
         answer.append("\t\"protocol\":\"");
@@ -583,10 +583,10 @@ ada_really_inline void url::parse_path(std::string_view input) {
         return answer;
     }
 
-    [[nodiscard]] bool url::has_valid_domain() const noexcept {
+    [[nodiscard]] bool Url::has_valid_domain() const noexcept {
         if (!host.has_value()) {
             return false;
         }
         return checkers::verify_dns_length(host.value());
     }
-} // namespace ada
+} // namespace fermat::uri

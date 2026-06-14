@@ -1,9 +1,23 @@
-/**
- * @file checkers-inl.h
- * @brief Definitions for URL specific checkers used within Ada.
- */
-#ifndef ADA_CHECKERS_INL_H
-#define ADA_CHECKERS_INL_H
+// Copyright (C) 2026 Kumo inc. and its affiliates. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// @file checkers-inl.h
+/// @brief Definitions for URL specific checkers used within Ada.
+
+#pragma once
 
 #include <fermat/uri/common_defs.h>
 
@@ -11,7 +25,7 @@
 #include <string_view>
 #include <cstring>
 
-namespace ada::checkers {
+namespace fermat::uri::checkers {
     inline bool has_hex_prefix_unsafe(std::string_view input) {
         // This is actually efficient code, see has_hex_prefix for the assembly.
         uint32_t value_one = 1;
@@ -53,13 +67,11 @@ namespace ada::checkers {
         return input.size() >= 2 && (is_alpha(input[0]) && (input[1] == ':'));
     }
 
-ada_really_inline bool begins_with(std::string_view view,
-                                   std::string_view prefix) {
+    [[nodiscard]] inline bool begins_with(std::string_view view,
+                                          std::string_view prefix) {
         // in C++20, you have view.begins_with(prefix)
         // std::equal is constexpr in C++20
         return view.size() >= prefix.size() &&
                std::equal(prefix.begin(), prefix.end(), view.begin());
     }
-} // namespace ada::checkers
-
-#endif  // ADA_CHECKERS_INL_H
+} // namespace fermat::uri::checkers

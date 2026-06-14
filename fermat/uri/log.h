@@ -13,13 +13,13 @@
 #define ADA_LOGGING 0
 #endif
 
-namespace ada {
+namespace fermat::uri {
     /**
  * Private function used for logging messages.
  * @private
  */
     template<typename T>
-ada_really_inline void inner_log([[maybe_unused]] T t) {
+TURBO_FORCE_INLINE void inner_log([[maybe_unused]] T t) {
 #if ADA_LOGGING
         std::cout << t << std::endl;
 #endif
@@ -30,7 +30,7 @@ ada_really_inline void inner_log([[maybe_unused]] T t) {
  * @private
  */
     template<typename T, typename... Args>
-ada_really_inline void inner_log([[maybe_unused]] T t,
+TURBO_FORCE_INLINE void inner_log([[maybe_unused]] T t,
                                  [[maybe_unused]] Args... args) {
 #if ADA_LOGGING
         std::cout << t;
@@ -43,7 +43,7 @@ ada_really_inline void inner_log([[maybe_unused]] T t,
  * @private
  */
     template<typename T, typename... Args>
-ada_really_inline void log([[maybe_unused]] T t,
+TURBO_FORCE_INLINE void log([[maybe_unused]] T t,
                            [[maybe_unused]] Args... args) {
 #if ADA_LOGGING
         std::cout << "ADA_LOG: " << t;
@@ -56,19 +56,19 @@ ada_really_inline void log([[maybe_unused]] T t,
  * @private
  */
     template<typename T>
-ada_really_inline void log([[maybe_unused]] T t) {
+TURBO_FORCE_INLINE void log([[maybe_unused]] T t) {
 #if ADA_LOGGING
         std::cout << "ADA_LOG: " << t << std::endl;
 #endif
     }
-} // namespace ada
+} // namespace fermat::uri
 
 #if ADA_LOGGING
 
 #ifndef ada_log
 #define ada_log(...)       \
   do {                     \
-    ada::log(__VA_ARGS__); \
+    fermat::uri::log(__VA_ARGS__); \
   } while (0)
 #endif  // ada_log
 #else

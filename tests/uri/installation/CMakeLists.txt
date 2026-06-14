@@ -13,7 +13,7 @@ file(WRITE main.cpp "
 #include <iostream>
 
 int main(int , char *[]) {
-  ada::result<ada::url_aggregator> url = ada::parse<ada::url_aggregator>(\"https://www.google.com\");
+  fermat::uri::result<fermat::uri::UrlAggregator> url = fermat::uri::parse<fermat::uri::UrlAggregator>(\"https://www.google.com\");
   url->set_protocol(\"http\");
   std::cout << url->get_protocol() << std::endl;
   std::cout << url->get_host() << std::endl;
@@ -21,4 +21,4 @@ int main(int , char *[]) {
 }")
 
 add_executable(main main.cpp)
-target_link_libraries(main PUBLIC ada::ada)
+target_link_libraries(main PUBLIC fermat::uri::ada)

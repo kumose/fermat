@@ -1,9 +1,9 @@
 #include <fermat/uri.h>
 
 #include <array>
-#include <string>
+#include <fermat/container/string.h>
 
-namespace ada::serializers {
+namespace fermat::uri::serializers {
     void find_longest_sequence_of_ipv6_pieces(
         const std::array<uint16_t, 8> &address, size_t &compress,
         size_t &compress_length) noexcept {
@@ -22,7 +22,7 @@ namespace ada::serializers {
         }
     }
 
-    std::string ipv6(const std::array<uint16_t, 8> &address) noexcept {
+    fermat::KString ipv6(const std::array<uint16_t, 8> &address) noexcept {
         size_t compress_length = 0; // The length of a long sequence of zeros.
         size_t compress = 0; // The start of a long sequence of zeros.
         find_longest_sequence_of_ipv6_pieces(address, compress, compress_length);
@@ -33,7 +33,7 @@ namespace ada::serializers {
             compress = compress_length = 8;
         }
 
-        std::string output(4 * 8 + 7 + 2, '\0');
+        fermat::KString output(4 * 8 + 7 + 2, '\0');
         size_t piece_index = 0;
         char *point = output.data();
         char *point_end = output.data() + output.size();
@@ -63,8 +63,8 @@ namespace ada::serializers {
         return output;
     }
 
-    std::string ipv4(const uint64_t address) noexcept {
-        std::string output(15, '\0');
+    fermat::KString ipv4(const uint64_t address) noexcept {
+        fermat::KString output(15, '\0');
         char *point = output.data();
         char *point_end = output.data() + output.size();
         point = std::to_chars(point, point_end, uint8_t(address >> 24)).ptr;
@@ -75,4 +75,4 @@ namespace ada::serializers {
         output.resize(point - output.data());
         return output;
     }
-} // namespace ada::serializers
+} // namespace fermat::uri::serializers

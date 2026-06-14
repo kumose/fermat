@@ -18,13 +18,13 @@ std::string  URLTESTDATA_JSON = turbo::str_format("%s/uri/wpt/urltestdata.json",
 // This function copies your input onto a memory buffer that
 // has just the necessary size. This will entice tools to detect
 // an out-of-bound access.
-ada::result<ada::url> ada_parse(std::string_view view,
-                                const ada::url* base = nullptr) {
+fermat::uri::result<fermat::uri::Url> ada_parse(std::string_view view,
+                                const fermat::uri::Url* base = nullptr) {
   std::cout << "about to parse '" << view << "' [" << view.size() << " bytes]"
             << std::endl;
   std::unique_ptr<char[]> buffer(new char[view.size()]);
   memcpy(buffer.get(), view.data(), view.size());
-  return ada::parse(std::string_view(buffer.get(), view.size()), base);
+  return fermat::uri::parse(std::string_view(buffer.get(), view.size()), base);
 }
 
 bool file_exists(const std::string &filename) {
@@ -63,7 +63,7 @@ TEST(url_components, urltestdata_encoding) {
       std::cout << "input='" << input << "' [" << input.size() << " bytes]"
                 << std::endl;
       std::string_view base;
-      ada::result<ada::url> base_url;
+      fermat::uri::result<fermat::uri::Url> base_url;
       if (!object["base"].get(base)) {
         std::cout << "base=" << base << std::endl;
         base_url = ada_parse(base);
@@ -78,7 +78,7 @@ TEST(url_components, urltestdata_encoding) {
         }
       }
       bool failure = false;
-      ada::result<ada::url> input_url = (!object["base"].get(base))
+      fermat::uri::result<fermat::uri::Url> input_url = (!object["base"].get(base))
                                             ? ada_parse(input, &*base_url)
                                             : ada_parse(input);
 
@@ -112,14 +112,14 @@ TEST(url_components, urltestdata_encoding) {
         if (url.port.has_value()) {
           ASSERT_EQ(out.port, url.port.value());
         } else {
-          ASSERT_EQ(out.port, ada::url_components::omitted);
+          ASSERT_EQ(out.port, fermat::uri::UrlComponents::omitted);
         }
 
         if (!url.get_pathname().empty()) {
           size_t pathname_end = std::string::npos;
-          if (out.search_start != ada::url_components::omitted) {
+          if (out.search_start != fermat::uri::UrlComponents::omitted) {
             pathname_end = out.search_start;
-          } else if (out.hash_start != ada::url_components::omitted) {
+          } else if (out.hash_start != fermat::uri::UrlComponents::omitted) {
             pathname_end = out.hash_start;
           }
           ASSERT_EQ(href.substr(out.pathname_start,

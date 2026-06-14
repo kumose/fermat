@@ -1,9 +1,23 @@
-/**
- * @file url_search_params-inl.h
- * @brief Inline declarations for the URL Search Params
- */
-#ifndef ADA_URL_SEARCH_PARAMS_INL_H
-#define ADA_URL_SEARCH_PARAMS_INL_H
+// Copyright (C) 2026 Kumo inc. and its affiliates. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// @file url_search_params-inl.h
+/// @brief Inline declarations for the URL Search Params
+
+#pragma once
 
 #include <fermat/uri.h>
 #include <fermat/uri/character_sets-inl.h>
@@ -12,21 +26,22 @@
 
 #include <algorithm>
 #include <optional>
-#include <string>
+#include <fermat/container/string.h>
+#include <fermat/container/vector.h>
 #include <string_view>
-#include <vector>
 
-namespace ada {
-    // A default, empty url_search_params for use with empty iterators.
-    template<typename T, ada::url_search_params_iter_type Type>
-    url_search_params url_search_params_iter<T, Type>::EMPTY;
 
-    inline void url_search_params::reset(std::string_view input) {
+namespace fermat::uri {
+    // A default, empty UrlSearchParams for use with empty iterators.
+    template<typename T, fermat::uri::UrlSearchParamsIterType Type>
+    UrlSearchParams UrlSearchParamsIter<T, Type>::EMPTY;
+
+    inline void UrlSearchParams::reset(std::string_view input) {
         params.clear();
         initialize(input);
     }
 
-    inline void url_search_params::initialize(std::string_view input) {
+    inline void UrlSearchParams::initialize(std::string_view input) {
         if (!input.empty() && input.front() == '?') {
             input.remove_prefix(1);
         }
@@ -35,12 +50,12 @@ namespace ada {
             auto equal = current.find('=');
 
             if (equal == std::string_view::npos) {
-                std::string name(current);
+                fermat::KString name(current);
                 std::replace(name.begin(), name.end(), '+', ' ');
                 params.emplace_back(unicode::percent_decode(name, name.find('%')), "");
             } else {
-                std::string name(current.substr(0, equal));
-                std::string value(current.substr(equal + 1));
+                fermat::KString name(current.substr(0, equal));
+                fermat::KString value(current.substr(equal + 1));
 
                 std::replace(name.begin(), name.end(), '+', ' ');
                 std::replace(value.begin(), value.end(), '+', ' ');
@@ -66,14 +81,14 @@ namespace ada {
         }
     }
 
-    inline void url_search_params::append(const std::string_view key,
-                                          const std::string_view value) {
+    inline void UrlSearchParams::append(const std::string_view key,
+                                        const std::string_view value) {
         params.emplace_back(key, value);
     }
 
-    inline size_t url_search_params::size() const noexcept { return params.size(); }
+    inline size_t UrlSearchParams::size() const noexcept { return params.size(); }
 
-    inline std::optional<std::string_view> url_search_params::get(
+    inline std::optional<std::string_view> UrlSearchParams::get(
         const std::string_view key) {
         auto entry = std::find_if(params.begin(), params.end(),
                                   [&key](auto &param) { return param.first == key; });
@@ -85,9 +100,9 @@ namespace ada {
         return entry->second;
     }
 
-    inline std::vector<std::string> url_search_params::get_all(
+    inline fermat::Vector<fermat::KString> UrlSearchParams::get_all(
         const std::string_view key) {
-        std::vector<std::string> out{};
+        fermat::Vector<fermat::KString> out{};
 
         for (auto &param: params) {
             if (param.first == key) {
@@ -98,14 +113,14 @@ namespace ada {
         return out;
     }
 
-    inline bool url_search_params::has(const std::string_view key) noexcept {
+    inline bool UrlSearchParams::has(const std::string_view key) noexcept {
         auto entry = std::find_if(params.begin(), params.end(),
                                   [&key](auto &param) { return param.first == key; });
         return entry != params.end();
     }
 
-    inline bool url_search_params::has(std::string_view key,
-                                       std::string_view value) noexcept {
+    inline bool UrlSearchParams::has(std::string_view key,
+                                     std::string_view value) noexcept {
         auto entry =
                 std::find_if(params.begin(), params.end(), [&key, &value](auto &param) {
                     return param.first == key && param.second == value;
@@ -113,12 +128,12 @@ namespace ada {
         return entry != params.end();
     }
 
-    inline std::string url_search_params::to_string() const {
-        auto character_set = ada::character_sets::WWW_FORM_URLENCODED_PERCENT_ENCODE;
-        std::string out{};
+    inline fermat::KString UrlSearchParams::to_string() const {
+        auto character_set = fermat::uri::character_sets::WWW_FORM_URLENCODED_PERCENT_ENCODE;
+        fermat::KString out{};
         for (size_t i = 0; i < params.size(); i++) {
-            auto key = ada::unicode::percent_encode(params[i].first, character_set);
-            auto value = ada::unicode::percent_encode(params[i].second, character_set);
+            auto key = fermat::uri::unicode::percent_encode(params[i].first, character_set);
+            auto value = fermat::uri::unicode::percent_encode(params[i].second, character_set);
 
             // Performance optimization: Move this inside percent_encode.
             std::replace(key.begin(), key.end(), ' ', '+');
@@ -134,8 +149,8 @@ namespace ada {
         return out;
     }
 
-    inline void url_search_params::set(const std::string_view key,
-                                       const std::string_view value) {
+    inline void UrlSearchParams::set(const std::string_view key,
+                                     const std::string_view value) {
         const auto find = [&key](auto &param) { return param.first == key; };
 
         auto it = std::find_if(params.begin(), params.end(), find);
@@ -149,15 +164,15 @@ namespace ada {
         }
     }
 
-    inline void url_search_params::remove(const std::string_view key) {
+    inline void UrlSearchParams::remove(const std::string_view key) {
         params.erase(
             std::remove_if(params.begin(), params.end(),
                            [&key](auto &param) { return param.first == key; }),
             params.end());
     }
 
-    inline void url_search_params::remove(const std::string_view key,
-                                          const std::string_view value) {
+    inline void UrlSearchParams::remove(const std::string_view key,
+                                        const std::string_view value) {
         params.erase(std::remove_if(params.begin(), params.end(),
                                     [&key, &value](auto &param) {
                                         return param.first == key &&
@@ -166,38 +181,34 @@ namespace ada {
                      params.end());
     }
 
-    inline void url_search_params::sort() {
+    inline void UrlSearchParams::sort() {
         std::stable_sort(params.begin(), params.end(),
                          [](const key_value_pair &lhs, const key_value_pair &rhs) {
                              return lhs.first < rhs.first;
                          });
     }
 
-    inline url_search_params_keys_iter url_search_params::get_keys() {
-        return url_search_params_keys_iter(*this);
+    inline UrlSearchParamsKeysIter UrlSearchParams::get_keys() {
+        return UrlSearchParamsKeysIter(*this);
     }
 
-    /**
- * @see https://url.spec.whatwg.org/#interface-urlsearchparams
- */
-    inline url_search_params_values_iter url_search_params::get_values() {
+    /// @see https://url.spec.whatwg.org/#interface-urlsearchparams
+    inline url_search_params_values_iter UrlSearchParams::get_values() {
         return url_search_params_values_iter(*this);
     }
 
-    /**
- * @see https://url.spec.whatwg.org/#interface-urlsearchparams
- */
-    inline url_search_params_entries_iter url_search_params::get_entries() {
+    /// @see https://url.spec.whatwg.org/#interface-urlsearchparams
+    inline url_search_params_entries_iter UrlSearchParams::get_entries() {
         return url_search_params_entries_iter(*this);
     }
 
-    template<typename T, url_search_params_iter_type Type>
-    inline bool url_search_params_iter<T, Type>::has_next() {
+    template<typename T, UrlSearchParamsIterType Type>
+    inline bool UrlSearchParamsIter<T, Type>::has_next() {
         return pos < params.params.size();
     }
 
     template<>
-    inline std::optional<std::string_view> url_search_params_keys_iter::next() {
+    inline std::optional<std::string_view> UrlSearchParamsKeysIter::next() {
         if (!has_next()) {
             return std::nullopt;
         }
@@ -220,6 +231,4 @@ namespace ada {
         }
         return params.params[pos++];
     }
-} // namespace ada
-
-#endif  // ADA_URL_SEARCH_PARAMS_INL_H
+} // namespace fermat::uri
