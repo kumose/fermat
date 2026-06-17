@@ -25,7 +25,6 @@
 #include <memory>
 #include <new>
 #include <deque>
-#include <build/kmpkg_installed/x64-linux/include/absl/strings/string_view.h>
 
 /// 10g may enough for a single CordBuffer
 #ifndef MAX_SINGLE_CORD_SIZE
