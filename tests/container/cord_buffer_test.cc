@@ -1366,5 +1366,167 @@ namespace fermat {
             cord.format("test");
             EXPECT_EQ(Flatten(cord), "test");
         }
+
+        // ============================================================================
+        // Range slicing API (share / take / copy / flatten / split / retain)
+        // ============================================================================
+
+        /// Builds a cord with one segment per @p chunk_size bytes.
+        /// append() reuses the writable tail block, so multiple small appends stay in one segment.
+        static TestCordBuffer MakeMultiSegmentCord(const std::string &data, size_t chunk_size = 3) {
+            TestCordBuffer cord;
+            for (size_t i = 0; i < data.size(); i += chunk_size) {
+                const size_t len = std::min(chunk_size, data.size() - i);
+                auto buf = std::make_shared<Buffer<char, 64> >();
+                buf->resize_uninitialized(len);
+                std::memcpy(buf->data(), data.data() + i, len);
+                cord.append_reference(
+                    BufferRef<64>::reference(buf, 0, static_cast<uint32_t>(len))).ignore_error();
+            }
+            return cord;
+        }
+
+        TEST(CordBufferRangeTest, share_range_single_segment) {
+            TestCordBuffer cord;
+            cord.append("hello world").ignore_error();
+            auto sub = cord.share_range(6, 5);
+            EXPECT_EQ(Flatten(sub), "world");
+            EXPECT_EQ(cord.size(), 11);
+            EXPECT_EQ(Flatten(cord), "hello world");
+        }
+
+        TEST(CordBufferRangeTest, share_range_multi_segment) {
+            auto cord = MakeMultiSegmentCord("abcdefghi");
+            auto sub = cord.share_range(2, 5);
+            EXPECT_EQ(Flatten(sub), "cdefg");
+            EXPECT_EQ(cord.size(), 9);
+        }
+
+        TEST(CordBufferRangeTest, share_range_suffix) {
+            TestCordBuffer cord;
+            cord.append("abcdef").ignore_error();
+            auto sub = cord.share_range(3);
+            EXPECT_EQ(Flatten(sub), "def");
+        }
+
+        TEST(CordBufferRangeTest, append_range) {
+            TestCordBuffer src;
+            src.append("0123456789").ignore_error();
+            TestCordBuffer dst;
+            dst.append("xx").ignore_error();
+            dst.append_range(src, 3, 4);
+            EXPECT_EQ(Flatten(dst), "xx3456");
+            EXPECT_EQ(src.size(), 10);
+        }
+
+        TEST(CordBufferRangeTest, take_front_unique_moves_segment) {
+            auto cord = MakeMultiSegmentCord("abcdefghi");
+            EXPECT_EQ(cord.buffer_count(), 3);
+            auto taken = cord.take_front(3);
+            EXPECT_EQ(Flatten(taken), "abc");
+            EXPECT_EQ(Flatten(cord), "defghi");
+            EXPECT_EQ(cord.buffer_count(), 2);
+            EXPECT_EQ(taken.buffer_count(), 1);
+            EXPECT_TRUE(taken.front_buffer().is_unique());
+        }
+
+        TEST(CordBufferRangeTest, take_front_partial_copies) {
+            TestCordBuffer cord;
+            cord.append("hello").ignore_error();
+            auto taken = cord.take_front(3);
+            EXPECT_EQ(Flatten(taken), "hel");
+            EXPECT_EQ(Flatten(cord), "lo");
+            EXPECT_TRUE(taken.front_buffer().is_unique());
+            // Modifying taken must not affect remainder.
+            taken.front_buffer().buffer->data()[0] = 'H';
+            EXPECT_EQ(Flatten(cord), "lo");
+        }
+
+        TEST(CordBufferRangeTest, take_front_shared_segment_copies) {
+            TestCordBuffer cord;
+            cord.append("shared").ignore_error();
+            auto shared = cord.share();
+            (void) shared;
+            auto taken = cord.take_front(3);
+            EXPECT_EQ(Flatten(taken), "sha");
+            EXPECT_TRUE(taken.front_buffer().is_unique());
+            EXPECT_EQ(Flatten(cord), "red");
+        }
+
+        TEST(CordBufferRangeTest, take_back) {
+            auto cord = MakeMultiSegmentCord("abcdefghi");
+            auto taken = cord.take_back(4);
+            EXPECT_EQ(Flatten(taken), "fghi");
+            EXPECT_EQ(Flatten(cord), "abcde");
+        }
+
+        TEST(CordBufferRangeTest, take_range_middle) {
+            auto cord = MakeMultiSegmentCord("abcdefghi");
+            auto taken = cord.take_range(2, 4);
+            EXPECT_EQ(Flatten(taken), "cdef");
+            EXPECT_EQ(Flatten(cord), "abghi");
+        }
+
+        TEST(CordBufferRangeTest, copy_range_independent) {
+            TestCordBuffer cord;
+            cord.append("original").ignore_error();
+            auto copy = cord.copy_range(2, 4);
+            EXPECT_EQ(Flatten(copy), "igin");
+            copy.front_buffer().buffer->data()[0] = 'X';
+            EXPECT_EQ(Flatten(cord), "original");
+            EXPECT_TRUE(copy.front_buffer().is_unique());
+        }
+
+        TEST(CordBufferRangeTest, append_copy) {
+            TestCordBuffer src;
+            src.append("0123456789").ignore_error();
+            TestCordBuffer dst;
+            dst.append_copy(src, 4, 3);
+            EXPECT_EQ(Flatten(dst), "456");
+            src.front_buffer().buffer->data()[4] = 'X';
+            EXPECT_EQ(Flatten(dst), "456");
+        }
+
+        TEST(CordBufferRangeTest, flatten_range) {
+            auto cord = MakeMultiSegmentCord("hello world");
+            EXPECT_EQ(cord.flatten_range(6, 5), "world");
+        }
+
+        TEST(CordBufferRangeTest, split_shared) {
+            TestCordBuffer cord;
+            cord.append("abcdef").ignore_error();
+            auto parts = cord.split(3);
+            EXPECT_EQ(Flatten(parts.head), "abc");
+            EXPECT_EQ(Flatten(parts.tail), "def");
+            EXPECT_EQ(Flatten(cord), "abcdef");
+        }
+
+        TEST(CordBufferRangeTest, split_off) {
+            auto cord = MakeMultiSegmentCord("abcdefghi");
+            auto tail = cord.split_off(4);
+            EXPECT_EQ(Flatten(cord), "abcd");
+            EXPECT_EQ(Flatten(tail), "efghi");
+            EXPECT_TRUE(tail.front_buffer().is_unique());
+        }
+
+        TEST(CordBufferRangeTest, retain_range) {
+            auto cord = MakeMultiSegmentCord("abcdefghi");
+            cord.retain_range(2, 4);
+            EXPECT_EQ(Flatten(cord), "cdef");
+        }
+
+        TEST(CordBufferRangeTest, slice_alias) {
+            TestCordBuffer cord;
+            cord.append("abcdef").ignore_error();
+            EXPECT_EQ(Flatten(cord.slice(1, 3)), Flatten(cord.share_range(1, 3)));
+        }
+
+        TEST(CordBufferRangeTest, empty_range) {
+            TestCordBuffer cord;
+            cord.append("abc").ignore_error();
+            EXPECT_EQ(cord.share_range(10, 5).size(), 0);
+            EXPECT_EQ(cord.take_range(5, 2).size(), 0);
+            EXPECT_EQ(cord.copy_range(0, 0).size(), 0);
+        }
     } // namespace test
 } // namespace fermat

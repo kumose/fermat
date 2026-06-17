@@ -351,3 +351,19 @@ kmcmake_cc_test(
         ${KMCMAKE_DEPS_LINK}
 )
 
+kmcmake_cc_test(
+        NAME window_cord_test
+        MODULE con
+        SOURCES
+        window_cord_test.cc
+        CXXOPTS
+        ${KMCMAKE_CXX_OPTIONS}
+        -fno-access-control
+        -Wno-unused-result
+        LINKS
+        fermat::fermat_static
+        GTest::gtest
+        GTest::gtest_main
+        ${KMCMAKE_DEPS_LINK}
+)
+

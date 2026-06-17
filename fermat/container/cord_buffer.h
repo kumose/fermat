@@ -25,6 +25,7 @@
 #include <memory>
 #include <new>
 #include <deque>
+#include <build/kmpkg_installed/x64-linux/include/absl/strings/string_view.h>
 
 /// 10g may enough for a single CordBuffer
 #ifndef MAX_SINGLE_CORD_SIZE
@@ -292,6 +293,12 @@ namespace fermat {
 
         using const_iterator = CordIterator;
 
+        /// Result of split(): shared head and tail sub-cords.
+        struct SplitView {
+            CordBufferBase head;
+            CordBufferBase tail;
+        };
+
         /// ZeroCopyInputStream adapter for CordBufferBase.
         /// Provides sequential read access to the underlying concatenated buffers,
         /// respecting any per‑segment views (sub‑ranges).
@@ -431,11 +438,10 @@ namespace fermat {
         // The source will be left in a valid but empty state (similar to default-constructed).
         // Precondition: source must not be in a state where it has an active lease?
         // Actually we just move the lease; after move, source will have an empty lease.
-        CordBufferBase(CordBufferBase &&rhs) noexcept
-            : _views(std::move(rhs._views)),
-              _total_size(rhs._total_size),
-              _write_buffer(_views.empty() ? const_cast<BufferRef<Alignment> *>(&kZeroBuffer) : &_views.back()) {
-            rhs._views.clear();
+        CordBufferBase(CordBufferBase &&rhs) noexcept {
+            _total_size = rhs._total_size;
+            _views = std::move(rhs._views);
+            _update_write_buffer();
             rhs._total_size = 0;
             rhs._write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
         }
@@ -646,8 +652,86 @@ namespace fermat {
         template<typename String = std::string, std::enable_if_t<is_contiguous_string_receiver<String>::value, int> = 0>
         String flatten() const;
 
+        /// @name Range views and slicing (byte offsets are logical, spanning all segments).
+        /// @{
+
+        /// Returns a new cord sharing [offset, offset + length). Does not modify *this.
+        [[nodiscard]] CordBufferBase share_range(size_t offset, size_t length) const;
+
+        /// Returns a new cord sharing [offset, size()). Does not modify *this.
+        [[nodiscard]] CordBufferBase share_range(size_t offset) const;
+
+        /// Alias for share_range.
+        [[nodiscard]] CordBufferBase slice(size_t offset, size_t length) const {
+            return share_range(offset, length);
+        }
+
+        /// Alias for share_range(offset).
+        [[nodiscard]] CordBufferBase slice(size_t offset) const {
+            return share_range(offset);
+        }
+
+        /// Appends a shared sub-range of @p src. Does not modify @p src.
+        void append_range(const CordBufferBase &src, size_t offset, size_t length);
+
+        /// Appends a shared suffix of @p src starting at @p offset.
+        void append_range(const CordBufferBase &src, size_t offset);
+
+        /// Removes [offset, offset + length) and returns it. Taken bytes are exclusive
+        /// (truncated segments and shared whole segments are copied).
+        [[nodiscard]] CordBufferBase take_range(size_t offset, size_t length);
+
+        /// Removes the first @p n bytes and returns them (exclusive ownership).
+        [[nodiscard]] CordBufferBase take_front(size_t n);
+
+        /// Removes the last @p n bytes and returns them (exclusive ownership).
+        [[nodiscard]] CordBufferBase take_back(size_t n);
+
+        /// Deep-copies [offset, offset + length) into a new cord. Does not modify *this.
+        [[nodiscard]] CordBufferBase copy_range(size_t offset, size_t length) const;
+
+        /// Deep-copies the suffix [offset, size()).
+        [[nodiscard]] CordBufferBase copy_range(size_t offset) const;
+
+        /// Appends a deep copy of a sub-range of @p src. Does not modify @p src.
+        void append_copy(const CordBufferBase &src, size_t offset, size_t length);
+
+        /// Appends a deep copy of the suffix of @p src starting at @p offset.
+        void append_copy(const CordBufferBase &src, size_t offset);
+
+        /// Writes [offset, offset + length) into @p recv (deep copy).
+        turbo::Status flatten_range(size_t offset, size_t length, Receiver &recv) const;
+
+        /// Returns [offset, offset + length) as a contiguous string (deep copy).
+        template<typename String = std::string, std::enable_if_t<is_contiguous_string_receiver<String>::value, int> = 0>
+        String flatten_range(size_t offset, size_t length) const;
+
+        /// Splits into [0, pos) and [pos, size()) as shared cords. Does not modify *this.
+        [[nodiscard]] SplitView split(size_t pos) const;
+
+        /// Keeps [0, pos) in *this and returns [pos, size()) (take semantics on the suffix).
+        [[nodiscard]] CordBufferBase split_off(size_t pos);
+
+        /// Keeps only [offset, offset + length), discarding the rest.
+        void retain_range(size_t offset, size_t length) noexcept;
+
+        /// @}
+
     protected:
         BufferRef<Alignment> *get_write_able_buffer();
+
+        void _update_write_buffer() noexcept;
+
+        [[nodiscard]] size_t _clamp_range_length(size_t offset, size_t length) const noexcept;
+
+        [[nodiscard]] std::vector<BufferRef<Alignment> >
+        _refs_for_range_share(size_t offset, size_t length) const;
+
+        [[nodiscard]] static BufferRef<Alignment> _copy_bytes(const char *data, size_t len);
+
+        void _take_front_into(CordBufferBase &result, size_t n) noexcept;
+
+        void _take_back_into(CordBufferBase &result, size_t n) noexcept;
 
     protected:
         static const BufferRef<Alignment> kZeroBuffer;
@@ -719,7 +803,8 @@ namespace fermat {
         using std::swap;
         swap(_views, other._views);
         swap(_total_size, other._total_size);
-        swap(_write_buffer, other._write_buffer);
+        _update_write_buffer();
+        other._update_write_buffer();
     }
 
     template<size_t Alignment, size_t BlockSize>
@@ -738,6 +823,7 @@ namespace fermat {
         String result;
         result.reserve(_total_size);
         for (auto &ref: _views) {
+            KLOG(INFO)<<std::string_view{ref.data(), ref.size()};
             result.append(ref.data(), ref.size());
         }
         return std::move(result);
@@ -978,14 +1064,10 @@ namespace fermat {
     CordBufferBase<Alignment, BlockSize> &
     CordBufferBase<Alignment, BlockSize>::operator=(CordBufferBase &&rhs) noexcept {
         if (this != &rhs) {
-            // Transfer ownership of the views container.
             _views = std::move(rhs._views);
-            // Transfer total size and clear rhs.
             _total_size = rhs._total_size;
+            _update_write_buffer();
             rhs._total_size = 0;
-            rhs._views.clear();
-            // Transfer writable buffer pointer and reset rhs to the sentinel.
-            _write_buffer = rhs._write_buffer;
             rhs._write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
         }
         return *this;
@@ -1434,6 +1516,274 @@ namespace fermat {
             }
         }
         return total;
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    size_t CordBufferBase<Alignment, BlockSize>::_clamp_range_length(size_t offset, size_t length) const noexcept {
+        if (offset >= _total_size) {
+            return 0;
+        }
+        return std::min(length, _total_size - offset);
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    void CordBufferBase<Alignment, BlockSize>::_update_write_buffer() noexcept {
+        if (!_views.empty() && _views.back().is_unique() && _views.back().write_able()) {
+            _write_buffer = &_views.back();
+        } else {
+            _write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
+        }
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    BufferRef<Alignment> CordBufferBase<Alignment, BlockSize>::_copy_bytes(const char *data, size_t len) {
+        if (len == 0) {
+            return {};
+        }
+        KCHECK(len <= static_cast<size_t>(std::numeric_limits<uint32_t>::max()));
+        auto ref = BufferRef<Alignment>::create_write_able(len);
+        std::memcpy(ref.buffer->data(), data, len);
+        ref.range.length = static_cast<uint32_t>(len);
+        return ref;
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    std::vector<BufferRef<Alignment> >
+    CordBufferBase<Alignment, BlockSize>::_refs_for_range_share(size_t offset, size_t length) const {
+        length = _clamp_range_length(offset, length);
+        std::vector<BufferRef<Alignment> > result;
+        if (length == 0) {
+            return result;
+        }
+
+        size_t pos = 0;
+        const size_t range_end = offset + length;
+        for (const auto &ref: _views) {
+            const size_t seg_size = ref.size();
+            const size_t seg_start = pos;
+            const size_t seg_end = pos + seg_size;
+            pos = seg_end;
+
+            if (seg_end <= offset || seg_start >= range_end) {
+                continue;
+            }
+
+            const size_t intersect_start = std::max(seg_start, offset);
+            const size_t intersect_end = std::min(seg_end, range_end);
+            const size_t skip = intersect_start - seg_start;
+            const size_t take = intersect_end - intersect_start;
+            KCHECK(ref.range.offset + skip <= static_cast<size_t>(std::numeric_limits<uint32_t>::max()));
+            KCHECK(take <= static_cast<size_t>(std::numeric_limits<uint32_t>::max()));
+            result.push_back(BufferRef<Alignment>::reference(
+                ref.buffer, static_cast<uint32_t>(ref.range.offset + skip), static_cast<uint32_t>(take)));
+        }
+        return result;
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    void CordBufferBase<Alignment, BlockSize>::_take_front_into(CordBufferBase &result, size_t n) noexcept {
+        n = std::min(n, _total_size);
+        size_t remaining = n;
+        while (remaining > 0 && !_views.empty()) {
+            BufferRef<Alignment> &front = _views.front();
+            const size_t seg_size = front.size();
+            const size_t take = std::min(remaining, seg_size);
+
+            if (take < seg_size) {
+                result._views.push_back(_copy_bytes(front.data(), take));
+                result._total_size += take;
+                front.pop_front(take);
+            } else {
+                if (front.buffer.use_count() > 1) {
+                    result._views.push_back(_copy_bytes(front.data(), seg_size));
+                    result._total_size += seg_size;
+                } else {
+                    result._total_size += seg_size;
+                    result._views.push_back(std::move(front));
+                }
+                _views.pop_front();
+            }
+            remaining -= take;
+            _total_size -= take;
+        }
+        result._update_write_buffer();
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    void CordBufferBase<Alignment, BlockSize>::_take_back_into(CordBufferBase &result, size_t n) noexcept {
+        n = std::min(n, _total_size);
+        size_t remaining = n;
+        while (remaining > 0 && !_views.empty()) {
+            BufferRef<Alignment> &back = _views.back();
+            const size_t seg_size = back.size();
+            const size_t take = std::min(remaining, seg_size);
+
+            if (take < seg_size) {
+                const char *start = back.data() + (seg_size - take);
+                result.prepend_reference(_copy_bytes(start, take));
+                back.pop_back(take);
+            } else {
+                if (back.buffer.use_count() > 1) {
+                    result.prepend_reference(_copy_bytes(back.data(), seg_size));
+                } else {
+                    BufferRef<Alignment> moved = std::move(back);
+                    result.prepend_reference(std::move(moved));
+                }
+                _views.pop_back();
+            }
+            remaining -= take;
+            _total_size -= take;
+        }
+        result._update_write_buffer();
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    CordBufferBase<Alignment, BlockSize>
+    CordBufferBase<Alignment, BlockSize>::share_range(size_t offset, size_t length) const {
+        CordBufferBase result;
+        const auto refs = _refs_for_range_share(offset, length);
+        for (const auto &ref: refs) {
+            result._views.push_back(ref);
+            result._total_size += ref.size();
+        }
+        result._write_buffer = const_cast<BufferRef<Alignment> *>(&kZeroBuffer);
+        return result;
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    CordBufferBase<Alignment, BlockSize>
+    CordBufferBase<Alignment, BlockSize>::share_range(size_t offset) const {
+        return share_range(offset, _total_size - offset);
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    void CordBufferBase<Alignment, BlockSize>::append_range(const CordBufferBase &src, size_t offset,
+                                                            size_t length) {
+        append_reference(src._refs_for_range_share(offset, length)).ignore_error();
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    void CordBufferBase<Alignment, BlockSize>::append_range(const CordBufferBase &src, size_t offset) {
+        append_range(src, offset, src._total_size - offset);
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    CordBufferBase<Alignment, BlockSize>
+    CordBufferBase<Alignment, BlockSize>::take_front(size_t n) {
+        CordBufferBase result;
+        _take_front_into(result, n);
+        _update_write_buffer();
+        return result;
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    CordBufferBase<Alignment, BlockSize>
+    CordBufferBase<Alignment, BlockSize>::take_back(size_t n) {
+        CordBufferBase result;
+        _take_back_into(result, n);
+        _update_write_buffer();
+        return result;
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    CordBufferBase<Alignment, BlockSize>
+    CordBufferBase<Alignment, BlockSize>::take_range(size_t offset, size_t length) {
+        length = _clamp_range_length(offset, length);
+        if (length == 0) {
+            return {};
+        }
+
+        CordBufferBase prefix;
+        if (offset > 0) {
+            prefix = take_front(offset);
+        }
+        CordBufferBase taken = take_front(length);
+        CordBufferBase suffix = std::move(*this);
+        clear();
+        append(std::move(prefix));
+        append(std::move(suffix));
+        return taken;
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    CordBufferBase<Alignment, BlockSize>
+    CordBufferBase<Alignment, BlockSize>::copy_range(size_t offset, size_t length) const {
+        CordBufferBase result;
+        const auto refs = _refs_for_range_share(offset, length);
+        for (const auto &ref: refs) {
+            result._views.push_back(_copy_bytes(ref.data(), ref.size()));
+            result._total_size += ref.size();
+        }
+        result._update_write_buffer();
+        return result;
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    CordBufferBase<Alignment, BlockSize>
+    CordBufferBase<Alignment, BlockSize>::copy_range(size_t offset) const {
+        return copy_range(offset, _total_size - offset);
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    void CordBufferBase<Alignment, BlockSize>::append_copy(const CordBufferBase &src, size_t offset,
+                                                           size_t length) {
+        append(std::move(src.copy_range(offset, length)));
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    void CordBufferBase<Alignment, BlockSize>::append_copy(const CordBufferBase &src, size_t offset) {
+        append_copy(src, offset, src._total_size - offset);
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    turbo::Status CordBufferBase<Alignment, BlockSize>::flatten_range(size_t offset, size_t length,
+                                                                      Receiver &recv) const {
+        length = _clamp_range_length(offset, length);
+        TURBO_RETURN_NOT_OK(recv.reserve(length));
+        const auto refs = _refs_for_range_share(offset, length);
+        for (const auto &ref: refs) {
+            TURBO_RETURN_NOT_OK(recv.append(ref.data(), ref.size()));
+        }
+        return turbo::OkStatus();
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    template<typename String, std::enable_if_t<is_contiguous_string_receiver<String>::value, int> >
+    String CordBufferBase<Alignment, BlockSize>::flatten_range(size_t offset, size_t length) const {
+        length = _clamp_range_length(offset, length);
+        String result;
+        result.reserve(length);
+        const auto refs = _refs_for_range_share(offset, length);
+        for (const auto &ref: refs) {
+            result.append(ref.data(), ref.size());
+        }
+        return std::move(result);
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    typename CordBufferBase<Alignment, BlockSize>::SplitView
+    CordBufferBase<Alignment, BlockSize>::split(size_t pos) const {
+        return {share_range(0, pos), share_range(pos)};
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    CordBufferBase<Alignment, BlockSize>
+    CordBufferBase<Alignment, BlockSize>::split_off(size_t pos) {
+        if (pos >= _total_size) {
+            return {};
+        }
+        return take_back(_total_size - pos);
+    }
+
+    template<size_t Alignment, size_t BlockSize>
+    void CordBufferBase<Alignment, BlockSize>::retain_range(size_t offset, size_t length) noexcept {
+        length = _clamp_range_length(offset, length);
+        if (length == 0) {
+            clear();
+            return;
+        }
+        pop_front(offset);
+        pop_back(_total_size - length);
     }
 
     /// Specialization of ContainerAppender for CordBufferBase (non‑contiguous, segmented buffer).
