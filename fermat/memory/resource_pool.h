@@ -217,24 +217,21 @@ namespace fermat {
         /// The returned 64-bit ID includes shard, block, slot, and version.
         static T *get_uninitialize(uint64_t &rid_out) {
             auto &pool = instance();
-            KLOG(INFO)<<1;
             /// Obtain a free slot index (32-bit short ID containing shard|block|slot).
             uint32_t short_id;
             if (!pool.acquire_free_slot(short_id)) {
-                KLOG(INFO)<<5;
                 return nullptr;
             }
             /// Decode the short ID into component fields using the dedicated helper.
             uint8_t shard_id, block_id;
             uint16_t slot_id;
             ResourceId::decode_short(short_id, shard_id, block_id, slot_id);
-            KLOG(INFO)<<2;
             auto &shard = pool._shards[shard_id];
             auto &ver_atom = shard.metas[block_id]->version[slot_id];
 
             /// Atomically increment the version to mark this slot as allocated.
             uint16_t old_ver = ver_atom.fetch_add(1, std::memory_order_relaxed);
-            KCHECK(old_ver%2 == 0);
+            DKCHECK(old_ver%2 == 0);
 
             /// Build the full 64-bit resource ID with the new version.
             ResourceId rid;
@@ -324,7 +321,6 @@ namespace fermat {
                 cache->pop_back();
                 return true;
             }
-            KLOG(INFO)<<4;
             /// 2. Refill TLS from global free list.
             if (!fetch_to_tls()) {
                 return false; // No free slots globally and cannot create new block.
