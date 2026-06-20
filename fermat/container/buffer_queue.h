@@ -116,13 +116,11 @@ namespace fermat {
 
         bool borrow(void **out, int *size) {
             if (TURBO_UNLIKELY(buffer.use_count() > 1)) {
-                KLOG(INFO) << buffer.use_count();
                 return false;
             }
 
             *size = buffer.size() - range.length - range.offset;
             if (TURBO_UNLIKELY(*size == 0)) {
-                KLOG(INFO) << "*size:" << *size;
                 return false;
             }
             *out = buffer.data() + range.offset + range.length;

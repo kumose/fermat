@@ -142,13 +142,11 @@ namespace fermat {
 
         bool borrow(void **out, int *size) {
             if (TURBO_UNLIKELY(buffer.use_count() > 1)) {
-                KLOG(INFO) << buffer.use_count();
                 return false;
             }
 
             *size = buffer->size() - range.length - range.offset;
             if (TURBO_UNLIKELY(*size == 0)) {
-                KLOG(INFO) << "*size:" << *size;
                 return false;
             }
             *out = buffer->data() + range.offset + range.length;
@@ -822,7 +820,6 @@ namespace fermat {
         String result;
         result.reserve(_total_size);
         for (auto &ref: _views) {
-            KLOG(INFO)<<std::string_view{ref.data(), ref.size()};
             result.append(ref.data(), ref.size());
         }
         return std::move(result);
