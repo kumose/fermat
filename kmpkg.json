@@ -1,0 +1,13 @@
+{
+  "dependencies": [
+    "benchmark",
+    "brpc",
+    "fmt",
+    "gtest",
+    "mimalloc",
+    "turbo",
+    "uriparser",
+    "xflow",
+    "simdjson"
+  ]
+}

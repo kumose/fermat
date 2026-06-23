@@ -59,17 +59,33 @@ endif ()
 find_package(Threads REQUIRED)
 kmcmake_private_find_package(Threads REQUIRED)
 list(APPEND KMCMAKE_SYSTEM_DYLINK Threads::Threads)
-
+find_package(turbo REQUIRED)
+if (FERMAT_USE_MIMALLOC)
+    find_package(mimalloc REQUIRED)
+    set(USE_MIMALLOC_VAL 1)
+else ()
+    set(USE_MIMALLOC_VAL 0)
+endif ()
 ############################################################
 #
 # add you libs to the KMCMAKE_DEPS_LINK variable eg as turbo
 # so you can and system pthread and rt, dl already add to
 # KMCMAKE_SYSTEM_DYLINK, using it for fun.
 ##########################################################
+if (FERMAT_USE_MIMALLOC)
 set(KMCMAKE_DEPS_LINK
         #${TURBO_LIB}
+        mimalloc-static
+        turbo::turbo_static
         ${KMCMAKE_SYSTEM_DYLINK}
-        )
+)
+else ()
+    set(KMCMAKE_DEPS_LINK
+            #${TURBO_LIB}
+            turbo::turbo_static
+            ${KMCMAKE_SYSTEM_DYLINK}
+    )
+endif ()
 list(REMOVE_DUPLICATES KMCMAKE_DEPS_LINK)
 kmcmake_print_list_label("Denpendcies:" KMCMAKE_DEPS_LINK)
 

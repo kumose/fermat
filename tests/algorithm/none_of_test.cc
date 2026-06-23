@@ -1,0 +1,76 @@
+#include <gtest/gtest.h>
+#include <vector>
+#include <initializer_list>
+#include <fermat/algorithm/none_of.h>
+
+constexpr bool even(int n) { return n % 2 == 0; }
+
+struct S {
+    bool test;
+    S(bool p) : test(p) {}
+    bool p() const { return test; }
+};
+
+constexpr bool test_constexpr(std::initializer_list<int> il) {
+    return fermat::ranges::none_of(il, even);
+}
+
+TEST(NoneOfTest, VectorIterators) {
+    std::vector<int> all_even{0, 2, 4, 6};
+    std::vector<int> one_even{1, 3, 4, 7};
+    std::vector<int> none_even{1, 3, 5, 7};
+
+    EXPECT_FALSE(fermat::ranges::none_of(all_even.begin(), all_even.end(), even));
+    EXPECT_FALSE(fermat::ranges::none_of(one_even.begin(), one_even.end(), even));
+    EXPECT_TRUE(fermat::ranges::none_of(none_even.begin(), none_even.end(), even));
+}
+
+TEST(NoneOfTest, VectorRange) {
+    std::vector<int> all_even{0, 2, 4, 6};
+    std::vector<int> one_even{1, 3, 4, 7};
+    std::vector<int> none_even{1, 3, 5, 7};
+
+    EXPECT_FALSE(fermat::ranges::none_of(all_even, even));
+    EXPECT_FALSE(fermat::ranges::none_of(one_even, even));
+    EXPECT_TRUE(fermat::ranges::none_of(none_even, even));
+}
+
+TEST(NoneOfTest, InitializerList) {
+    using ILI = std::initializer_list<int>;
+    EXPECT_FALSE(fermat::ranges::none_of(ILI{0, 2, 4, 6}, [](int n) { return n % 2 == 0; }));
+    EXPECT_FALSE(fermat::ranges::none_of(ILI{1, 3, 4, 7}, [](int n) { return n % 2 == 0; }));
+    EXPECT_TRUE(fermat::ranges::none_of(ILI{1, 3, 5, 7}, [](int n) { return n % 2 == 0; }));
+}
+
+TEST(NoneOfTest, StructSVectorIterators) {
+    std::vector<S> all_true{S(true), S(true), S(true)};
+    std::vector<S> one_true{S(false), S(false), S(true)};
+    std::vector<S> none_true{S(false), S(false), S(false)};
+
+    EXPECT_FALSE(fermat::ranges::none_of(all_true.begin(), all_true.end(), &S::p));
+    EXPECT_FALSE(fermat::ranges::none_of(one_true.begin(), one_true.end(), &S::p));
+    EXPECT_TRUE(fermat::ranges::none_of(none_true.begin(), none_true.end(), &S::p));
+}
+
+TEST(NoneOfTest, StructSVectorRange) {
+    std::vector<S> all_true{S(true), S(true), S(true)};
+    std::vector<S> one_true{S(false), S(false), S(true)};
+    std::vector<S> none_true{S(false), S(false), S(false)};
+
+    EXPECT_FALSE(fermat::ranges::none_of(all_true, &S::p));
+    EXPECT_FALSE(fermat::ranges::none_of(one_true, &S::p));
+    EXPECT_TRUE(fermat::ranges::none_of(none_true, &S::p));
+}
+
+TEST(NoneOfTest, StructSInitializerList) {
+    using ILS = std::initializer_list<S>;
+    EXPECT_FALSE(fermat::ranges::none_of(ILS{S(true), S(true), S(true)}, &S::p));
+    EXPECT_FALSE(fermat::ranges::none_of(ILS{S(false), S(true), S(false)}, &S::p));
+    EXPECT_TRUE(fermat::ranges::none_of(ILS{S(false), S(false), S(false)}, &S::p));
+}
+
+TEST(NoneOfTest, Constexpr) {
+    static_assert(!test_constexpr({0, 2, 4, 6}), "");
+    static_assert(!test_constexpr({1, 3, 4, 7}), "");
+    static_assert(test_constexpr({1, 3, 5, 7}), "");
+}

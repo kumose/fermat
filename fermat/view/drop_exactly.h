@@ -1,0 +1,184 @@
+/// \file
+// Range v3 library
+//
+//  Copyright Eric Niebler 2013-present
+//
+//  Use, modification and distribution is subject to the
+//  Boost Software License, Version 1.0. (See accompanying
+//  file LICENSE_1_0.txt or copy at
+//  http://www.boost.org/LICENSE_1_0.txt)
+//
+// Project home: https://github.com/ericniebler/range-v3
+//
+
+#ifndef RANGES_V3_VIEW_DROP_EXACTLY_HPP
+#define RANGES_V3_VIEW_DROP_EXACTLY_HPP
+
+#include <type_traits>
+
+#include <fermat/meta/meta.h>
+
+#include <fermat/range_fwd.h>
+
+#include <fermat/functional/bind_back.h>
+#include <fermat/iterator/operations.h>
+#include <fermat/iterator/traits.h>
+#include <fermat/range/concepts.h>
+#include <fermat/range/traits.h>
+#include <fermat/utility/box.h>
+#include <fermat/utility/optional.h>
+#include <fermat/utility/static_const.h>
+#include <fermat/view/all.h>
+#include <fermat/view/interface.h>
+#include <fermat/view/subrange.h>
+#include <fermat/view/view.h>
+
+#include <fermat/detail/prologue.h>
+
+namespace fermat::ranges
+{
+    /// \addtogroup group-views
+    /// @{
+    template<typename Rng>
+    struct RANGES_EMPTY_BASES drop_exactly_view
+      : view_interface<drop_exactly_view<Rng>,
+                       is_finite<Rng>::value ? finite : range_cardinality<Rng>::value>
+      , private detail::non_propagating_cache<iterator_t<Rng>, drop_exactly_view<Rng>,
+                                              !random_access_range<Rng>>
+    {
+    private:
+        using difference_type_ = range_difference_t<Rng>;
+        Rng rng_;
+        difference_type_ n_;
+
+        // random_access_range == true
+        template(bool Const = true)(
+            requires Const AND random_access_range<meta::const_if_c<Const, Rng>>)
+        iterator_t<meta::const_if_c<Const, Rng>> get_begin_(std::true_type) const
+        {
+            return next(fermat::ranges::begin(rng_), n_);
+        }
+        iterator_t<Rng> get_begin_(std::true_type)
+        {
+            return next(fermat::ranges::begin(rng_), n_);
+        }
+        // random_access_range == false
+        iterator_t<Rng> get_begin_(std::false_type)
+        {
+            using cache_t =
+                detail::non_propagating_cache<iterator_t<Rng>, drop_exactly_view<Rng>>;
+            auto & begin_ = static_cast<cache_t &>(*this);
+            if(!begin_)
+                begin_ = next(fermat::ranges::begin(rng_), n_);
+            return *begin_;
+        }
+
+    public:
+        drop_exactly_view() = default;
+        drop_exactly_view(Rng rng, difference_type_ n)
+          : rng_(std::move(rng))
+          , n_(n)
+        {
+            RANGES_EXPECT(n >= 0);
+        }
+        iterator_t<Rng> begin()
+        {
+            return this->get_begin_(meta::bool_<random_access_range<Rng>>{});
+        }
+        sentinel_t<Rng> end()
+        {
+            return fermat::ranges::end(rng_);
+        }
+        template(bool Const = true)(
+            requires Const AND random_access_range<meta::const_if_c<Const, Rng>>)
+        iterator_t<meta::const_if_c<Const, Rng>> begin() const
+        {
+            return this->get_begin_(std::true_type{});
+        }
+        template(bool Const = true)(
+            requires Const AND random_access_range<meta::const_if_c<Const, Rng>>)
+        sentinel_t<meta::const_if_c<Const, Rng>> end() const
+        {
+            return fermat::ranges::end(rng_);
+        }
+        CPP_auto_member
+        auto CPP_fun(size)()(const
+            requires sized_range<Rng const>)
+        {
+            return fermat::ranges::size(rng_) - static_cast<range_size_t<Rng const>>(n_);
+        }
+        CPP_auto_member
+        auto CPP_fun(size)()(
+            requires sized_range<Rng>)
+        {
+            return fermat::ranges::size(rng_) - static_cast<range_size_t<Rng>>(n_);
+        }
+        Rng base() const
+        {
+            return rng_;
+        }
+    };
+
+    template<typename Rng>
+    inline constexpr bool enable_borrowed_range<drop_exactly_view<Rng>> = //
+        enable_borrowed_range<Rng>;
+
+#if RANGES_CXX_DEDUCTION_GUIDES >= RANGES_CXX_DEDUCTION_GUIDES_17
+    template<typename Rng>
+    drop_exactly_view(Rng &&, range_difference_t<Rng>)
+        ->drop_exactly_view<views::all_t<Rng>>;
+#endif
+
+    namespace views
+    {
+        struct drop_exactly_base_fn
+        {
+        private:
+            template<typename Rng>
+            static auto impl_(Rng && rng, range_difference_t<Rng> n, input_range_tag)
+                -> drop_exactly_view<all_t<Rng>>
+            {
+                return {all(static_cast<Rng &&>(rng)), n};
+            }
+            template(typename Rng)(
+                requires borrowed_range<Rng>)
+            static subrange<iterator_t<Rng>, sentinel_t<Rng>> //
+            impl_(Rng && rng, range_difference_t<Rng> n, random_access_range_tag)
+            {
+                return {begin(rng) + n, end(rng)};
+            }
+
+        public:
+            template(typename Rng)(
+                requires viewable_range<Rng> AND input_range<Rng>)
+            auto operator()(Rng && rng, range_difference_t<Rng> n) const
+            {
+                return drop_exactly_base_fn::impl_(
+                    static_cast<Rng &&>(rng), n, range_tag_of<Rng>{});
+            }
+        };
+
+        struct drop_exactly_fn : drop_exactly_base_fn
+        {
+            using drop_exactly_base_fn::operator();
+
+            template(typename Int)(
+                requires detail::integer_like_<Int>)
+            constexpr auto operator()(Int n) const
+            {
+                return make_view_closure(bind_back(drop_exactly_base_fn{}, n));
+            }
+        };
+
+        /// \relates drop_exactly_fn
+        /// \ingroup group-views
+        RANGES_INLINE_VARIABLE(drop_exactly_fn, drop_exactly)
+    } // namespace views
+    /// @}
+} // namespace fermat::ranges
+
+#include <fermat/detail/epilogue.h>
+#include <fermat/detail/satisfy_boost_range.h>
+RANGES_SATISFY_BOOST_RANGE(::fermat::ranges::drop_exactly_view)
+
+#endif

@@ -1,0 +1,79 @@
+/// \file
+// Range v3 library
+//
+//  Copyright Eric Niebler 2013-present
+//
+//  Use, modification and distribution is subject to the
+//  Boost Software License, Version 1.0. (See accompanying
+//  file LICENSE_1_0.txt or copy at
+//  http://www.boost.org/LICENSE_1_0.txt)
+//
+// Project home: https://github.com/ericniebler/range-v3
+//
+
+#ifndef RANGES_V3_ACTION_STRIDE_HPP
+#define RANGES_V3_ACTION_STRIDE_HPP
+
+#include <fermat/range_fwd.h>
+
+#include <fermat/action/action.h>
+#include <fermat/action/erase.h>
+#include <fermat/functional/bind_back.h>
+#include <fermat/iterator/concepts.h>
+#include <fermat/iterator/operations.h>
+#include <fermat/iterator/traits.h>
+#include <fermat/utility/static_const.h>
+
+#include <fermat/detail/prologue.h>
+
+namespace fermat::ranges
+{
+    /// \addtogroup group-actions
+    /// @{
+    namespace actions
+    {
+        struct stride_fn
+        {
+            template(typename D)(
+                requires detail::integer_like_<D>)
+            constexpr auto operator()(D step) const
+            {
+                return make_action_closure(bind_back(stride_fn{}, step));
+            }
+
+            template(typename Rng, typename D = range_difference_t<Rng>)(
+                requires forward_range<Rng> AND
+                    erasable_range<Rng &, iterator_t<Rng>, sentinel_t<Rng>> AND
+                    permutable<iterator_t<Rng>>)
+            Rng operator()(Rng && rng, range_difference_t<Rng> const step) const
+            {
+                using I = iterator_t<Rng>;
+                using S = sentinel_t<Rng>;
+                RANGES_EXPECT(0 < step);
+                if(1 < step)
+                {
+                    I first = fermat::ranges::begin(rng);
+                    S const last = fermat::ranges::end(rng);
+                    if(first != last)
+                    {
+                        for(I i = fermat::ranges::next(++first, step - 1, last); i != last;
+                            advance(i, step, last), ++first)
+                        {
+                            *first = iter_move(i);
+                        }
+                    }
+                    fermat::ranges::actions::erase(rng, first, last);
+                }
+                return static_cast<Rng &&>(rng);
+            }
+        };
+
+        /// \relates actions::stride_fn
+        RANGES_INLINE_VARIABLE(stride_fn, stride)
+    } // namespace actions
+    /// @}
+} // namespace fermat::ranges
+
+#include <fermat/detail/epilogue.h>
+
+#endif

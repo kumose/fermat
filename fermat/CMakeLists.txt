@@ -16,11 +16,21 @@
 # below are examples, after initialization, modify it to your own.
 ###########################################################################
 ###kmcmake_example
+set(SRC
+        fake.cc
+        io/reader.cc
+        io/sysio.cc
+        io/writer.cc
+        memory/arena.cc
+        memory/malloc.cc
+        memory/resource_pool.cc
+        uri/uri.cc
+)
 kmcmake_cc_library(
         NAMESPACE ${PROJECT_NAME}
-        NAME foo
+        NAME fermat
         SOURCES
-        foo.cc
+        ${SRC}
         CXXOPTS
         ${KMCMAKE_CXX_OPTIONS}
         PLINKS
@@ -28,16 +38,7 @@ kmcmake_cc_library(
         PUBLIC
 )
 
-kmcmake_cc_interface(
-        NAMESPACE ${PROJECT_NAME}
-        NAME api
-        HEADERS
-        api.h
-        CXXOPTS
-        ${KMCMAKE_CXX_OPTIONS}
-        PUBLIC
-)
-
+#[[
 kmcmake_cc_binary(
         NAMESPACE ${PROJECT_NAME}
         NAME shared_main
@@ -52,6 +53,6 @@ kmcmake_cc_binary(
         ${PROJECT_NAME}::foo
         PUBLIC
 )
-
+]]
 
 ###kmcmake_example
